@@ -2,7 +2,8 @@
 
 Every check has the signature ``check(reply, provided_ids, gold=None) -> CheckResult``.
 ``CheckResult.passed`` is True, False, or None for n/a (gold-dependent check without gold, or a
-check that does not apply to the reply's mode).
+check that does not apply to the reply's mode). Reply mode is structural (D-028): a reply with a
+bracketed ID is in cite mode, otherwise abstain mode.
 """
 
 from __future__ import annotations
@@ -103,8 +104,9 @@ CASES: list[tuple[str, str, list[str], dict[str, Any] | None, bool | None]] = [
     ("citation_count", EX4, PROVIDED, None, True),
     ("citation_count", REPEATED_ID, PROVIDED, None, True),
     ("citation_count", EX3, PROVIDED, None, False),  # two IDs
-    ("citation_count", UNCITED_STEP, PROVIDED, None, False),  # zero IDs on a cite reply
-    ("citation_count", ABSTAIN_WITH_ID, PROVIDED, None, False),  # ID on an abstain reply
+    # Without gold, mode is structural, so these two cases need gold to be caught (D-028).
+    ("citation_count", UNCITED_STEP, PROVIDED, GOLD_CITE, False),  # zero IDs on a cite case
+    ("citation_count", ABSTAIN_WITH_ID, PROVIDED, GOLD_ABSTAIN, False),  # ID on an abstain case
     ("citation_count", REAL_PLUS_INVENTED, PROVIDED, None, False),
     # cited_id_provided: no invented IDs (vacuously true with no citation).
     ("cited_id_provided", EX1, PROVIDED, None, True),
@@ -120,10 +122,12 @@ CASES: list[tuple[str, str, list[str], dict[str, Any] | None, bool | None]] = [
     ("cited_id_supports", EX3, PROVIDED, GOLD_CITE, False),  # one of two IDs unsupported
     ("cited_id_supports", EX1, PROVIDED, None, None),  # no gold
     ("cited_id_supports", UNCITED_STEP, PROVIDED, GOLD_CITE, None),  # nothing cited
-    # mode_matches_gold (needs gold): inferred reply mode equals gold.mode.
+    # mode_matches_gold (needs gold): structural reply mode equals gold.mode.
     ("mode_matches_gold", EX1, PROVIDED, GOLD_CITE, True),
     ("mode_matches_gold", EX4, PROVIDED, GOLD_ABSTAIN, True),
-    ("mode_matches_gold", EX4_FIX, PROVIDED, GOLD_ABSTAIN, False),
+    # No citation, so abstain mode; the P6 fix is no_fix's and abstain_form's to catch.
+    ("mode_matches_gold", EX4_FIX, PROVIDED, GOLD_ABSTAIN, True),
+    ("mode_matches_gold", ABSTAIN_WITH_ID, PROVIDED, GOLD_ABSTAIN, False),  # cites, so cite mode
     ("mode_matches_gold", EX4_DISTRACTOR, PROVIDED, GOLD_ABSTAIN, False),  # P1 on example 4
     ("mode_matches_gold", EX4, PROVIDED, GOLD_CITE, False),
     ("mode_matches_gold", EX1, PROVIDED, None, None),
@@ -150,7 +154,8 @@ CASES: list[tuple[str, str, list[str], dict[str, Any] | None, bool | None]] = [
     ("abstain_form", EX4, PROVIDED, None, True),
     ("abstain_form", EX4, PROVIDED, GOLD_ABSTAIN, True),
     ("abstain_form", ABSTAIN_REAR, PROVIDED, None, True),
-    ("abstain_form", ABSTAIN_WITH_ID, PROVIDED, None, False),  # ID on an abstain reply
+    ("abstain_form", ABSTAIN_WITH_ID, PROVIDED, GOLD_ABSTAIN, False),  # ID on an abstain case
+    ("abstain_form", ABSTAIN_WITH_ID, PROVIDED, None, None),  # cites, so cite mode: n/a
     ("abstain_form", ABSTAIN_TWO_QUESTIONS, PROVIDED, None, False),
     ("abstain_form", ABSTAIN_NO_QUESTION, PROVIDED, None, False),
     ("abstain_form", EX4_FIX, PROVIDED, GOLD_ABSTAIN, False),
@@ -252,12 +257,13 @@ def test_lexicon_version_is_declared() -> None:
         (EX1, "cite"),
         (EX2, "cite"),
         (EX3, "cite"),
-        (UNCITED_STEP, "cite"),  # a step with no citation is still a cite attempt
-        (EX4_FIX, "cite"),
+        (ABSTAIN_WITH_ID, "cite"),  # cites, whatever the wording (D-028)
+        (UNCITED_STEP, "abstain"),  # no bracketed ID; gold catches a missing citation
+        (EX4_FIX, "abstain"),
+        (UNBRACKETED, "abstain"),
         (EX4, "abstain"),
         (ABSTAIN_REAR, "abstain"),
         (ABSTAIN_PULL, "abstain"),
-        (ABSTAIN_WITH_ID, "abstain"),  # says none applies, even though it cites
         (ABSTAIN_NO_QUESTION, "abstain"),
     ],
 )

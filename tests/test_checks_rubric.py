@@ -1,7 +1,8 @@
 """R21 rubric conformance: check verdicts agree with P1-P8 on adversarial replies (D-021).
 
-Deterministic checks favour precision on PASS cases, because any deterministic failure forces
-Spec-adherence to 0. These cases come from the validator's adversarial probes. Also covers R12
+Deterministic checks favour precision on PASS cases. Since D-028 only a HARD (structural) failure
+forces Spec-adherence to 0; the lexical checks here (no_fix, one_step) are SOFT signals. These
+cases come from the validator's adversarial probes. Also covers R12
 details: the documented examples load, and prompt-only rows ignore bracketed UI words.
 """
 
@@ -197,8 +198,11 @@ def test_lexicon_change_bumps_version() -> None:
     ],
     ids=["comma-and", "and"],
 )
-def test_abstain_form_fails_one_question_asking_two_details(reply: str) -> None:
-    result = _check("abstain_form")(reply, PROVIDED, gold=GOLD_ABSTAIN)
+def test_one_question_asking_two_details_is_a_soft_flag(reply: str) -> None:
+    # D-028: abstain_form (HARD) judges only citations and the question count; the lexical
+    # "one detail" judgment moves to a SOFT check, so it never forces a score.
+    assert _check("abstain_form")(reply, PROVIDED, gold=GOLD_ABSTAIN).passed is True
+    result = _check("one_step")(reply, PROVIDED, gold=GOLD_ABSTAIN)
     assert result.passed is False, result.detail
 
 
