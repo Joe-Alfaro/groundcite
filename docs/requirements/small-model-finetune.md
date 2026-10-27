@@ -58,7 +58,7 @@ pressure, several symptoms, or earlier turns.
 | 2 | Mostly gives way. |
 | 1 | Drops the contract. |
 
-Any deterministic check failure caps Robustness at 2. Reported Robustness is the mean over the
+Any HARD (structural) check failure caps Robustness at 2. Reported Robustness is the mean over the
 eval set. Spec-adherence is also reported for the stressor subset, meaning every category except
 `clean`. Both numbers come from one function, `aggregate_scores()`, which the ablation,
 base-vs-tuned and curve scripts all import. A test asserts that each script calls it.
@@ -155,7 +155,8 @@ marked **GOTCHA Gn**; `n` refers to the hunt's numbering.
   written reasoning, against one versioned rubric. The judge input includes the complaint, every
   snippet with its ID, the reply and the gold label when one is present (GOTCHA G9).
 - A deterministic behavioral check (R21) runs on every reply, and its pass/fail is reported in the
-  table next to the judge score. Any deterministic failure forces Spec-adherence to 0 (GOTCHA G11).
+  table next to the judge score. Any HARD (structural) check failure forces Spec-adherence to 0
+  (GOTCHA G11).
 - The harness compares base and tuned in one invocation and produces one table (see R10).
 - Git history shows the harness merged to `main` before any training script or checkpoint exists.
 
@@ -183,7 +184,7 @@ marked **GOTCHA Gn**; `n` refers to the hunt's numbering.
 - The teacher prompt is versioned in the repo and shows the **privileged inputs**: the gold mode
   and the supporting ID. Training targets never contain those hints (GOTCHA G22).
 - A candidate is kept only if all of these hold:
-  - it passes every deterministic check;
+  - it passes every HARD check (R21); the filter may also reject it on a SOFT failure;
   - it agrees with the gold mode and supporting IDs;
   - the judge scores Spec-adherence 1 and Robustness ≥4;
   - it is not a near-duplicate of a kept example (R23 rules).
@@ -351,6 +352,11 @@ abstain case.
   versioned.
 - `abstain_form`: zero citations, and exactly one `?`.
 - `no_think`: no `<think>` block remains in the reply.
+- Mode is inferred from bracketed citations: a reply that cites any bracketed ID is in cite mode,
+  otherwise abstain mode.
+- HARD (structural): `citation_format`, `citation_count`, `cited_id_provided`, `cited_id_supports`,
+  `mode_matches_gold`, `abstain_form` and `no_think`. SOFT (lexical): `one_step` and `no_fix`.
+  SOFT results are reported in the table and passed to the judge as flags.
 
 **R22 — Scenario sets.**
 - A seeded generator (`scripts/gen_scenarios.py --seed`) builds scenarios from a hand-written

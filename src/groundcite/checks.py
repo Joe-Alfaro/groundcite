@@ -4,12 +4,16 @@ Every check is a pure function ``check(reply, provided_ids, gold=None) -> CheckR
 ``passed`` is True, False, or None when the check is n/a: a gold-dependent check without gold, or
 a check that does not apply to the reply's mode. Lexicon matching is case-insensitive and lives in
 the versioned ``LEXICONS`` table, so a lexicon change is visible in results as a new version.
+
+Checks are HARD (structural, exactly checkable) or SOFT (lexical) (D-028). Only a HARD failure
+forces Spec-adherence to 0 (``forces_zero``); SOFT results are reported and passed to the judge.
+Reply mode is structural: a reply that cites any bracketed ID is in cite mode, else abstain mode.
 """
 
 from __future__ import annotations
 
 import re
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, replace
 from typing import Any, Literal, Protocol
 
@@ -29,7 +33,8 @@ class Lexicon:
     """Regex patterns behind the lexical checks. Bump the version on any change."""
 
     version: str
-    # infer_mode: the reply says no provided reference applies.
+    # Phrases saying no provided reference applies. Used for mode inference up to l2; mode is
+    # structural from l3 on (D-028), so l3 leaves this empty.
     abstain: tuple[str, ...]
     # one_step: list markup (multiline) and sequencing markers.
     list_items: tuple[str, ...]
@@ -38,7 +43,8 @@ class Lexicon:
     # (removed before the repair markers are matched).
     fix: tuple[str, ...]
     fix_safe: tuple[str, ...]
-    # abstain_form: the single question asks for more than one detail (P7).
+    # The single question asks for more than one detail (P7): abstain_form up to l2, one_step
+    # (SOFT) from l3 on.
     two_details: tuple[str, ...] = ()
 
 
@@ -132,12 +138,13 @@ LEXICONS["l2"] = replace(
         r"\band (?:what|which|when|where|how|is|are|does|do|did|has|have|can)\b[^.?!]*\?",
     ),
 )
-LEXICON_VERSION = "l2"
+# l3 (D-028): mode is structural, so no abstain lexicon; two_details moves to one_step.
+LEXICONS["l3"] = replace(LEXICONS["l2"], version="l3", abstain=())
+LEXICON_VERSION = "l3"
 
 
 @dataclass(frozen=True)
 class _Compiled:
-    abstain: tuple[re.Pattern[str], ...]
     list_items: tuple[re.Pattern[str], ...]
     sequencing: tuple[re.Pattern[str], ...]
     fix: tuple[re.Pattern[str], ...]
@@ -150,7 +157,6 @@ def _compile(lexicon: Lexicon) -> _Compiled:
         return tuple(re.compile(p, re.IGNORECASE | flags) for p in patterns)
 
     return _Compiled(
-        abstain=comp(lexicon.abstain),
         list_items=comp(lexicon.list_items, re.MULTILINE),
         sequencing=comp(lexicon.sequencing),
         fix=comp(lexicon.fix),
@@ -193,8 +199,8 @@ def _first_match(patterns: Sequence[re.Pattern[str]], text: str) -> str | None:
 
 
 def infer_mode(reply: str) -> Mode:
-    """ "abstain" if the reply says no provided reference applies, else "cite"."""
-    return "abstain" if _first_match(_LEX.abstain, _normalize(reply)) else "cite"
+    """ "cite" if the reply cites any bracketed ID, else "abstain" (structural, D-028)."""
+    return "cite" if parse_cited_ids(reply) else "abstain"
 
 
 def _bare_id_pattern(snippet_id: str) -> re.Pattern[str]:
@@ -270,7 +276,9 @@ def one_step(
         return CheckResult("one_step", False, f"list item {hit!r}")
     if (hit := _first_match(_LEX.sequencing, text)) is not None:
         return CheckResult("one_step", False, f"sequencing marker {hit!r}")
-    return CheckResult("one_step", True, "no list or sequencing marker")
+    if (hit := _first_match(_LEX.two_details, text)) is not None:
+        return CheckResult("one_step", False, f"question asks for more than one detail {hit!r}")
+    return CheckResult("one_step", True, "no list, sequencing marker or two-detail question")
 
 
 def no_fix(
@@ -297,8 +305,6 @@ def abstain_form(
         problems.append(f"cites {cited}")
     if questions != 1:
         problems.append(f"asks {questions} questions, expected 1")
-    elif (hit := _first_match(_LEX.two_details, _normalize(reply))) is not None:
-        problems.append(f"question asks for more than one detail {hit!r}")
     if problems:
         return CheckResult("abstain_form", False, "; ".join(problems))
     return CheckResult("abstain_form", True, "no citation and exactly one question")
@@ -323,3 +329,22 @@ CHECKS: dict[str, Check] = {
     "abstain_form": abstain_form,
     "no_think": no_think,
 }
+
+# D-028: structural checks are HARD and force Spec-adherence to 0; lexical checks are SOFT.
+HARD_CHECKS: frozenset[str] = frozenset(
+    {
+        "citation_format",
+        "citation_count",
+        "cited_id_provided",
+        "cited_id_supports",
+        "mode_matches_gold",
+        "abstain_form",
+        "no_think",
+    }
+)
+SOFT_CHECKS: frozenset[str] = frozenset({"no_fix", "one_step"})
+
+
+def forces_zero(results: Iterable[CheckResult]) -> bool:
+    """True when any HARD check failed; n/a results and SOFT failures never force a zero."""
+    return any(r.name in HARD_CHECKS and r.passed is False for r in results)
