@@ -1,0 +1,362 @@
+"""Generation and judge backends behind one interface (R10, R19, R25, R26).
+
+``get_backend(spec)`` resolves a spec by its provider prefix: ``anthropic:``, ``openai:``,
+``hf:`` (a bare ``org/repo`` means ``hf:``) or ``mock:``. Every backend has ``.name`` (the full
+spec) and ``.generate(messages, system, params) -> str``.
+
+API backends call the official SDKs by default. Tests inject ``transport(url, headers, body)``
+instead, which receives the exact JSON request body. Keys are resolved when the backend is built,
+so a missing key fails before any work; key values are redacted from every error.
+"""
+
+from __future__ import annotations
+
+import importlib
+import json
+import logging
+import re
+from collections.abc import Callable, Mapping, Sequence
+from typing import Any, Protocol
+
+from groundcite.judge import CHECK_LINE_RE
+from groundcite.keys import get_key, redact
+from groundcite.spec import parse_cited_ids
+
+log = logging.getLogger(__name__)
+
+Messages = Sequence[Mapping[str, str]]
+Transport = Callable[[str, Mapping[str, str], Mapping[str, Any]], Mapping[str, Any]]
+
+ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
+ANTHROPIC_VERSION = "2023-06-01"
+OPENAI_URL = "https://api.openai.com/v1/chat/completions"
+
+# Sampling parameters a model may reject (Claude Opus 5.5 rejects temperature; some OpenAI
+# reasoning snapshots do too). Only these are dropped on a rejection; anything else fails loudly.
+DROPPABLE_PARAMS = frozenset({"temperature", "top_p", "top_k", "seed"})
+# Parameters each model has rejected in this process, so later calls skip the failed request.
+_REJECTED: dict[str, set[str]] = {}
+
+
+class Backend(Protocol):
+    name: str
+
+    def generate(
+        self, messages: Messages, system: str | None, params: Mapping[str, Any]
+    ) -> str: ...
+
+
+class BackendError(RuntimeError):
+    """A backend call failed. The message never contains a key value."""
+
+
+# ---------------------------------------------------------------------------------------------
+# API backends
+# ---------------------------------------------------------------------------------------------
+
+
+def _rejected_param(exc: Exception, body: Mapping[str, Any]) -> str | None:
+    """The droppable body parameter a 400 response (or the SDK, client-side) rejects, if any."""
+    if isinstance(exc, TypeError):
+        # Newer SDKs drop removed parameters from their signatures, e.g. anthropic 2.x has no
+        # `temperature` because current Claude models reject it.
+        match = re.search(r"unexpected keyword argument '(\w+)'", str(exc))
+        if match and match.group(1) in DROPPABLE_PARAMS and match.group(1) in body:
+            return match.group(1)
+        return None
+    if getattr(exc, "status_code", None) != 400:
+        return None
+    param = getattr(exc, "param", None)
+    if param in DROPPABLE_PARAMS and param in body:
+        return str(param)
+    named = [p for p in DROPPABLE_PARAMS & set(body) if re.search(rf"\b{p}\b", str(exc))]
+    return named[0] if len(named) == 1 else None
+
+
+class _ApiBackend:
+    url: str
+    key_var: str
+
+    def __init__(self, spec: str, transport: Transport | None) -> None:
+        self.name = spec
+        self.model = spec.split(":", 1)[1]
+        self._key = get_key(self.key_var)
+        self._transport = transport
+        self._client: Any = None
+        # The decoding parameters the last successful call actually ran with (R13).
+        self.effective_params: dict[str, Any] | None = None
+
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}(name={self.name!r})"
+
+    def generate(self, messages: Messages, system: str | None, params: Mapping[str, Any]) -> str:
+        rejected = _REJECTED.setdefault(self.model, set())
+        sent = {k: v for k, v in params.items() if k not in rejected}
+        while True:
+            body = self._body(messages, system, sent)
+            try:
+                response = self._post(body)
+                break
+            except Exception as exc:
+                param = _rejected_param(exc, sent)
+                if param is None:
+                    message = redact(f"{self.name} request failed: {exc}", [self._key])
+                    raise BackendError(message) from None
+                log.warning("%s rejected %r; retrying without it", self.name, param)
+                rejected.add(param)
+                del sent[param]
+        self.effective_params = dict(sent)
+        return self._text(response)
+
+    def _post(self, body: dict[str, Any]) -> Mapping[str, Any]:
+        if self._transport is not None:
+            return self._transport(self.url, self._headers(), body)
+        return self._sdk_call(body)
+
+    def _body(
+        self, messages: Messages, system: str | None, params: Mapping[str, Any]
+    ) -> dict[str, Any]:
+        raise NotImplementedError
+
+    def _headers(self) -> dict[str, str]:
+        raise NotImplementedError
+
+    def _sdk_call(self, body: dict[str, Any]) -> Mapping[str, Any]:
+        raise NotImplementedError
+
+    def _text(self, response: Mapping[str, Any]) -> str:
+        raise NotImplementedError
+
+
+class AnthropicBackend(_ApiBackend):
+    url = ANTHROPIC_URL
+    key_var = "ANTHROPIC_API_KEY"
+
+    def _body(
+        self, messages: Messages, system: str | None, params: Mapping[str, Any]
+    ) -> dict[str, Any]:
+        body: dict[str, Any] = {"model": self.model, "messages": [dict(m) for m in messages]}
+        if system is not None:
+            body["system"] = system
+        return {**body, **params}
+
+    def _headers(self) -> dict[str, str]:
+        return {
+            "x-api-key": self._key,
+            "anthropic-version": ANTHROPIC_VERSION,
+            "content-type": "application/json",
+        }
+
+    def _sdk_call(self, body: dict[str, Any]) -> Mapping[str, Any]:
+        if self._client is None:
+            import anthropic
+
+            self._client = anthropic.Anthropic(api_key=self._key)
+        result: Mapping[str, Any] = self._client.messages.create(**body).to_dict()
+        return result
+
+    def _text(self, response: Mapping[str, Any]) -> str:
+        if response.get("stop_reason") == "refusal":
+            raise BackendError(f"{self.name} refused the request")
+        # Thinking blocks may precede the answer; the reply is the text blocks.
+        texts = [b["text"] for b in response.get("content", []) if b.get("type") == "text"]
+        if not texts:
+            raise BackendError(f"{self.name} returned no text content")
+        return "".join(texts)
+
+
+class OpenAIBackend(_ApiBackend):
+    url = OPENAI_URL
+    key_var = "OPENAI_API_KEY"
+
+    def _body(
+        self, messages: Messages, system: str | None, params: Mapping[str, Any]
+    ) -> dict[str, Any]:
+        msgs = [dict(m) for m in messages]
+        if system is not None:
+            msgs.insert(0, {"role": "developer", "content": system})
+        return {"model": self.model, "messages": msgs, **params}
+
+    def _headers(self) -> dict[str, str]:
+        return {"Authorization": f"Bearer {self._key}", "content-type": "application/json"}
+
+    def _sdk_call(self, body: dict[str, Any]) -> Mapping[str, Any]:
+        if self._client is None:
+            import openai
+
+            self._client = openai.OpenAI(api_key=self._key)
+        result: Mapping[str, Any] = self._client.chat.completions.create(**body).model_dump()
+        return result
+
+    def _text(self, response: Mapping[str, Any]) -> str:
+        choice = response["choices"][0]
+        content = choice["message"].get("content")
+        if not content:
+            reason = choice.get("finish_reason")
+            raise BackendError(f"{self.name} returned no content (finish_reason={reason})")
+        return str(content)
+
+
+# ---------------------------------------------------------------------------------------------
+# Hugging Face (local transformers, loaded on first use)
+# ---------------------------------------------------------------------------------------------
+
+_THINK_BLOCK_RE = re.compile(r"<think>.*?</think>\s*", re.DOTALL)
+
+
+class HFBackend:
+    """``hf:<repo>[@rev]`` through transformers: greedy, chat template, thinking off (R27).
+
+    Nothing is imported or downloaded until the first ``generate`` call.
+    """
+
+    def __init__(self, spec: str, transport: Transport | None = None) -> None:
+        self.name = spec
+        repo = spec.split(":", 1)[1]
+        self.repo, _, rev = repo.partition("@")
+        self.revision = rev or None
+        self._model: Any = None
+        self._tokenizer: Any = None
+
+    def __repr__(self) -> str:
+        return f"HFBackend(name={self.name!r})"
+
+    def _load(self) -> None:
+        torch = importlib.import_module("torch")
+        transformers = importlib.import_module("transformers")
+        if torch.cuda.is_available():
+            device, dtype = "cuda", torch.bfloat16
+        elif torch.backends.mps.is_available():
+            device, dtype = "mps", torch.float16
+        else:
+            device, dtype = "cpu", torch.float32
+        self._tokenizer = transformers.AutoTokenizer.from_pretrained(
+            self.repo, revision=self.revision
+        )
+        model = transformers.AutoModelForCausalLM.from_pretrained(
+            self.repo, revision=self.revision, dtype=dtype
+        )
+        self._model = model.to(device).eval()
+
+    def generate(self, messages: Messages, system: str | None, params: Mapping[str, Any]) -> str:
+        if self._model is None:
+            self._load()
+        chat = [dict(m) for m in messages]
+        if system is not None:
+            chat.insert(0, {"role": "system", "content": system})
+        inputs = self._tokenizer.apply_chat_template(
+            chat,
+            add_generation_prompt=True,
+            enable_thinking=False,
+            return_tensors="pt",
+            return_dict=True,
+        ).to(self._model.device)
+        gen = {"do_sample": False, "max_new_tokens": 256, **params}
+        output = self._model.generate(**inputs, **gen)
+        new_tokens = output[0][inputs["input_ids"].shape[-1] :]
+        text = str(self._tokenizer.decode(new_tokens, skip_special_tokens=True))
+        return _THINK_BLOCK_RE.sub("", text).strip()
+
+
+# ---------------------------------------------------------------------------------------------
+# Mocks (R19, R26): deterministic, no keys, no network
+# ---------------------------------------------------------------------------------------------
+
+
+def _prompt_ids(messages: Messages, system: str | None) -> list[str]:
+    """Bracketed IDs in the system and user text, in order of first appearance."""
+    texts = [system or ""] + [m["content"] for m in messages if m.get("role") != "assistant"]
+    return parse_cited_ids("\n".join(texts))
+
+
+class MockCompliant:
+    """Cites the first provided ID in one clean step, or abstains with one question."""
+
+    name = "mock:compliant"
+
+    def generate(self, messages: Messages, system: str | None, params: Mapping[str, Any]) -> str:
+        ids = _prompt_ids(messages, system)
+        if not ids:
+            return (
+                "None of the provided references cover this complaint, so I can't point to a "
+                "documented step yet. Which trouble code is stored?"
+            )
+        return f"Perform the test described in the reference and record the reading [{ids[0]}]."
+
+
+class MockNaive:
+    """Off-spec on purpose: a list of steps, several citations and a repair."""
+
+    name = "mock:naive"
+
+    def generate(self, messages: Messages, system: str | None, params: Mapping[str, Any]) -> str:
+        ids = (_prompt_ids(messages, system) + ["REF-901", "REF-902"])[:2]
+        return (
+            f"1. Check the fuel pressure [{ids[0]}].\n"
+            f"2. Then inspect the vacuum hoses [{ids[1]}].\n"
+            "3. If either looks bad, replace the fuel pump."
+        )
+
+
+class MockJudge:
+    """Scores from the deterministic check lines in the judge input (R19).
+
+    Failures are checks marked FAIL (N/A is ignored): none -> (1, 5), one -> (0, 2), more ->
+    (0, 1).
+    """
+
+    name = "mock:judge"
+
+    def generate(self, messages: Messages, system: str | None, params: Mapping[str, Any]) -> str:
+        text = "\n".join(m["content"] for m in messages)
+        failed = [name for name, _, status in CHECK_LINE_RE.findall(text) if status == "FAIL"]
+        if not failed:
+            spec, robustness = 1, 5
+            reasoning = "All applicable deterministic checks pass."
+        else:
+            spec, robustness = 0, (2 if len(failed) == 1 else 1)
+            reasoning = f"Deterministic check(s) failed: {', '.join(failed)}."
+        verdict = {
+            "spec_adherence": spec,
+            "robustness": robustness,
+            "failed_checks": failed,
+            "reasoning": reasoning,
+        }
+        return json.dumps(verdict)
+
+
+MOCKS: dict[str, Callable[[], Backend]] = {
+    "compliant": MockCompliant,
+    "naive": MockNaive,
+    "judge": MockJudge,
+}
+
+
+def _mock(spec: str, transport: Transport | None = None) -> Backend:
+    name = spec.split(":", 1)[1]
+    if name not in MOCKS:
+        raise ValueError(f"unknown mock model {name!r}; known: {sorted(MOCKS)}")
+    return MOCKS[name]()
+
+
+# ---------------------------------------------------------------------------------------------
+# Registry
+# ---------------------------------------------------------------------------------------------
+
+BACKENDS: dict[str, Callable[[str, Transport | None], Backend]] = {
+    "anthropic:": AnthropicBackend,
+    "openai:": OpenAIBackend,
+    "hf:": HFBackend,
+    "mock:": _mock,
+}
+
+
+def get_backend(spec: str, *, transport: Transport | None = None) -> Backend:
+    """Build the backend for ``spec``. Raises ValueError for an unknown prefix or mock name, and
+    MissingKeyError (before any request) when an API backend's key is unset."""
+    if ":" not in spec and "/" in spec:
+        spec = f"hf:{spec}"
+    prefix = spec.split(":", 1)[0] + ":"
+    if ":" not in spec or prefix not in BACKENDS:
+        raise ValueError(f"unknown backend prefix {prefix!r} in {spec!r}; known: {list(BACKENDS)}")
+    return BACKENDS[prefix](spec, transport)

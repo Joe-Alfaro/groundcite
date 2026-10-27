@@ -1,0 +1,33 @@
+# Pinned model ids and fixed decoding parameters (R13, R28). Change these only with a decision
+# log entry: every result records the ids and the effective decoding parameters it ran with.
+
+[judge]
+# A dated snapshot, never an alias. OpenAI so the judge differs in family from the teacher.
+model = "openai:gpt-5.5-2026-04-23"
+
+[teacher]
+model = "anthropic:claude-opus-5-5"
+
+[cross_check]
+# Rescores a subset to measure judge agreement (R29).
+model = "anthropic:claude-opus-5-5"
+
+[ablation]
+models = ["anthropic:claude-opus-5-5", "openai:gpt-5.5-2026-04-23"]
+
+# Decoding parameters per provider, sent as-is in every request body. A model that rejects one of
+# them (some reject temperature) gets the request again without it, and the backend records the
+# parameters that actually ran (`Backend.effective_params`).
+[decoding.anthropic]
+temperature = 0
+max_tokens = 16000
+output_config = { effort = "medium" }
+
+[decoding.openai]
+temperature = 0
+max_completion_tokens = 16000
+reasoning_effort = "low"
+
+[decoding.hf]
+do_sample = false
+max_new_tokens = 256
