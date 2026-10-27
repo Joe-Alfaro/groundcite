@@ -284,7 +284,10 @@ def test_checks_run_on_every_fixture_set(fixture: str) -> None:
         results = {name: fn(reply, s.provided_ids, gold=s.gold) for name, fn in CHECKS.items()}
         assert results["cited_id_provided"].passed is True
         assert results["citation_format"].passed is True
-        assert results["citation_count"].passed is True
+        # With gold, citation_count expects the count gold.mode implies (D-021): one ID on an
+        # abstain-gold row is a failure.
+        gold_mode = s.gold.get("mode") if s.gold is not None else None
+        assert results["citation_count"].passed is (gold_mode != "abstain")
         if s.gold is None:
             for name in GOLD_DEPENDENT:
                 assert results[name].passed is None
