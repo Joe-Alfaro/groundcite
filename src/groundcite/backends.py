@@ -19,7 +19,8 @@ from collections.abc import Callable, Mapping, Sequence
 from typing import Any, Protocol
 
 from groundcite.judge import CHECK_LINE_RE
-from groundcite.keys import get_key, redact
+from groundcite.keys import get_key, optional_key, redact
+from groundcite.prompts import CHAT_TEMPLATE_KWARGS
 from groundcite.spec import parse_cited_ids
 
 log = logging.getLogger(__name__)
@@ -46,8 +47,31 @@ class Backend(Protocol):
     ) -> str: ...
 
 
+# Transient failures worth retrying with backoff: rate limits, timeouts and server errors.
+RETRYABLE_STATUS = frozenset({408, 409, 429, 500, 502, 503, 504, 529})
+
+
 class BackendError(RuntimeError):
-    """A backend call failed. The message never contains a key value."""
+    """A backend call failed. The message never contains a key value.
+
+    ``status`` is the HTTP status when there was one; ``retryable`` marks transient failures
+    (rate limits, server errors, dropped connections) that a caller may retry.
+    """
+
+    def __init__(self, message: str, *, status: int | None = None, retryable: bool = False):
+        super().__init__(message)
+        self.status = status
+        self.retryable = retryable or status in RETRYABLE_STATUS
+
+
+def _is_transient(exc: Exception) -> bool:
+    """Connection and timeout errors (the SDKs raise these without an HTTP status)."""
+    name = type(exc).__name__
+    return (
+        isinstance(exc, (TimeoutError, ConnectionError))
+        or "Connection" in name
+        or ("Timeout" in name)
+    )
 
 
 # ---------------------------------------------------------------------------------------------
@@ -101,7 +125,12 @@ class _ApiBackend:
                 param = _rejected_param(exc, sent)
                 if param is None:
                     message = redact(f"{self.name} request failed: {exc}", [self._key])
-                    raise BackendError(message) from None
+                    status = getattr(exc, "status_code", None)
+                    raise BackendError(
+                        message,
+                        status=status if isinstance(status, int) else None,
+                        retryable=_is_transient(exc),
+                    ) from None
                 log.warning("%s rejected %r; retrying without it", self.name, param)
                 rejected.add(param)
                 del sent[param]
@@ -215,6 +244,8 @@ class HFBackend:
         repo = spec.split(":", 1)[1]
         self.repo, _, rev = repo.partition("@")
         self.revision = rev or None
+        # Optional: needed only for gated or private repos. Never shown in repr or errors.
+        self._token = optional_key("HF_TOKEN")
         self._model: Any = None
         self._tokenizer: Any = None
 
@@ -231,10 +262,10 @@ class HFBackend:
         else:
             device, dtype = "cpu", torch.float32
         self._tokenizer = transformers.AutoTokenizer.from_pretrained(
-            self.repo, revision=self.revision
+            self.repo, revision=self.revision, token=self._token
         )
         model = transformers.AutoModelForCausalLM.from_pretrained(
-            self.repo, revision=self.revision, dtype=dtype
+            self.repo, revision=self.revision, dtype=dtype, token=self._token
         )
         self._model = model.to(device).eval()
 
@@ -247,9 +278,9 @@ class HFBackend:
         inputs = self._tokenizer.apply_chat_template(
             chat,
             add_generation_prompt=True,
-            enable_thinking=False,
             return_tensors="pt",
             return_dict=True,
+            **CHAT_TEMPLATE_KWARGS,
         ).to(self._model.device)
         gen = {"do_sample": False, "max_new_tokens": 256, **params}
         output = self._model.generate(**inputs, **gen)
@@ -264,8 +295,12 @@ class HFBackend:
 
 
 def _prompt_ids(messages: Messages, system: str | None) -> list[str]:
-    """Bracketed IDs in the system and user text, in order of first appearance."""
-    texts = [system or ""] + [m["content"] for m in messages if m.get("role") != "assistant"]
+    """Bracketed IDs in the user turns, in order of first appearance.
+
+    The system prompt is instructions only (the spec's own ``[ID]`` placeholder included); the
+    renderer puts a scenario's snippets in its first user turn.
+    """
+    texts = [m["content"] for m in messages if m.get("role") == "user"]
     return parse_cited_ids("\n".join(texts))
 
 

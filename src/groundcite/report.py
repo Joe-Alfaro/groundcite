@@ -6,6 +6,7 @@ curve). Judge-error rows are already scored (0, 1) and count like any other row.
 
 from __future__ import annotations
 
+import hashlib
 import random
 from collections.abc import Iterable, Mapping, Sequence
 from typing import Any
@@ -121,8 +122,16 @@ def aggregate_scores(
     cells: dict[tuple[str, str], list[Mapping[str, Any]]] = {}
     for row in rows:
         cells.setdefault((row["model"], row["strategy"]), []).append(row)
-    rng = random.Random(seed)
-    return [_cell(cell_rows, rng, n_boot, confidence) for cell_rows in cells.values()]
+    return [
+        _cell(cell_rows, _cell_rng(seed, model, strategy), n_boot, confidence)
+        for (model, strategy), cell_rows in cells.items()
+    ]
+
+
+def _cell_rng(seed: int, model: str, strategy: str) -> random.Random:
+    """An RNG for one cell, independent of the other cells and of PYTHONHASHSEED (D-039)."""
+    digest = hashlib.sha256(f"{seed}\x00{model}\x00{strategy}".encode()).digest()
+    return random.Random(int.from_bytes(digest[:8], "big"))
 
 
 # ---------------------------------------------------------------------------------------------

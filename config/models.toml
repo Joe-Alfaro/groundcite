@@ -12,6 +12,11 @@ model = "anthropic:claude-opus-5-5"
 # Rescores a subset to measure judge agreement (R29).
 model = "anthropic:claude-opus-5-5"
 
+[eval]
+# The base model's second row in eval.py uses this prompt strategy (R10, GOTCHA G39). It must be
+# few_shot or structured, and it is set from the ablation result with a decision log entry.
+best_strategy = "structured"
+
 [ablation]
 models = ["anthropic:claude-opus-5-5", "openai:gpt-5.5-2026-04-23"]
 

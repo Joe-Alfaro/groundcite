@@ -18,6 +18,11 @@ echo "==> leakage"
 # deterministic, so it only changes when the data does.
 uv run python scripts/check_leakage.py --train data/scenarios/eval_own.jsonl \
     --eval data/scenarios/heldout.jsonl --report data/scenarios/leakage_report.md
+# The few-shot examples against every eval set (R3, R23): disjoint ids and final messages, and no
+# reserved family. There is no training set in this comparison, so --train is empty.
+uv run python scripts/check_leakage.py --train /dev/null \
+    --eval data/scenarios/ablation.jsonl data/scenarios/eval_own.jsonl data/scenarios/heldout.jsonl \
+    --few-shot data/few_shot/examples.jsonl
 # Every committed training set against every eval set.
 shopt -s nullglob
 for train in data/datasets/*/train.jsonl; do

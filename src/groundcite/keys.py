@@ -51,6 +51,11 @@ def get_key(name: str) -> str:
     return value
 
 
+def optional_key(name: str) -> str | None:
+    """Like ``get_key``, but None when unset (for keys such as ``HF_TOKEN`` that are optional)."""
+    return os.environ.get(name) or _from_env_file(name) or None
+
+
 def redact(text: str, secrets: Iterable[str]) -> str:
     """Replace every secret value in ``text`` with a placeholder."""
     for secret in secrets:
