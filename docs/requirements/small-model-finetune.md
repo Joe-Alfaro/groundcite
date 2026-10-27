@@ -251,7 +251,7 @@ marked **GOTCHA Gn**; `n` refers to the hunt's numbering.
   `robustness`), `reasoning`, `judge_model` and `rubric_sha256`.
 - `--model` accepts:
   - `hf:<repo>[@rev]` (a bare repo id means `hf:`);
-  - `anthropic:<model>`, `openai:<model>`, `gemini:<model>`;
+  - `anthropic:<model>`, `openai:<model>`;
   - `mock:<name>`.
 
   Repeating `--model` adds rows.
@@ -419,9 +419,9 @@ It runs in the quality gate against every committed dataset, and its report is c
 ### Gotchas (requirements not covered above; others are marked GOTCHA inline)
 
 **R28 — GOTCHA G13: reproducible numbers.**
-- Local models use greedy decoding. The judge and API generators run at provider default
-  sampling, since the pinned models reject temperature 0; the effective parameters of every run
-  are recorded in `results.json`.
+- Local HF models use greedy decoding. The pinned API models (judge and ablation subjects) reject
+  `temperature`, so they run at provider defaults. The effective decoding params of every system
+  and of the judge are recorded in `results.json`.
 - Re-running `eval.py` on the same pins reproduces Spec-adherence within ±0.03, and the observed
   rerun delta is reported. The tolerance is stated in the README.
 
@@ -483,10 +483,10 @@ doesn't wait on them.
   command.
 - **G19 — Curve checkpoints.** Each curve checkpoint goes up as its own HF revision with a recorded
   SHA, so `run_curve.py` can be re-run on a third-party set.
-- **G12 — Judge bias.** The judge shares a family with the teacher and with one ablation model.
-  - The ablation table flags the cell that shares the judge's family.
-  - If a second-family key is available, a second-family judge rescores 40 examples. Agreement
-    ≥85% is the target.
+- **G12 — Judge bias.** The judge (OpenAI) differs in family from the teacher (Anthropic). It
+  shares a family with one ablation model; it is in fact the same model as the OpenAI subject.
+  - The ablation table flags the cells that share the judge's family.
+  - A second-family judge (Anthropic) rescores 40 examples. Agreement ≥85% is the target.
 - **G31, G32 — Live demo.**
   - Ask someone outside the project for the live demo prompt at least 24 hours before recording.
   - A public notebook link (Colab or Kaggle) runs the demo, with each reply in under 2 minutes,

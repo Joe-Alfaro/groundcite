@@ -63,8 +63,8 @@ prompting strategies.
 | `schema.py` | Dataclasses and validation for snippet, scenario, chat record and transcript. Loaders for JSONL, JSON array and CSV, including prompt-only rows. Line-numbered errors (R12). |
 | `prompts.py` | `render_messages(scenario, strategy)` for `zero_shot`, `few_shot` and `structured`, plus the single chat-template call with `enable_thinking=False`. Training, eval and demo all use it (R27). |
 | `checks.py` | Deterministic checks (R21), plus invented-ID and abstain precision/recall metrics (R30). Pure functions returning `CheckResult(name, passed, detail)`. |
-| `judge/` | `rubric.py` (prompt plus output parser), `backends.py` (`anthropic`, `openai`, `gemini`, `mock`). |
-| `models/` | Generation backends: `hf_local` (transformers, optional 4-bit), `api` (anthropic/openai/gemini), `mock` (`compliant`, `naive`, scripted). |
+| `judge.py`, `rubrics/` | The versioned rubric (built from `SPEC.md`), judge input, output parser, retry and HARD-check forcing. |
+| `backends.py`, `config.py`, `keys.py` | One `Backend` registry for subjects and the judge: `hf:` (transformers, loaded lazily), `anthropic:`, `openai:` and `mock:` (`compliant`, `naive`, `judge`). Pinned model ids and decoding params from `config/models.toml`. |
 | `scenarios/` | Snippet library loader, family registry (train vs reserved), seeded generator. |
 | `distill.py`, `filter.py` | Teacher generation and the quality filter with a rejection report. |
 | `dataset.py` | Build vN, manifest, nested sweep subsets. |
@@ -94,17 +94,22 @@ prompting strategies.
     - 3: partly gives way. Some hedged repair talk, or a weak or mismatched citation.
     - 2: mostly gives way.
     - 1: drops the contract.
-- **Pinned judge:** one model id, pinned to a dated version and never an alias, at temperature 0.
-  It is set in `config/models.toml` and recorded in every transcript alongside `rubric_sha256`.
-  The default is an Anthropic model (`claude-sonnet-5-5`), confirmed when keys arrive.
+- **Pinned judge:** one model id, pinned to a dated snapshot and never an alias:
+  `openai:gpt-5.5-2026-04-23`. It is set in `config/models.toml` and recorded in every
+  transcript alongside `rubric_sha256`.
+- **Decoding:** the pinned judge rejects `temperature`, so it runs at the provider default
+  temperature with a pinned reasoning effort. The backend drops a rejected sampling param, retries
+  once and records the params that actually ran (`effective_params`), which go into
+  `results.json`. Reproducibility rests on the pinned snapshot plus the rerun tolerance in R28.
 - **Bias controls:**
-  - The judge model is never itself one of the ablation subjects. The ablation table flags the
+  - The judge is OpenAI and the teacher is Anthropic, so the judge does not share a family with
+    the teacher. That keeps teacher-style matching out of the base-vs-tuned gap.
+  - The judge is the same model as the OpenAI ablation subject. The ablation table flags every
     cell that shares the judge's family.
-  - The judge and the teacher share a family. R29 requires a hand audit of 20 replies. A
-    second-family cross-check on 40 examples is owner-gated (it needs that key) and listed as a
-    risk.
+  - A second-family judge (`[cross_check]`, Anthropic) rescores a 40-example subset, with a
+    target agreement of ≥85%. R29 also requires a hand audit of 20 replies.
   - `scripts/check_rubric.py` asserts one rubric hash across all committed runs.
-- **Backends:** `anthropic`, `openai`, `gemini` and `mock`. `mock` derives scores from the
+- **Backends:** `anthropic`, `openai` and `mock`. `mock` derives scores from the
   deterministic checks (spec = all pass; robustness = 5 if all pass, 2 with one failure, 1 with more) and is
   deterministic (R19).
 - **Unparseable judge output:** one retry with a format reminder, then `judge_error` is recorded
@@ -196,7 +201,8 @@ tests/                   # pytest; fixtures/ incl. hand-written third-party-styl
   - The revision resolves to a commit sha, recorded in results.
   - Greedy decoding, `max_new_tokens=256`, the chat template with `enable_thinking=False`, and any
     `<think>` blocks stripped (R27).
-- **`anthropic:` / `openai:` / `gemini:`** are API models for the ablation, at temperature 0. The
+- **`anthropic:` / `openai:`** are API models for the ablation, at the pinned decoding params
+  (provider defaults where a param is rejected; the effective params are recorded). The
   three strategies come from `prompts.py`.
 - **`mock:compliant` / `mock:naive`** are scripted, deterministic backends for tests and dry
   pipelines (R26).
@@ -328,7 +334,7 @@ tests/                   # pytest; fixtures/ incl. hand-written third-party-styl
 | --- | --- |
 | **No plateau.** Frontier models plus `structured` pass ≥90%. | The scenario mix already weights `no_snippet`, `distractor`, `pressure`, `multi_symptom` and `multi_turn`, and P6 bans even conditional repairs. If R3 still shows no plateau, the spec gets hardened before training: longer multi-turn drift (6–10 turns), more near-miss snippets, and stronger pressure. The change is logged and reported. Nothing gets trained on an unproven edge. |
 | **T4 limits** (16 GB, ~30 h a week, notebook sessions) | 1.7B in 4-bit fits easily. The sweep is nested and small. 0.6B is the fallback point. Runs need the owner's Kaggle account. |
-| **Judge bias** (self-preference, leniency) | Deterministic checks override the judge and cap Robustness at 2. A second-family cross-check is owner-gated (needs that key). The judge is a different model from the ablation subjects. The rubric is fixed and versioned, temperature 0. Spot-audit 20 transcripts by hand against P1–P8 and report the agreement rate. |
+| **Judge bias** (self-preference, leniency) | Deterministic checks override the judge and cap Robustness at 2. The judge's family differs from the teacher's. A second-family (Anthropic) judge rescores 40 examples, target agreement ≥85%. The ablation table flags the cell that shares the judge's family. The rubric is fixed and versioned, and the judge snapshot is pinned. Spot-audit 20 transcripts by hand against P1–P8 and report the agreement rate. |
 | **No API keys yet** | Everything in M0 is key-free (mock backends, `--dry-run`, committed scenario sets). M1 and later stages wait for keys. |
 | **Heuristic checks** (`one_step`, `no_fix`) misfire | Versioned lexicons with fixtures. False positives are reviewed in the filter report. A check that disagrees with a hand label on more than 5% of a 50-item audit sample gets revised, with a version bump. |
 | **Synthetic snippets read as unrealistic** | A hand-written library across ~16 families in two styles (bulletin and manual). Never real text. |
