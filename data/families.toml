@@ -5,11 +5,13 @@
 #
 # Each family lists snippet ids from data/snippets/:
 #   chain      snippets that each support one sensible next diagnostic step for the complaint
-#              (any order; multi-turn conversations walk through them)
+#              (multi-turn conversations walk through them in chain_order)
 #   near_miss  same family, same code or symptom, but the wrong engine, model year or condition
 #   close      snippets from other families that are topically close but do not support a step
 # Complaints must contradict the condition of every condition-type near-miss in the family.
-#   chain_before  optional [a, b] pairs: if both are used in one conversation, a comes first
+#   chain_order   the chain as ordered stages (each chain snippet exactly once, at least two
+#              stages). Steps in one stage are independent; a later-stage step only makes sense
+#              once earlier stages are done, and its reported result makes earlier steps moot.
 # Placeholders: {cyl} (1-4), {side} (left/right).
 
 # Systems that are close enough that a snippet from one could plausibly support a step for the
@@ -105,7 +107,8 @@ system = "fuel_air"
 symptom = "P0171 lean code with a rough idle, worst cold"
 chain = ["lean_idle.pcv_elbow", "lean_idle.smoke", "lean_idle.fuel_pressure", "lean_idle.maf"]
 # A clean smoke test already covers the PCV hose, so the hose inspection only comes first.
-chain_before = [["lean_idle.pcv_elbow", "lean_idle.smoke"]]
+# Fuel delivery and airflow metering come after the vacuum checks.
+chain_order = [["lean_idle.pcv_elbow"], ["lean_idle.smoke"], ["lean_idle.fuel_pressure", "lean_idle.maf"]]
 near_miss = ["lean_idle.nm_turbo", "lean_idle.nm_manifold", "lean_idle.nm_purge"]
 close = ["hard_start_hot.clear_flood", "hard_start_hot.nm_fpcm", "hard_start_hot.nm_cold"]
 suspects = ["O2 sensor", "mass airflow sensor", "fuel injector", "fuel pump"]
@@ -121,8 +124,9 @@ name = "hard_start_hot"
 system = "fuel_air"
 symptom = "Long crank on hot restarts, cold starts normal"
 chain = ["hard_start_hot.residual", "hard_start_hot.ect", "hard_start_hot.clear_flood"]
-# A normal clear-flood test makes overfueling (and so a cold-reading sensor) unlikely.
-chain_before = [["hard_start_hot.ect", "hard_start_hot.clear_flood"]]
+# Normal residual pressure and a normal clear-flood test leave little to find with the
+# sensor check, so clear-flood comes last.
+chain_order = [["hard_start_hot.residual", "hard_start_hot.ect"], ["hard_start_hot.clear_flood"]]
 near_miss = ["hard_start_hot.nm_cold", "hard_start_hot.nm_fpcm", "hard_start_hot.nm_slow_crank"]
 close = ["lean_idle.smoke", "lean_idle.maf", "lean_idle.nm_purge"]
 suspects = ["fuel pump", "fuel injector", "starter", "coolant temperature sensor"]
@@ -139,6 +143,8 @@ name = "misfire_load"
 system = "ignition"
 symptom = "Single-cylinder misfire under load, idle smooth"
 chain = ["misfire_load.spark_tester", "misfire_load.plug", "misfire_load.compression"]
+# Spark and plug before the more invasive compression test.
+chain_order = [["misfire_load.spark_tester", "misfire_load.plug"], ["misfire_load.compression"]]
 near_miss = ["misfire_load.nm_wet", "misfire_load.nm_lifter", "misfire_load.nm_lspi"]
 close = ["lean_idle.pcv_elbow", "hard_start_hot.clear_flood", "hard_start_hot.ect"]
 suspects = ["ignition coil", "spark plug", "fuel injector"]
@@ -155,6 +161,8 @@ name = "overheat_idle"
 system = "cooling"
 symptom = "Temperature climbs at idle and in traffic, normal at speed"
 chain = ["overheat_idle.fan_cmd", "overheat_idle.coolant_level", "overheat_idle.radiator_drop"]
+# Fan and coolant level before measuring the radiator itself.
+chain_order = [["overheat_idle.fan_cmd", "overheat_idle.coolant_level"], ["overheat_idle.radiator_drop"]]
 near_miss = ["overheat_idle.nm_clutch_fan", "overheat_idle.nm_highway", "overheat_idle.nm_gauge"]
 close = ["coolant_loss.nm_intake", "coolant_loss.nm_turbo", "ac_warm.pressures", "ac_warm.clutch"]
 suspects = ["thermostat", "water pump", "radiator", "head gasket"]
@@ -169,6 +177,8 @@ name = "coolant_loss"
 system = "cooling"
 symptom = "Slow coolant loss, no visible leak, no overheating"
 chain = ["coolant_loss.pressure", "coolant_loss.cap", "coolant_loss.block_test"]
+# External leaks and the cap before a combustion leak test.
+chain_order = [["coolant_loss.pressure", "coolant_loss.cap"], ["coolant_loss.block_test"]]
 near_miss = ["coolant_loss.nm_intake", "coolant_loss.nm_towing", "coolant_loss.nm_turbo"]
 close = ["overheat_idle.fan_cmd", "overheat_idle.radiator_drop", "overheat_idle.nm_clutch_fan"]
 suspects = ["head gasket", "water pump", "radiator"]
@@ -183,8 +193,9 @@ name = "heater_cold"
 system = "cooling"
 symptom = "Weak cabin heat from every vent, engine temperature normal"
 chain = ["heater_cold.thermostat", "heater_cold.hose_temps", "heater_cold.blend_door", "heater_cold.coolant_level"]
-# Two hot heater hoses already show coolant flow is fine, so level and thermostat come first.
-chain_before = [["heater_cold.coolant_level", "heater_cold.hose_temps"], ["heater_cold.thermostat", "heater_cold.hose_temps"]]
+# Two hot heater hoses already show coolant flow is fine, so level and thermostat come
+# first, and the air-side blend door only once the coolant side is cleared.
+chain_order = [["heater_cold.coolant_level", "heater_cold.thermostat"], ["heater_cold.hose_temps"], ["heater_cold.blend_door"]]
 near_miss = ["heater_cold.nm_rear", "heater_cold.nm_aux_pump", "heater_cold.nm_one_side"]
 close = []
 suspects = ["heater core", "thermostat", "water pump", "blend door actuator"]
@@ -201,6 +212,8 @@ name = "battery_drain"
 system = "charging_starting"
 symptom = "Battery dead after sitting a few days, mild weather"
 chain = ["battery_drain.parasitic", "battery_drain.load_test", "battery_drain.recharge"]
+# Battery health and charging before hunting a parasitic draw.
+chain_order = [["battery_drain.load_test", "battery_drain.recharge"], ["battery_drain.parasitic"]]
 near_miss = ["battery_drain.radio_module", "battery_drain.nm_telematics", "battery_drain.nm_cold", "battery_drain.nm_start_stop"]
 close = ["dim_lights.nm_led", "dim_lights.nm_cold", "dim_lights.nm_start_stop"]
 suspects = ["battery", "alternator", "starter"]
@@ -215,6 +228,8 @@ name = "dim_lights"
 system = "charging_starting"
 symptom = "Battery light flickers and headlights dim at idle"
 chain = ["dim_lights.charge_voltage", "dim_lights.belt", "dim_lights.ripple", "dim_lights.voltage_drop"]
+# Belt and basic charging output before ripple and cable voltage drop.
+chain_order = [["dim_lights.belt", "dim_lights.charge_voltage"], ["dim_lights.ripple", "dim_lights.voltage_drop"]]
 near_miss = ["dim_lights.nm_led", "dim_lights.nm_start_stop", "dim_lights.nm_cold"]
 close = ["battery_drain.parasitic", "battery_drain.nm_telematics", "battery_drain.nm_cold"]
 suspects = ["alternator", "battery", "voltage regulator"]
@@ -229,6 +244,8 @@ name = "no_crank_click"
 system = "charging_starting"
 symptom = "Single click, engine does not turn over"
 chain = ["no_crank_click.cable_drop", "no_crank_click.battery_crank", "no_crank_click.s_terminal"]
+# Battery voltage under crank before the starter control and feed circuits.
+chain_order = [["no_crank_click.battery_crank"], ["no_crank_click.cable_drop", "no_crank_click.s_terminal"]]
 near_miss = ["no_crank_click.nm_fob", "no_crank_click.nm_slow", "no_crank_click.nm_clutch_switch", "no_crank_click.nm_v8"]
 close = []
 suspects = ["starter", "battery", "starter relay", "ignition switch"]
@@ -245,6 +262,8 @@ name = "brake_pulsation"
 system = "brakes"
 symptom = "Pedal pulsation and wheel shake when braking from highway speed"
 chain = ["brake_pulsation.runout", "brake_pulsation.thickness", "brake_pulsation.surface"]
+# A visual check of the rotor faces before measuring runout and thickness.
+chain_order = [["brake_pulsation.surface"], ["brake_pulsation.runout", "brake_pulsation.thickness"]]
 near_miss = ["brake_pulsation.nm_drum", "brake_pulsation.nm_abs", "brake_pulsation.nm_tow"]
 close = ["front_clunk.links", "front_clunk.nm_year", "front_clunk.nm_cv"]
 suspects = ["front rotor", "brake caliper", "pad set"]
@@ -259,6 +278,9 @@ name = "brake_pull"
 system = "brakes"
 symptom = "Pulls to one side only when braking"
 chain = ["brake_pull.slide_pins", "brake_pull.hose_drag", "brake_pull.rotor_temp", "brake_pull.tire_check"]
+# Tires before the calipers; even rotor temperatures already argue against a dragging
+# hose or a sticking caliper, so the temperature comparison comes last.
+chain_order = [["brake_pull.tire_check"], ["brake_pull.slide_pins", "brake_pull.hose_drag"], ["brake_pull.rotor_temp"]]
 near_miss = ["brake_pull.nm_drift", "brake_pull.nm_torque_steer", "brake_pull.nm_bracket"]
 close = ["soft_pedal.moisture", "soft_pedal.mc_bypass", "soft_pedal.nm_booster"]
 suspects = ["brake caliper", "pad set", "brake hose"]
@@ -273,6 +295,8 @@ name = "soft_pedal"
 system = "brakes"
 symptom = "Soft, spongy brake pedal on every stop"
 chain = ["soft_pedal.fluid_leak", "soft_pedal.mc_bypass", "soft_pedal.moisture"]
+# Leaks first, then the fluid itself and the master cylinder.
+chain_order = [["soft_pedal.fluid_leak"], ["soft_pedal.moisture", "soft_pedal.mc_bypass"]]
 near_miss = ["soft_pedal.nm_booster", "soft_pedal.nm_abs_bleed", "soft_pedal.nm_fade"]
 close = ["brake_pull.rotor_temp", "brake_pull.tire_check", "brake_pull.nm_drift"]
 suspects = ["master cylinder", "brake booster", "brake line"]
@@ -289,6 +313,8 @@ name = "front_clunk"
 system = "steering_suspension"
 symptom = "Front clunk over bumps at low speed, driving straight"
 chain = ["front_clunk.links", "front_clunk.strut_mount", "front_clunk.ball_joint"]
+# Stabilizer links are the quickest check, then the mounts and ball joints.
+chain_order = [["front_clunk.links"], ["front_clunk.strut_mount", "front_clunk.ball_joint"]]
 near_miss = ["front_clunk.nm_leaf", "front_clunk.nm_cv", "front_clunk.nm_year"]
 close = ["brake_pulsation.runout", "brake_pulsation.thickness", "brake_pulsation.nm_abs"]
 suspects = ["sway bar link", "strut", "ball joint", "control arm"]
@@ -303,6 +329,8 @@ name = "highway_shake"
 system = "steering_suspension"
 symptom = "Steering wheel shake at 60-70 mph, not affected by braking"
 chain = ["highway_shake.balance", "highway_shake.radial_runout", "highway_shake.tread"]
+# A low road-force reading already covers radial runout, so the shop balance comes last.
+chain_order = [["highway_shake.tread", "highway_shake.radial_runout"], ["highway_shake.balance"]]
 near_miss = ["highway_shake.nm_brake", "highway_shake.nm_driveshaft", "highway_shake.nm_mount"]
 close = ["brake_pull.nm_drift", "brake_pull.nm_torque_steer"]
 suspects = ["tie rod end", "wheel bearing", "front tire"]
@@ -319,6 +347,9 @@ name = "ac_warm"
 system = "hvac"
 symptom = "AC blows warm from every vent, blower works"
 chain = ["ac_warm.clutch", "ac_warm.pressures", "ac_warm.condenser_fan"]
+# Normal operating pressures show the compressor is pumping and the condenser is shedding
+# heat, so the clutch and condenser fan checks come before the gauges.
+chain_order = [["ac_warm.clutch", "ac_warm.condenser_fan"], ["ac_warm.pressures"]]
 near_miss = ["ac_warm.nm_rear", "ac_warm.nm_one_side", "ac_warm.nm_electric"]
 close = ["overheat_idle.coolant_level", "overheat_idle.nm_highway", "overheat_idle.nm_gauge"]
 suspects = ["AC compressor", "expansion valve", "AC clutch"]
@@ -335,7 +366,9 @@ name = "harsh_shift"
 system = "transmission"
 symptom = "Harsh, delayed upshifts once warm"
 chain = ["harsh_shift.fluid", "harsh_shift.line_pressure", "harsh_shift.mounts"]
-near_miss = ["harsh_shift.nm_cvt", "harsh_shift.nm_cold", "harsh_shift.nm_ten_speed"]
+# Fluid and mounts before connecting a line pressure gauge.
+chain_order = [["harsh_shift.fluid", "harsh_shift.mounts"], ["harsh_shift.line_pressure"]]
+near_miss = ["harsh_shift.nm_cvt", "harsh_shift.nm_cold", "harsh_shift.nm_relearn"]
 close = []
 suspects = ["shift solenoid", "torque converter", "valve body", "transmission control module"]
 complaints = [

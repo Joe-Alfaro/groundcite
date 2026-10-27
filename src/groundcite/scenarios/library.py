@@ -111,19 +111,17 @@ class Family:
     close: tuple[str, ...]
     suspects: tuple[str, ...]
     complaints: tuple[str, ...]
-    # (a, b) pairs: when both are used in one conversation, a's check comes before b's.
-    chain_before: tuple[tuple[str, str], ...] = ()
+    # Ordered stages of chain snippet ids. Steps in one stage are independent; a later-stage
+    # step only makes sense once earlier stages are done, and its reported result makes every
+    # earlier-stage step moot.
+    chain_order: tuple[tuple[str, ...], ...] = ()
+
+    def stage(self, snippet_id: str) -> int:
+        return next(i for i, stage in enumerate(self.chain_order) if snippet_id in stage)
 
     def order_chain(self, picked: list[str]) -> list[str]:
-        """``picked`` reordered (by swapping) so every ``chain_before`` pair holds."""
-        ordered = list(picked)
-        for _ in range(len(self.chain_before) + 1):  # swaps can undo an earlier pair; repeat
-            for first, then in self.chain_before:
-                if first in ordered and then in ordered:
-                    i, j = ordered.index(first), ordered.index(then)
-                    if i > j:
-                        ordered[i], ordered[j] = ordered[j], ordered[i]
-        return ordered
+        """``picked`` sorted by ``chain_order`` stage; ties keep their picked order."""
+        return sorted(picked, key=self.stage)
 
 
 @dataclass(frozen=True)
@@ -261,9 +259,11 @@ def _validate_family(lib: Library, family: Family) -> list[str]:
         elif (snippet.family in lib.reserved) != reserved:
             # Held-out scenarios must not share snippet text with training-family scenarios.
             problems.append(f"{name}: close snippet {snippet_id} crosses the reserved split")
-    for first, then in family.chain_before:
-        if first not in family.chain or then not in family.chain:
-            problems.append(f"{name}: chain_before pair ({first}, {then}) not both in chain")
+    flat = [snippet_id for stage in family.chain_order for snippet_id in stage]
+    if len(family.chain_order) < 2 or not all(family.chain_order):
+        problems.append(f"{name}: chain_order needs at least 2 non-empty stages")
+    if len(flat) != len(set(flat)) or set(flat) != set(family.chain):
+        problems.append(f"{name}: chain_order must list every chain snippet exactly once")
     for complaint in family.complaints:
         extra = set(PLACEHOLDER.findall(complaint)) - COMPLAINT_PLACEHOLDERS
         if extra:
@@ -335,5 +335,5 @@ def _family(raw: dict[str, Any]) -> Family:
         close=tuple(raw["close"]),
         suspects=tuple(raw["suspects"]),
         complaints=tuple(raw["complaints"]),
-        chain_before=tuple((str(a), str(b)) for a, b in raw.get("chain_before", ())),
+        chain_order=tuple(tuple(str(i) for i in stage) for stage in raw.get("chain_order", ())),
     )
