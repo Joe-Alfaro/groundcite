@@ -24,6 +24,9 @@ NGRAM_JACCARD = "ngram_jaccard"
 HELDOUT_SNIPPET_HASH = "heldout_snippet_hash"
 RESERVED_FAMILY = "reserved_family"
 FEWSHOT_IN_EVAL = "fewshot_in_eval"
+# reserved_family can only fire on a row that names a family, so a training or few-shot row
+# without one is itself a finding. Eval rows (third-party sets) need no family.
+MISSING_FAMILY = "missing_family"
 RULES = (
     SHARED_ID,
     SAME_FINAL_MESSAGE,
@@ -31,6 +34,7 @@ RULES = (
     HELDOUT_SNIPPET_HASH,
     RESERVED_FAMILY,
     FEWSHOT_IN_EVAL,
+    MISSING_FAMILY,
 )
 
 NGRAM_N = 5
@@ -203,7 +207,11 @@ def find_leaks(
                     f"{row.where} ({row.id}) ~ {other.where} ({other.id}), jaccard {score:.2f}",
                 )
             )
-        if row.family in reserved:
+        if not row.family:
+            findings.append(
+                Finding(MISSING_FAMILY, f"training {row.where} ({row.id}) has no family")
+            )
+        elif row.family in reserved:
             findings.append(
                 Finding(RESERVED_FAMILY, f"training {row.where} ({row.id}) uses {row.family}")
             )
@@ -211,7 +219,11 @@ def find_leaks(
     findings.extend(_heldout_snippet_leaks(train, [r for r in evals if is_heldout(r, reserved)]))
 
     for row in few_shot:
-        if row.family in reserved:
+        if not row.family:
+            findings.append(
+                Finding(MISSING_FAMILY, f"few-shot {row.where} ({row.id}) has no family")
+            )
+        elif row.family in reserved:
             findings.append(
                 Finding(RESERVED_FAMILY, f"few-shot {row.where} ({row.id}) uses {row.family}")
             )

@@ -26,6 +26,8 @@ for train in data/datasets/*/train.jsonl; do
         --report "$(dirname "$train")/leakage_report.md"
 done
 shopt -u nullglob
+echo "==> secret_scan"
+uv run python scripts/secret_scan.py --repo .
 echo "==> scrub_check"
 uv run python scripts/scrub_check.py --repo .
 
