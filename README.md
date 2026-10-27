@@ -21,6 +21,28 @@ transformers and peft included) on first run, and the model is downloaded from t
   sampling is not fully deterministic. The rerun tolerance is ±0.03 Spec-adherence on the same
   pins (eval code, model revision, judge, rubric and eval set, all stamped in `results.json`).
 
+## Reproduce
+
+One-command eval on the own eval set:
+
+```sh
+uv run eval.py --model <hf-repo-id> --eval-set data/scenarios/eval_own.jsonl
+```
+
+One prompt-ceiling ablation cell (one model, one strategy, the first 30 ablation scenarios):
+
+```sh
+uv run scripts/run_ablation.py --model <m> --strategy few_shot --limit 30
+```
+
+Where results land:
+
+- `eval.py` writes `results/<run_id>/results.md`, `results.json` and `transcripts.jsonl`.
+- `scripts/run_ablation.py` writes the same three files under `results/ablation/<run_id>/`.
+
+Add `--dry-run` to either command to print the planned calls without making any. What exists
+and what is still planned is tracked in [`docs/checklist.md`](docs/checklist.md).
+
 ## Quality gate
 
 Run every check before committing:
