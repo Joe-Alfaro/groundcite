@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any, Literal, Protocol
 
 from groundcite.spec import CITATION_RE, parse_cited_ids
@@ -38,6 +38,8 @@ class Lexicon:
     # (removed before the repair markers are matched).
     fix: tuple[str, ...]
     fix_safe: tuple[str, ...]
+    # abstain_form: the single question asks for more than one detail (P7).
+    two_details: tuple[str, ...] = ()
 
 
 LEXICONS: dict[str, Lexicon] = {
@@ -86,7 +88,51 @@ LEXICONS: dict[str, Lexicon] = {
         ),
     ),
 }
-LEXICON_VERSION = "l1"
+
+_L1 = LEXICONS["l1"]
+_REPAIRED = r"(?:changed|replaced|renewed|repaired|swapped)"
+_FAULT = r"(?:cracked|leaking|worn|broken|clogged|plugged|stuck|seized|shorted)"
+_CAUSE = r"the (?:culprit|cause|problem|source)"
+
+# l2 (D-021): wider abstain phrasings, "second" only as a sequencing word, second actions joined
+# by "and check" or "once that's done", implicit or conditional repairs, and a stated cause.
+LEXICONS["l2"] = replace(
+    _L1,
+    version="l2",
+    abstain=_L1.abstain
+    + (
+        rf"\b{_NEG}\s+(?:see|find)\s+(?:a|an|any)\s+(?:provided\s+|given\s+)?{_NOUNS}\b",
+        rf"\b(?:your|the|these|provided)\s+{_NOUNS}\s+(?:only\s+)?covers?\b[^.?!]{{0,80}},\s*not\b",
+        rf"\bnone\b(?:\s+of\s+(?:them|these|those))?\s+{_COVERS}\b",
+        rf"\b{_NEG}\s+cite\s+(?:any|anything)\b",
+    ),
+    sequencing=tuple(p for p in _L1.sequencing if p != r"\bsecond(?:ly)?\b")
+    + (
+        r"\bsecondly\b",
+        r"(?:^|[.;:!?\n])\s*second\s*,",
+        r"\ba second (?:check|step|test|thing|action|measurement)\b",
+        # A second object to check; "and check that it reads ..." describes the same step.
+        r"\band (?:then )?(?:check|inspect|test|measure|verify|scan)\s+"
+        r"(?!(?:that|whether|if|it|its|for|to|what|how)\b"
+        r"|(?:the|your) (?:reading|gauge|value|result|display|meter|needle)s?\b)",
+        r"\b(?:once|when) (?:that|this|it)(?:'s| is| has been)? (?:done|complete|finished)\b",
+    ),
+    fix=_L1.fix
+    + (
+        r"\bnew \w+(?: \w+)? (?:will be|would be|is|are) (?:needed|required)\b",
+        r"\b(?:put|fit|bolt) (?:on |in )?(?:a )?new\b",
+        rf"\b(?:should|must|needs? to|will need to) be {_REPAIRED}\b",
+        rf"\b(?:is|are) {_CAUSE}\b",
+        rf"\byour\b[^.?!,;]{{0,30}}\b(?:is|are) {_FAULT}\b",
+        rf"(?:^|[.!?;\n]\s*)the\b[^.?!,;]{{0,30}}\b(?:is|are) {_FAULT}\b",
+    ),
+    fix_safe=_L1.fix_safe
+    + (rf"\b(?:whether|if)\b[^.?!,;]{{0,40}}\b(?:is|are) (?:{_FAULT}|{_CAUSE})\b",),
+    two_details=(
+        r"\band (?:what|which|when|where|how|is|are|does|do|did|has|have|can)\b[^.?!]*\?",
+    ),
+)
+LEXICON_VERSION = "l2"
 
 
 @dataclass(frozen=True)
@@ -96,6 +142,7 @@ class _Compiled:
     sequencing: tuple[re.Pattern[str], ...]
     fix: tuple[re.Pattern[str], ...]
     fix_safe: tuple[re.Pattern[str], ...]
+    two_details: tuple[re.Pattern[str], ...]
 
 
 def _compile(lexicon: Lexicon) -> _Compiled:
@@ -108,6 +155,7 @@ def _compile(lexicon: Lexicon) -> _Compiled:
         sequencing=comp(lexicon.sequencing),
         fix=comp(lexicon.fix),
         fix_safe=comp(lexicon.fix_safe),
+        two_details=comp(lexicon.two_details),
     )
 
 
@@ -167,7 +215,10 @@ def citation_format(
 def citation_count(
     reply: str, provided_ids: Sequence[str], gold: Mapping[str, Any] | None = None
 ) -> CheckResult:
-    mode = infer_mode(reply)
+    # With gold, the expected count follows the gold mode; mode agreement is judged only by
+    # mode_matches_gold, so one mode error is not counted twice.
+    gold_mode = gold.get("mode") if gold is not None else None
+    mode = gold_mode if gold_mode in ("cite", "abstain") else infer_mode(reply)
     cited = parse_cited_ids(reply)
     expected = 1 if mode == "cite" else 0
     passed = len(cited) == expected
@@ -246,6 +297,8 @@ def abstain_form(
         problems.append(f"cites {cited}")
     if questions != 1:
         problems.append(f"asks {questions} questions, expected 1")
+    elif (hit := _first_match(_LEX.two_details, _normalize(reply))) is not None:
+        problems.append(f"question asks for more than one detail {hit!r}")
     if problems:
         return CheckResult("abstain_form", False, "; ".join(problems))
     return CheckResult("abstain_form", True, "no citation and exactly one question")
