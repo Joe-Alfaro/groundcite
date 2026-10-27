@@ -23,11 +23,13 @@ from groundcite.report import aggregate_scores
 from groundcite.runner import (
     BOOTSTRAP_SEED,
     DEFAULT_CONCURRENCY,
+    MANIFEST,
     Retrying,
     System,
     UsageError,
     build_backend,
     category_table,
+    discard_if_empty,
     new_run_id,
     normalize_spec,
     pins,
@@ -35,7 +37,9 @@ from groundcite.runner import (
     print_plan,
     results_table,
     run_grid,
+    run_manifest,
     split_hf,
+    stop_message,
     write_json,
 )
 
@@ -188,17 +192,22 @@ def run(args: argparse.Namespace) -> int:
     run_id = new_run_id()
     run_dir = args.out / run_id
     run_dir.mkdir(parents=True)
+    write_json(run_dir / MANIFEST, run_manifest(args.eval_set, scenarios, judge.name))
     transcripts = run_dir / "transcripts.jsonl"
-    rows = run_grid(
-        run_id=run_id,
-        systems=systems,
-        scenarios=scenarios,
-        backends=backends,
-        revisions=revisions,
-        judge=judge,
-        transcripts=transcripts,
-        concurrency=args.concurrency,
-    )
+    try:
+        rows = run_grid(
+            run_id=run_id,
+            systems=systems,
+            scenarios=scenarios,
+            backends=backends,
+            revisions=revisions,
+            judge=judge,
+            transcripts=transcripts,
+            concurrency=args.concurrency,
+        )
+    except BaseException:
+        discard_if_empty(run_dir)
+        raise
     cells = aggregate_scores(rows, seed=BOOTSTRAP_SEED)
     p = pins(
         eval_set=args.eval_set,
@@ -227,6 +236,12 @@ def main(argv: list[str] | None = None) -> int:
     except (UsageError, MissingKeyError, ValueError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
-    except (BackendError, HubError) as exc:
+    except BackendError as exc:
+        if exc.stops_run:
+            print(stop_message(exc), file=sys.stderr)
+            return 2
+        print(f"error: run stopped: {exc}", file=sys.stderr)
+        return 1
+    except HubError as exc:
         print(f"error: run stopped: {exc}", file=sys.stderr)
         return 1

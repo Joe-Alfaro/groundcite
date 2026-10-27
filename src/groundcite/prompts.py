@@ -12,6 +12,7 @@ part of the graded conversation.
 
 from __future__ import annotations
 
+import hashlib
 import json
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
@@ -165,6 +166,14 @@ def _system_prompt(strategy: str) -> str:
     return "\n\n".join(parts)
 
 
+def prompt_sha256(strategy: str) -> str:
+    """The hash of ``strategy``'s system prompt (role, SPEC.md, examples or rules). Transcript
+    rows record it, and a resume refuses rows rendered under another prompt (R13, D-043)."""
+    if strategy not in STRATEGIES:
+        raise ValueError(f"unknown strategy {strategy!r}; known: {', '.join(STRATEGIES)}")
+    return hashlib.sha256(_system_prompt(strategy).encode("utf-8")).hexdigest()
+
+
 def render_messages(scenario: Scenario, strategy: str) -> tuple[str, list[dict[str, str]]]:
     """``(system, messages)`` for ``scenario`` under ``strategy``.
 
@@ -180,14 +189,16 @@ def render_messages(scenario: Scenario, strategy: str) -> tuple[str, list[dict[s
 
 def render_chat_text(
     tokenizer: ChatTokenizer,
-    system: str,
+    system: str | None,
     messages: Sequence[Mapping[str, str]],
     *,
     reply: str | None = None,
 ) -> str:
     """The chat-template string for eval (``reply=None``, ends in the generation prompt) or for
-    training (the reply appended as the assistant turn). Thinking is always disabled (R27)."""
-    chat = [{"role": "system", "content": system}, *[dict(m) for m in messages]]
+    training (the reply appended as the assistant turn). Thinking is always disabled (R27).
+    ``system=None`` renders no system turn."""
+    chat = [] if system is None else [{"role": "system", "content": system}]
+    chat += [dict(m) for m in messages]
     if reply is not None:
         chat.append({"role": "assistant", "content": reply})
     text = tokenizer.apply_chat_template(

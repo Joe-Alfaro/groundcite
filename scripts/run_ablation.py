@@ -6,8 +6,9 @@
 
 Defaults: the config [ablation] models, all three strategies, data/scenarios/ablation.jsonl and
 the pinned judge. Rows are appended to transcripts.jsonl as they finish, so --resume re-pays
-nothing. Transient API errors are retried with backoff; subject errors that survive the retries
-are scored as failures.
+nothing, and refuses to continue a run whose eval set, scenarios, prompts, judge or rubric changed.
+Transient API errors are retried with backoff; refusals, empty replies and transient errors that
+survive the retries are scored as failures. A non-retryable 4xx (bad key) stops the run (exit 2).
 """
 
 from __future__ import annotations
@@ -27,27 +28,30 @@ from groundcite.ablation import (
 from groundcite.backends import BackendError
 from groundcite.cli import check_clean_tree, load_scenarios
 from groundcite.config import load_models_config
-from groundcite.judge import rubric_sha256
 from groundcite.keys import MissingKeyError
 from groundcite.prompts import STRATEGIES
 from groundcite.report import aggregate_scores
 from groundcite.runner import (
     BOOTSTRAP_SEED,
     DEFAULT_CONCURRENCY,
+    MANIFEST,
     System,
     UsageError,
     build_backend,
     category_table,
+    check_resumable,
+    discard_if_empty,
     fmt,
     new_run_id,
     normalize_spec,
     pins,
     pins_section,
     print_plan,
-    read_transcripts,
     results_table,
     run_grid,
+    run_manifest,
     split_hf,
+    stop_message,
     write_json,
 )
 
@@ -83,17 +87,6 @@ def build_parser() -> argparse.ArgumentParser:
 def _revision(model: str) -> str | None:
     """API models are pinned by their dated id; an hf: model records its requested revision."""
     return split_hf(model)[1] if model.startswith("hf:") else None
-
-
-def _check_resumable(run_dir: Path, judge: str) -> None:
-    """Rows from an earlier attempt must come from the same judge and rubric."""
-    rubric = rubric_sha256()
-    for row in read_transcripts(run_dir / "transcripts.jsonl"):
-        if row.get("judge_model") != judge or row.get("rubric_sha256") != rubric:
-            raise UsageError(
-                f"{run_dir} was scored by {row.get('judge_model')} with rubric "
-                f"{row.get('rubric_sha256')}; this run uses {judge} with {rubric}"
-            )
 
 
 def _results_md(results: dict[str, Any]) -> str:
@@ -169,20 +162,29 @@ def run(args: argparse.Namespace) -> int:
     revisions = {m: _revision(m) for m in model_ids}
     backends = {m: build_backend(m) for m in model_ids}
     judge = build_backend(judge_spec)
-    if run_dir.exists():
-        _check_resumable(run_dir, judge.name)
-
-    run_dir.mkdir(parents=True, exist_ok=True)
-    rows = run_grid(
-        run_id=run_id,
-        systems=systems,
-        scenarios=scenarios,
-        backends=backends,
-        revisions=revisions,
-        judge=judge,
-        transcripts=run_dir / "transcripts.jsonl",
-        concurrency=args.concurrency,
-    )
+    manifest = run_manifest(args.eval_set, scenarios, judge.name)
+    resuming = run_dir.exists()
+    if resuming:
+        # Same eval set, scenario IDs, prompts, judge and rubric, or no resume (R11, D-043).
+        check_resumable(run_dir, manifest)
+    else:
+        run_dir.mkdir(parents=True)
+        write_json(run_dir / MANIFEST, manifest)
+    try:
+        rows = run_grid(
+            run_id=run_id,
+            systems=systems,
+            scenarios=scenarios,
+            backends=backends,
+            revisions=revisions,
+            judge=judge,
+            transcripts=run_dir / "transcripts.jsonl",
+            concurrency=args.concurrency,
+        )
+    except BaseException:
+        if not resuming:
+            discard_if_empty(run_dir)
+        raise
     cells = aggregate_scores(rows, seed=BOOTSTRAP_SEED)
     judge_family = model_family(judge.name)
     for cell in cells:
@@ -216,6 +218,9 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: {exc}", file=sys.stderr)
         return 2
     except BackendError as exc:
+        if exc.stops_run:
+            print(stop_message(exc), file=sys.stderr)
+            return 2
         print(
             f"error: run stopped: {exc}; finished rows are saved, rerun with --resume",
             file=sys.stderr,

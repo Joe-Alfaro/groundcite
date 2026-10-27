@@ -156,7 +156,7 @@ It sits next to a `manifest.json` (counts, hashes, versions) and `rejections.jso
 **Judge transcript** (`results/<run_id>/transcripts.jsonl`, one line per model × scenario):
 ```json
 {"run_id": "...", "scenario_id": "eo-0042", "model": "hf:org/repo@<sha>", "strategy": "zero_shot",
- "reply": "...", "had_think": false, "checks": {"one_step": true, "no_fix": false, ...},
+ "prompt_sha256": "...", "reply": "...", "had_think": false, "checks": {"one_step": true, "no_fix": false, ...},
  "score": {"spec_adherence": 0, "robustness": 2}, "reasoning": "...",
  "judge": {"model": "...", "rubric_version": "r1", "raw": "...", "forced_by_checks": true}}
 ```
@@ -195,9 +195,11 @@ tests/                   # pytest; fixtures/ incl. hand-written third-party-styl
 - **`hf:<repo>[@rev]`** loads through transformers locally. It defaults to the pinned revision.
   For an adapter repo, the base comes from `adapter_config.json`, and eval.py adds base rows
   automatically: base with `zero_shot`, base with the best ablation strategy, and tuned with
-  `zero_shot` (R10). On CUDA it uses 4-bit; on Apple
-  Silicon it uses MPS in fp16; otherwise CPU.
-  - LoRA adapters are detected and loaded on top of the base model.
+  `zero_shot` (R10). It runs on MPS (Apple silicon) or CUDA in bf16, otherwise on CPU in fp32.
+  torch, transformers and peft are core dependencies, so `uv run eval.py` needs no extra.
+  - LoRA adapters are detected (`adapter_config.json`) and loaded on top of the base model
+    through peft.
+  - The prompt is rendered by `render_chat_text` and that string is tokenized (R27).
   - The revision resolves to a commit sha, recorded in results.
   - Greedy decoding, `max_new_tokens=256`, the chat template with `enable_thinking=False`, and any
     `<think>` blocks stripped (R27).
@@ -221,7 +223,10 @@ tests/                   # pytest; fixtures/ incl. hand-written third-party-styl
     instruction to output only the final reply.
 - `--dry-run` prints the grid and the call counts. `--limit k` runs one point for reproduction
   (R14). Responses are cached on disk by (model, strategy, scenario, prompt hash), so a crash can
-  resume without re-paying.
+  resume without re-paying. The run directory's `run.json` records the eval-set sha256, the
+  scenario IDs, the per-strategy prompt hashes, the judge and the rubric; `--resume` refuses any
+  mismatch. A non-retryable 4xx (bad key, no access) stops the run with exit 2 instead of scoring
+  failures.
 - Output:
   - `results/ablation/<run_id>/`: the table, transcripts and per-category breakdown.
   - The plateau check (R3), computed and printed.

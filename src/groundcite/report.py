@@ -1,7 +1,8 @@
 """Score aggregation and the transcript row schema (Robustness definition, R3, R10, R11, R30).
 
 ``aggregate_scores`` is the single aggregation every runner imports (ablation, base vs tuned,
-curve). Judge-error rows are already scored (0, 1) and count like any other row.
+curve). Judge-error rows are already scored (0, 1) and count like any other row; generation-error
+rows count as Spec failures but are left out of the abstain precision/recall predictions.
 """
 
 from __future__ import annotations
@@ -83,7 +84,9 @@ def _cell(
     tp = fp = fn = 0
     for r in rows:
         gold_mode = (r.get("gold") or {}).get("mode")
-        if gold_mode is None:
+        # A reply that never arrived is empty, which would read as an abstain; it is a Spec
+        # failure but no prediction (R30, D-043).
+        if gold_mode is None or r.get("generation_error"):
             continue
         predicted = infer_mode(r["reply"]) == "abstain"
         actual = gold_mode == "abstain"

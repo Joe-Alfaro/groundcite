@@ -18,9 +18,10 @@ import re
 from collections.abc import Callable, Mapping, Sequence
 from typing import Any, Protocol
 
+from groundcite import hub
 from groundcite.judge import CHECK_LINE_RE
 from groundcite.keys import get_key, optional_key, redact
-from groundcite.prompts import CHAT_TEMPLATE_KWARGS
+from groundcite.prompts import render_chat_text
 from groundcite.spec import parse_cited_ids
 
 log = logging.getLogger(__name__)
@@ -62,6 +63,12 @@ class BackendError(RuntimeError):
         super().__init__(message)
         self.status = status
         self.retryable = retryable or status in RETRYABLE_STATUS
+
+    @property
+    def stops_run(self) -> bool:
+        """A non-retryable 4xx (bad key, no access, malformed request): every later request would
+        fail the same way, so the run stops instead of scoring failures (D-043)."""
+        return self.status is not None and 400 <= self.status < 500 and not self.retryable
 
 
 def _is_transient(exc: Exception) -> bool:
@@ -136,6 +143,14 @@ class _ApiBackend:
                 del sent[param]
         self.effective_params = dict(sent)
         return self._text(response)
+
+    def restore_effective_params(
+        self, requested: Mapping[str, Any], recorded: Mapping[str, Any]
+    ) -> None:
+        """Adopt params an earlier process recorded: what it dropped counts as rejected."""
+        dropped = {k for k in requested if k not in recorded and k in DROPPABLE_PARAMS}
+        _REJECTED.setdefault(self.model, set()).update(dropped)
+        self.effective_params = dict(recorded)
 
     def _post(self, body: dict[str, Any]) -> Mapping[str, Any]:
         if self._transport is not None:
@@ -234,9 +249,13 @@ _THINK_BLOCK_RE = re.compile(r"<think>.*?</think>\s*", re.DOTALL)
 
 
 class HFBackend:
-    """``hf:<repo>[@rev]`` through transformers: greedy, chat template, thinking off (R27).
+    """``hf:<repo>[@rev]`` through transformers: greedy, thinking off, one renderer (R10, R27).
 
-    Nothing is imported or downloaded until the first ``generate`` call.
+    A repo with an ``adapter_config.json`` is a LoRA adapter: its base model is loaded and the
+    adapter goes on top through peft. Otherwise the repo is a full (or merged) model. The prompt
+    is rendered by ``render_chat_text`` and that exact string is tokenized. Runs on MPS when
+    available, else CUDA, else CPU. Nothing is imported or downloaded until the first
+    ``generate`` call.
     """
 
     def __init__(self, spec: str, transport: Transport | None = None) -> None:
@@ -248,45 +267,62 @@ class HFBackend:
         self._token = optional_key("HF_TOKEN")
         self._model: Any = None
         self._tokenizer: Any = None
+        # The generate() arguments the last call ran with (R13).
+        self.effective_params: dict[str, Any] | None = None
 
     def __repr__(self) -> str:
         return f"HFBackend(name={self.name!r})"
 
+    def restore_effective_params(
+        self, requested: Mapping[str, Any], recorded: Mapping[str, Any]
+    ) -> None:
+        self.effective_params = dict(recorded)
+
     def _load(self) -> None:
         torch = importlib.import_module("torch")
         transformers = importlib.import_module("transformers")
-        if torch.cuda.is_available():
+        if torch.backends.mps.is_available():
+            device, dtype = "mps", torch.bfloat16
+        elif torch.cuda.is_available():
             device, dtype = "cuda", torch.bfloat16
-        elif torch.backends.mps.is_available():
-            device, dtype = "mps", torch.float16
         else:
             device, dtype = "cpu", torch.float32
+        adapter = hub.fetch_adapter_config(self.repo, self.revision)
+        source: str = self.repo
+        source_rev: str | None = self.revision
+        if adapter is not None:
+            base = adapter.get("base_model_name_or_path")
+            if not isinstance(base, str) or not base:
+                raise BackendError(f"{self.name}: adapter_config.json names no base model")
+            # The adapter's own pin of its base, when it recorded one.
+            source, source_rev = base, adapter.get("revision") or None
         self._tokenizer = transformers.AutoTokenizer.from_pretrained(
-            self.repo, revision=self.revision, token=self._token
+            source, revision=source_rev, token=self._token
         )
         model = transformers.AutoModelForCausalLM.from_pretrained(
-            self.repo, revision=self.revision, dtype=dtype, token=self._token
+            source, revision=source_rev, dtype=dtype, token=self._token
         )
+        if adapter is not None:
+            peft = importlib.import_module("peft")
+            model = peft.PeftModel.from_pretrained(
+                model, self.repo, revision=self.revision, token=self._token
+            )
         self._model = model.to(device).eval()
 
     def generate(self, messages: Messages, system: str | None, params: Mapping[str, Any]) -> str:
         if self._model is None:
             self._load()
-        chat = [dict(m) for m in messages]
-        if system is not None:
-            chat.insert(0, {"role": "system", "content": system})
-        inputs = self._tokenizer.apply_chat_template(
-            chat,
-            add_generation_prompt=True,
-            return_tensors="pt",
-            return_dict=True,
-            **CHAT_TEMPLATE_KWARGS,
-        ).to(self._model.device)
+        text = render_chat_text(self._tokenizer, system, messages)
+        # The template already holds any special tokens; don't add a second BOS.
+        inputs = self._tokenizer(text, return_tensors="pt", add_special_tokens=False).to(
+            self._model.device
+        )
         gen = {"do_sample": False, "max_new_tokens": 256, **params}
         output = self._model.generate(**inputs, **gen)
+        self.effective_params = gen
         new_tokens = output[0][inputs["input_ids"].shape[-1] :]
-        text = str(self._tokenizer.decode(new_tokens, skip_special_tokens=True))
-        return _THINK_BLOCK_RE.sub("", text).strip()
+        reply = str(self._tokenizer.decode(new_tokens, skip_special_tokens=True))
+        return _THINK_BLOCK_RE.sub("", reply).strip()
 
 
 # ---------------------------------------------------------------------------------------------

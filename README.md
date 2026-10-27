@@ -2,6 +2,25 @@
 
 Fine-tuning a small open model to reliably hold one narrow, falsifiable behavior, with a reproducible eval harness.
 
+## Rerunning the eval
+
+```sh
+uv run eval.py --model <hf-repo-id> --eval-set <path>
+```
+
+One command: [uv](https://docs.astral.sh/uv/) installs the pinned dependencies (torch,
+transformers and peft included) on first run, and the model is downloaded from the Hub.
+
+- **Env vars.** `OPENAI_API_KEY` is required for the pinned judge. `ANTHROPIC_API_KEY` is needed
+  only for Anthropic subjects (the prompt-ceiling ablation). `HF_TOKEN` is optional, for gated or
+  private repos. Keys are read from the environment or from `.env` at the repo root (override the
+  path with `GROUNDCITE_ENV_FILE`). Without keys, `--judge mock` and `--dry-run` still work.
+- **Hardware.** No GPU is required. A 1.7B model runs on an Apple silicon Mac (MPS), an NVIDIA
+  GPU (CUDA) or, slowly, on CPU. About 8 GB of free memory is enough.
+- **Reproducibility.** Local models decode greedily and the judge is a dated snapshot, but API
+  sampling is not fully deterministic. The rerun tolerance is ±0.03 Spec-adherence on the same
+  pins (eval code, model revision, judge, rubric and eval set, all stamped in `results.json`).
+
 ## Quality gate
 
 Run every check before committing:

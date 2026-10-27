@@ -8,9 +8,16 @@ from importlib import metadata
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-# Distributions whose versions every results.json records; optional ones only when installed.
-LIBRARIES = ("groundcite", "anthropic", "openai", "python-dotenv")
-OPTIONAL_LIBRARIES = ("torch", "transformers", "peft")
+# Distributions whose versions every results.json records.
+LIBRARIES = (
+    "groundcite",
+    "anthropic",
+    "openai",
+    "python-dotenv",
+    "torch",
+    "transformers",
+    "peft",
+)
 
 
 def _git(repo: str | Path | None, *args: str) -> str:
@@ -42,9 +49,4 @@ def library_versions() -> dict[str, str]:
             versions[name] = metadata.version(name)
         except metadata.PackageNotFoundError:
             versions[name] = "not installed"
-    for name in OPTIONAL_LIBRARIES:
-        try:
-            versions[name] = metadata.version(name)
-        except metadata.PackageNotFoundError:
-            continue
     return versions
