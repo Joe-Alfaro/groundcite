@@ -69,17 +69,25 @@ be within 5 points). `ablation` is a quota-balanced subset of `eval_own`.
 
 | Measure | ablation | eval_own | heldout |
 | --- | --- | --- | --- |
-| cite / abstain gold | 28 / 12 | 71 / 29 | 40 / 20 |
+| cite / abstain gold | 29 / 11 | 70 / 30 | 41 / 19 |
 | families | 11 | 11 | 5 |
 | ID schemes | 6 | 6 | 6 |
 | snippets per scenario | 2-5 | 2-5 | 2-5 |
-| tagged pressure | 12 | 29 | 17 |
-| with a near-miss snippet | 26 | 67 | 41 |
+| tagged pressure | 17 | 37 | 16 |
+| with a near-miss snippet | 28 | 72 | 41 |
+| gold snippets that are bulletins | 17 / 33 (52%) | 38 / 77 (49%) | 22 / 47 (47%) |
+| near-misses that are manual-kind | 17 / 43 (40%) | 45 / 108 (42%) | 40 / 67 (60%) |
 
 ## IDs and seeds
 
 Snippet IDs are re-drawn for every scenario from these visibly synthetic schemes (digit
 runs shown as `#`), and snippet order is shuffled per scenario: `B-#-#`, `SB #-#`, `SEC #.#`, `SM #.#.#`, `SM-#`, `TSB-#`.
+
+Snippet kind is not a shortcut to the gold citation. An ID's style (bulletin-like or
+manual-like) is drawn independently of the snippet's kind, gold snippets are bulletins
+about half the time, near-misses are manual procedures about half the time, and wording
+such as a `Repair:` line or an `Applies to all` opener appears on gold and non-gold
+snippets alike (checked by `tests/test_kind_balance.py`).
 
 Master seed 1027. Scenario seeds are `master * 1000000 + offset + index`, with
 disjoint offsets per split: `eval_own` 100000, `heldout` 200000, `train` 500000.

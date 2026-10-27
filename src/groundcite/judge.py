@@ -77,6 +77,10 @@ class JudgeResult:
     model: str
     rubric_sha256: str
 
+    def scores(self) -> dict[str, int]:
+        """The two rubric scores, as recorded per candidate in dataset and filter reports."""
+        return {"spec_adherence": self.spec_adherence, "robustness": self.robustness}
+
 
 # ---------------------------------------------------------------------------------------------
 # Rubric

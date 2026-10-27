@@ -228,7 +228,7 @@ def train_record(outcome: Outcome) -> dict[str, Any]:
             "teacher": outcome.teacher,
             "filter_version": FILTER_VERSION,
             "candidate_index": c.candidate_index,
-            "judge": {"spec_adherence": judge.spec_adherence, "robustness": judge.robustness},
+            "judge": judge.scores(),
         },
     }
 
@@ -245,10 +245,7 @@ def rejection_record(outcome: Outcome) -> dict[str, Any]:
     if r.failed_checks:
         record["failed_checks"] = list(r.failed_checks)
     if outcome.judge is not None:
-        record["judge"] = {
-            "spec_adherence": outcome.judge.spec_adherence,
-            "robustness": outcome.judge.robustness,
-        }
+        record["judge"] = outcome.judge.scores()
     return record
 
 

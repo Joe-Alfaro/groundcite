@@ -110,6 +110,14 @@ def render_coverage(
             "with a near-miss snippet",
             lambda rows: str(sum(bool(r["gold"]["near_miss_ids"]) for r in rows)),
         ),
+        (
+            "gold snippets that are bulletins",
+            lambda rows: _kind_share(rows, "supporting_ids", "tsb"),
+        ),
+        (
+            "near-misses that are manual-kind",
+            lambda rows: _kind_share(rows, "near_miss_ids", "manual"),
+        ),
     ):
         measures.append((label, [fn(rows) for rows in sets.values()]))
     for label, cells in measures:
@@ -127,6 +135,12 @@ def render_coverage(
         + ", ".join(f"`{s}`" for s in schemes)
         + ".",
         "",
+        "Snippet kind is not a shortcut to the gold citation. An ID's style (bulletin-like or",
+        "manual-like) is drawn independently of the snippet's kind, gold snippets are bulletins",
+        "about half the time, near-misses are manual procedures about half the time, and wording",
+        "such as a `Repair:` line or an `Applies to all` opener appears on gold and non-gold",
+        "snippets alike (checked by `tests/test_kind_balance.py`).",
+        "",
         f"Master seed {master_seed}. Scenario seeds are `master * 1000000 + offset + index`, with",
         "disjoint offsets per split: "
         + ", ".join(f"`{split}` {offset}" for split, offset in SPLIT_OFFSETS.items())
@@ -139,6 +153,18 @@ def render_coverage(
 def _modes(rows: Sequence[Mapping[str, Any]]) -> str:
     modes = Counter(r["gold"]["mode"] for r in rows)
     return f"{modes['cite']} / {modes['abstain']}"
+
+
+def _kind_share(rows: Sequence[Mapping[str, Any]], gold_key: str, kind: str) -> str:
+    """How many of the snippets listed under ``gold[gold_key]`` are of ``kind``."""
+    kinds = Counter(
+        {s["id"]: s["kind"] for s in r["snippets"]}[snippet_id]
+        for r in rows
+        for snippet_id in r["gold"][gold_key]
+    )
+    total = sum(kinds.values())
+    share = 100 * kinds[kind] / total if total else 0.0
+    return f"{kinds[kind]} / {total} ({share:.0f}%)"
 
 
 def _snippet_range(rows: Sequence[Mapping[str, Any]]) -> str:

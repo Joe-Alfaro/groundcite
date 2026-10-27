@@ -50,6 +50,9 @@ class Backend(Protocol):
 
 # Transient failures worth retrying with backoff: rate limits, timeouts and server errors.
 RETRYABLE_STATUS = frozenset({408, 409, 429, 500, 502, 503, 504, 529})
+# The callers already retry transient failures with backoff, so the SDK clients don't retry on
+# their own: stacked retries would turn one failing row into many paid attempts.
+SDK_MAX_RETRIES = 0
 
 
 class BackendError(RuntimeError):
@@ -195,7 +198,7 @@ class AnthropicBackend(_ApiBackend):
         if self._client is None:
             import anthropic
 
-            self._client = anthropic.Anthropic(api_key=self._key)
+            self._client = anthropic.Anthropic(api_key=self._key, max_retries=SDK_MAX_RETRIES)
         result: Mapping[str, Any] = self._client.messages.create(**body).to_dict()
         return result
 
@@ -228,7 +231,7 @@ class OpenAIBackend(_ApiBackend):
         if self._client is None:
             import openai
 
-            self._client = openai.OpenAI(api_key=self._key)
+            self._client = openai.OpenAI(api_key=self._key, max_retries=SDK_MAX_RETRIES)
         result: Mapping[str, Any] = self._client.chat.completions.create(**body).model_dump()
         return result
 

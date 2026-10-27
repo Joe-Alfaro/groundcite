@@ -53,8 +53,13 @@ SELECTION_RULE = (
     "one example per scenario: among candidates that pass every stage, the highest judge "
     "Robustness wins, ties go to the lowest candidate_index; scenarios in candidates-file order"
 )
+# Words that only make sense if the reply saw the privileged inputs (the gold label, the supporting
+# IDs or the hint note). "the note" is matched only as a phrase, so "a service manual note" and
+# "note the idle speed" still pass.
 _HINT_WORDS = re.compile(
-    rf"\b(?:gold|supporting_ids|privileged|hint)\b|{re.escape(HINT_HEADER)}", re.IGNORECASE
+    r"\b(?:gold(?: label)?|supporting[_ ]ids?|privileged|hints?|answer key|the note|"
+    r"grading|graded|reference answer|i was told|correct mode)\b|" + re.escape(HINT_HEADER),
+    re.IGNORECASE,
 )
 _GOLD_CHECKS = ("mode_matches_gold", "cited_id_supports")
 

@@ -19,6 +19,7 @@ produced in one run, so the sets don't leak into each other.
 
 from __future__ import annotations
 
+import itertools
 import random
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
@@ -49,9 +50,11 @@ TRAIN_POOL_SIZE = 480
 MAX_SNIPPETS = 5
 MAX_ATTEMPTS = 60
 
-# Visibly synthetic ID schemes per snippet kind. Digits are random per scenario.
+# Visibly synthetic ID schemes in two styles. Digits are random per scenario. The style is drawn
+# independently of the snippet's kind (D-046), so a bulletin-style ID says nothing about whether
+# the snippet is a bulletin, or whether it is the one to cite.
 ID_SCHEMES: dict[str, tuple[Callable[[random.Random], str], ...]] = {
-    "tsb": (
+    "bulletin": (
         lambda r: f"TSB-{r.randint(100, 9999):04d}",
         lambda r: f"B-{r.randint(10, 24):02d}-{r.randint(1, 299):03d}",
         lambda r: f"SB {r.randint(10, 99):02d}-{r.randint(1, 999):03d}",
@@ -62,6 +65,8 @@ ID_SCHEMES: dict[str, tuple[Callable[[random.Random], str], ...]] = {
         lambda r: f"SEC {r.randint(1, 19)}.{r.randint(1, 30)}",
     ),
 }
+ID_STYLES = ("bulletin", "manual")
+SNIPPET_KINDS = ("tsb", "manual")
 
 
 class GenerationError(RuntimeError):
@@ -96,9 +101,18 @@ class _Draft:
 
 @dataclass(frozen=True)
 class _PlanItem:
+    """One planned scenario. The three preferences are balanced across each category (and its
+    ablation subset) so that snippet kind and ID style never predict the gold citation (D-046):
+    ``gold_kind`` is the preferred kind of the (first) supporting snippet, ``near_kind`` the
+    preferred kind of the first near-miss and ``gold_style`` the ID style of the first supporting
+    snippet. A builder falls back to any snippet when the family has none of the preferred kind."""
+
     category: str
     family: Family
     ablation: bool
+    gold_kind: str = "manual"
+    near_kind: str = "manual"
+    gold_style: str = "manual"
 
 
 @dataclass(frozen=True)
@@ -153,9 +167,19 @@ class _Generator:
             # Cycle through the families in a per-category shuffled order so each category
             # covers every family before repeating one; the first entries form the ablation set.
             order = rng.sample(families, len(families))
+            gold_kinds = _alternating(rng, SNIPPET_KINDS, count)
+            near_kinds = _alternating(rng, SNIPPET_KINDS, count)
+            gold_styles = _alternating(rng, ID_STYLES, count)
             for i in range(count):
                 items.append(
-                    _PlanItem(category, order[i % len(order)], i < ablation.get(category, 0))
+                    _PlanItem(
+                        category,
+                        order[i % len(order)],
+                        i < ablation.get(category, 0),
+                        gold_kind=gold_kinds[i],
+                        near_kind=near_kinds[i],
+                        gold_style=gold_styles[i],
+                    )
                 )
         rng.shuffle(items)
         return items
@@ -189,7 +213,7 @@ class _Generator:
     def build(self, item: _PlanItem, rng: random.Random, pool: list[Family]) -> dict[str, Any]:
         builder = getattr(self, f"_build_{item.category}")
         for _ in range(MAX_ATTEMPTS):
-            row: dict[str, Any] | None = builder(item.family, rng, pool)
+            row: dict[str, Any] | None = builder(item, rng, pool)
             if row is None:
                 continue
             final = row["messages"][-1]["content"]
@@ -210,20 +234,22 @@ class _Generator:
         raise GenerationError(f"could not build a distinct {item.category} for {item.family.name}")
 
     def _build_clean(
-        self, fam: Family, rng: random.Random, pool: list[Family]
+        self, item: _PlanItem, rng: random.Random, pool: list[Family]
     ) -> dict[str, Any] | None:
-        support = [self._snip(rng.choice(fam.chain))]
+        fam = item.family
+        support = [self._gold(rng, fam, item.gold_kind)]
         others = self._sample(rng, self._unrelated([fam], pool), rng.randint(1, 3))
         draft = self._draft(rng, [fam], support, others, [])
         if draft is None:
             return None
-        return self._single_turn(rng, fam, draft, pressure=False)
+        return self._single_turn(rng, item, draft, pressure=False)
 
     def _build_distractor(
-        self, fam: Family, rng: random.Random, pool: list[Family]
+        self, item: _PlanItem, rng: random.Random, pool: list[Family]
     ) -> dict[str, Any] | None:
-        support = [self._snip(rng.choice(fam.chain))]
-        near = self._sample(rng, self._snips(fam.near_miss), rng.randint(1, 2))
+        fam = item.family
+        support = [self._gold(rng, fam, item.gold_kind)]
+        near = self._near(rng, fam, item.near_kind, rng.randint(1, 2))
         extra = self._sample(
             rng, self._snips(fam.close) + self._unrelated([fam], pool), rng.randint(0, 1)
         )
@@ -231,53 +257,61 @@ class _Generator:
         if draft is None:
             return None
         pressure = rng.random() < 0.15
-        return self._single_turn(rng, fam, draft, pressure=pressure)
+        return self._single_turn(rng, item, draft, pressure=pressure)
 
     def _build_no_snippet(
-        self, fam: Family, rng: random.Random, pool: list[Family]
+        self, item: _PlanItem, rng: random.Random, pool: list[Family]
     ) -> dict[str, Any] | None:
-        draft = self._abstain_draft(fam, rng, pool)
+        draft = self._abstain_draft(item, rng, pool)
         if draft is None:
             return None
         pressure = rng.random() < 0.15
-        return self._single_turn(rng, fam, draft, pressure=pressure)
+        return self._single_turn(rng, item, draft, pressure=pressure)
 
     def _build_pressure(
-        self, fam: Family, rng: random.Random, pool: list[Family]
+        self, item: _PlanItem, rng: random.Random, pool: list[Family]
     ) -> dict[str, Any] | None:
+        fam = item.family
         if rng.random() < self.mix.pressure_abstain:
-            draft = self._abstain_draft(fam, rng, pool)
+            draft = self._abstain_draft(item, rng, pool)
             if draft is not None:
                 draft.tags.add("no_snippet")
         else:
-            support = [self._snip(rng.choice(fam.chain))]
-            near = self._sample(rng, self._snips(fam.near_miss), rng.choice((0, 1)))
+            support = [self._gold(rng, fam, item.gold_kind)]
+            near = self._near(rng, fam, item.near_kind, rng.choice((0, 1)))
             others = self._sample(rng, self._unrelated([fam], pool), rng.randint(1, 2))
             draft = self._draft(rng, [fam], support, near + others, near)
             if draft is not None and near:
                 draft.tags.add("distractor")
         if draft is None:
             return None
-        return self._single_turn(rng, fam, draft, pressure=True)
+        return self._single_turn(rng, item, draft, pressure=True)
 
     def _build_multi_symptom(
-        self, fam: Family, rng: random.Random, pool: list[Family]
+        self, item: _PlanItem, rng: random.Random, pool: list[Family]
     ) -> dict[str, Any] | None:
+        fam = item.family
         candidates = [f for f in pool if not self.lib.related_systems(f.system, fam.system)]
         second = rng.choice(candidates)
         variant = rng.random()
         if (
             variant < self.mix.multi_symptom_both
         ):  # both complaints have a supporting snippet; either is a valid citation
-            support = [self._snip(rng.choice(fam.chain)), self._snip(rng.choice(second.chain))]
+            # One supporting snippet of each kind, so the pair never favors a kind.
+            support = [
+                self._gold(rng, fam, item.gold_kind),
+                self._gold(rng, second, _other(SNIPPET_KINDS, item.gold_kind)),
+            ]
             near: list[Snippet] = []
         elif variant < self.mix.multi_symptom_partial:  # only one complaint is supported
             supported, missed = (fam, second) if rng.random() < 0.5 else (second, fam)
-            support = [self._snip(rng.choice(supported.chain))]
-            near = [self._snip(rng.choice(missed.near_miss))]
+            support = [self._gold(rng, supported, item.gold_kind)]
+            near = self._near(rng, missed, item.near_kind, 1)
         else:  # neither complaint is supported
             support = []
-            near = [self._snip(rng.choice(fam.near_miss)), self._snip(rng.choice(second.near_miss))]
+            near = self._near(rng, fam, item.near_kind, 1) + self._near(
+                rng, second, _other(SNIPPET_KINDS, item.near_kind), 1
+            )
         close = [
             s
             for s in self._snips(fam.close)
@@ -308,7 +342,7 @@ class _Generator:
         )
         if rng.random() < 0.5:
             joined += " " + rng.choice(self.phrases("minor_symptom"))
-        ids = self._assign_ids(rng, draft)
+        ids = self._assign_ids(rng, draft, item.gold_style)
         tail = (
             self._pressure(rng, fam)
             if "pressure" in draft.tags
@@ -318,12 +352,13 @@ class _Generator:
         return self._row(rng, draft, ids, [{"role": "user", "content": message}])
 
     def _build_multi_turn(
-        self, fam: Family, rng: random.Random, pool: list[Family]
+        self, item: _PlanItem, rng: random.Random, pool: list[Family]
     ) -> dict[str, Any] | None:
-        picked = fam.order_chain(rng.sample(fam.chain, 3))
+        fam = item.family
+        picked = self._chain_walk(rng, fam, item.gold_kind)
         first, second, third = (self._snip(i) for i in picked)
         cite = rng.random() < self.mix.multi_turn_cite
-        near = self._sample(rng, self._snips(fam.near_miss), 1 if not cite else rng.choice((0, 1)))
+        near = self._near(rng, fam, item.near_kind, 1 if not cite else rng.choice((0, 1)))
         others = self._sample(
             rng, self._snips(fam.close) + self._unrelated([fam], pool), rng.choice((0, 1))
         )
@@ -339,7 +374,7 @@ class _Generator:
             draft.tags.add("distractor")
         if not cite:
             draft.tags.add("no_snippet")
-        ids = self._assign_ids(rng, draft)
+        ids = self._assign_ids(rng, draft, item.gold_style)
         phrases = self.phrases
         part = rng.choice(fam.suspects)
 
@@ -371,10 +406,11 @@ class _Generator:
 
     # --- pieces --------------------------------------------------------------------------
 
-    def _abstain_draft(self, fam: Family, rng: random.Random, pool: list[Family]) -> _Draft | None:
-        near = self._sample(
-            rng, self._snips(fam.near_miss), rng.randint(1, min(3, len(fam.near_miss)))
-        )
+    def _abstain_draft(
+        self, item: _PlanItem, rng: random.Random, pool: list[Family]
+    ) -> _Draft | None:
+        fam = item.family
+        near = self._near(rng, fam, item.near_kind, rng.randint(1, min(3, len(fam.near_miss))))
         close = self._sample(rng, self._snips(fam.close), rng.randint(0, 2))
         others = near + close
         if len(others) < 2 or rng.random() < 0.3:
@@ -414,11 +450,12 @@ class _Generator:
         )
 
     def _single_turn(
-        self, rng: random.Random, fam: Family, draft: _Draft, pressure: bool
+        self, rng: random.Random, item: _PlanItem, draft: _Draft, pressure: bool
     ) -> dict[str, Any]:
+        fam = item.family
         if pressure:
             draft.tags.add("pressure")
-        ids = self._assign_ids(rng, draft)
+        ids = self._assign_ids(rng, draft, item.gold_style)
         intro, complaint = self._intro(rng, draft), self._complaint(rng, fam)
         body = [intro, complaint] if rng.random() < 0.7 else [complaint, intro]
         if not pressure:
@@ -447,11 +484,23 @@ class _Generator:
             "tags": draft.tags,
         }
 
-    def _assign_ids(self, rng: random.Random, draft: _Draft) -> dict[str, str]:
+    def _assign_ids(self, rng: random.Random, draft: _Draft, gold_style: str) -> dict[str, str]:
+        """IDs whose style ignores the snippet's kind. Half the snippets (a random one more when
+        the count is odd) get a bulletin-style ID; the first supporting snippet gets
+        ``gold_style``, which the plan balances, and the rest are spread at random."""
+        snippets = draft.supporting + draft.others
+        bulletin = len(snippets) // 2 + (len(snippets) % 2 and rng.random() < 0.5)
+        styles = []
+        if draft.supporting:
+            styles.append(gold_style)
+            bulletin -= gold_style == "bulletin"
+        rest = ["bulletin"] * bulletin + ["manual"] * (len(snippets) - len(styles) - bulletin)
+        rng.shuffle(rest)
+        styles += rest
         ids: dict[str, str] = {}
-        for snippet in draft.supporting + draft.others:
+        for snippet, style in zip(snippets, styles, strict=True):
             while True:
-                candidate = rng.choice(ID_SCHEMES[snippet.kind])(rng)
+                candidate = rng.choice(ID_SCHEMES[style])(rng)
                 if candidate not in ids.values():
                     ids[snippet.id] = candidate
                     break
@@ -479,6 +528,26 @@ class _Generator:
 
     def _snip(self, snippet_id: str) -> Snippet:
         return self.lib.snippets[snippet_id]
+
+    def _gold(self, rng: random.Random, fam: Family, kind: str) -> Snippet:
+        """A chain snippet of ``kind`` when the family has one, else any chain snippet."""
+        chain = self._snips(fam.chain)
+        return rng.choice([s for s in chain if s.kind == kind] or chain)
+
+    def _near(self, rng: random.Random, fam: Family, kind: str, k: int) -> list[Snippet]:
+        """``k`` near-misses; the first is of ``kind`` when the family has one."""
+        if k <= 0:
+            return []
+        snippets = self._snips(fam.near_miss)
+        first = rng.choice([s for s in snippets if s.kind == kind] or snippets)
+        return [first, *self._sample(rng, [s for s in snippets if s != first], k - 1)]
+
+    def _chain_walk(self, rng: random.Random, fam: Family, kind: str) -> list[str]:
+        """Three chain snippet ids in ``chain_order``, preferring walks whose last step (the
+        multi-turn gold) is of ``kind``."""
+        walks = [fam.order_chain(list(p)) for p in itertools.permutations(fam.chain, 3)]
+        preferred = [w for w in walks if self._snip(w[-1]).kind == kind]
+        return rng.choice(preferred or walks)
 
     def _snips(self, ids: Sequence[str]) -> list[Snippet]:
         return [self.lib.snippets[i] for i in ids]
@@ -533,6 +602,19 @@ def generate_train(
     """
     gen = _Generator(lib, mix=TRAIN_MIX, phrasing=phrasing, avoid=avoid)
     return gen.build_split("train", master_seed, reserved=False, size=size)
+
+
+def _alternating(rng: random.Random, values: tuple[str, str], count: int) -> list[str]:
+    """``count`` values that alternate in pairs (each pair in random order), so every prefix is
+    balanced to within one."""
+    out: list[str] = []
+    while len(out) < count:
+        out += rng.sample(values, 2)
+    return out[:count]
+
+
+def _other(values: tuple[str, str], value: str) -> str:
+    return values[1] if value == values[0] else values[0]
 
 
 def _fill(template: str, **values: str) -> str:
