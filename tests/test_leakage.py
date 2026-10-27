@@ -23,6 +23,7 @@ RULE_CODES = (
     "heldout_snippet_hash",
     "reserved_family",
     "fewshot_in_eval",
+    "missing_family",
 )
 
 RESERVED = "fam_reserved"
@@ -248,6 +249,60 @@ def test_chat_record_shared_scenario_id(tmp_path: Path) -> None:
 def test_chat_record_from_reserved_family(tmp_path: Path) -> None:
     code, output = _run(tmp_path, train=[_chat_record("tr-0001", TRAIN_MSG, RESERVED)])
     _assert_flags(code, output, "reserved_family")
+
+
+# --- missing family (validator note Q8) -------------------------------------------------------
+# reserved_family can only fire on rows that name a family, so a training or few-shot row
+# without one is itself a finding.
+
+
+def _without_family(row: dict[str, Any]) -> dict[str, Any]:
+    row = dict(row)
+    row.pop("family", None)
+    if "meta" in row:
+        row["meta"] = {k: v for k, v in row["meta"].items() if k != "family"}
+    return row
+
+
+def test_training_row_without_family(tmp_path: Path) -> None:
+    code, output = _run(tmp_path, train=[_without_family(_train())])
+    _assert_flags(code, output, "missing_family")
+
+
+def test_training_row_with_empty_family(tmp_path: Path) -> None:
+    code, output = _run(tmp_path, train=[_train(family="")])
+    _assert_flags(code, output, "missing_family")
+
+
+def test_training_chat_record_without_meta_family(tmp_path: Path) -> None:
+    record = _without_family(_chat_record("tr-0001", TRAIN_MSG, "fam_brakes"))
+    code, output = _run(tmp_path, train=[record])
+    _assert_flags(code, output, "missing_family")
+
+
+def test_few_shot_row_without_family(tmp_path: Path) -> None:
+    code, output = _run(tmp_path, few_shot=[_without_family(_fewshot())])
+    _assert_flags(code, output, "missing_family")
+
+
+def test_missing_family_names_the_row(tmp_path: Path) -> None:
+    code, output = _run(tmp_path, train=[_train(), _without_family(_train(scenario_id="tr-0002"))])
+    assert code == 1, output
+    assert "tr-0002" in output
+    assert "tr-0001" not in output
+
+
+def test_eval_rows_without_family_are_not_flagged(tmp_path: Path) -> None:
+    # Third-party eval sets need not carry a family; only training and few-shot rows must.
+    code, output = _run(tmp_path, eval_own=[_without_family(_eval())])
+    assert code == 0, output
+    assert "missing_family" not in output
+
+
+def test_missing_family_is_a_reported_rule() -> None:
+    from groundcite.leakage import RULES
+
+    assert "missing_family" in RULES
 
 
 def test_check_sh_runs_the_leakage_check() -> None:

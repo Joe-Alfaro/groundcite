@@ -3,7 +3,8 @@
 Deterministic checks favour precision on PASS cases. Since D-028 only a HARD (structural) failure
 forces Spec-adherence to 0; the lexical checks here (no_fix, one_step) are SOFT signals. These
 cases come from the validator's adversarial probes. Also covers R12
-details: the documented examples load, and prompt-only rows ignore bracketed UI words.
+details: the documented examples load, and prompt-only rows take every bracketed token as a
+provided ID (D-033, which supersedes the D-022 digit rule).
 """
 
 from __future__ import annotations
@@ -254,7 +255,7 @@ def test_format_doc_examples_load(index: int, tmp_path: Path) -> None:
         assert s.provided_ids, s.id
 
 
-# --- D. prompt-only rows: bracketed UI words are not provided IDs (R12 refinement) -----------
+# --- D. prompt-only rows: every bracketed token is a provided ID (R12, D-033) ----------------
 
 
 def _load_rows(tmp_path: Path, rows: list[dict[str, Any]]) -> list[Any]:
@@ -265,21 +266,33 @@ def _load_rows(tmp_path: Path, rows: list[dict[str, Any]]) -> list[Any]:
     return load_eval_set(path)
 
 
-def test_prompt_only_ids_need_a_digit(tmp_path: Path) -> None:
+def test_prompt_only_ids_are_every_bracketed_token(tmp_path: Path) -> None:
+    # D-033 dropped the D-022 digit rule: bracketed UI words are provided IDs too. Citing one is
+    # rare, and an unbracketed mention of one is only a SOFT flag on prompt-only rows.
     prompt = (
         "References: [SM-3105] Alternator output test. [ref_q3.11] Wiper park switch.\n"
         "Press [OK] on the scan tool, open [Live Data] and read [MAP]. Battery light flickers."
     )
     (scenario,) = _load_rows(tmp_path, [{"id": "ui-1", "prompt": prompt}])
-    assert scenario.provided_ids == ["SM-3105", "ref_q3.11"]
+    assert scenario.provided_ids == ["SM-3105", "ref_q3.11", "OK", "Live Data", "MAP"]
 
 
-def test_prompt_only_gold_cannot_name_a_ui_word(tmp_path: Path) -> None:
-    from groundcite.evalset import EvalSetError
-
+def test_prompt_only_gold_may_name_any_bracketed_token(tmp_path: Path) -> None:
     row = {
         "id": "ui-2",
         "prompt": "References: [SM-3105] Alternator output test. Press [OK] to continue.",
+        "gold": {"mode": "cite", "supporting_ids": ["OK"]},
+    }
+    (scenario,) = _load_rows(tmp_path, [row])
+    assert scenario.gold["supporting_ids"] == ["OK"]
+
+
+def test_prompt_only_gold_cannot_name_an_unbracketed_token(tmp_path: Path) -> None:
+    from groundcite.evalset import EvalSetError
+
+    row = {
+        "id": "ui-2b",
+        "prompt": "References: [SM-3105] Alternator output test. Press OK to continue.",
         "gold": {"mode": "cite", "supporting_ids": ["OK"]},
     }
     with pytest.raises(EvalSetError, match="gold.supporting_ids"):
@@ -287,7 +300,7 @@ def test_prompt_only_gold_cannot_name_a_ui_word(tmp_path: Path) -> None:
 
 
 def test_structured_snippet_ids_without_digits_are_still_accepted(tmp_path: Path) -> None:
-    # The digit rule only filters IDs scraped from prompt text; declared snippets are explicit.
+    # Declared snippet IDs are explicit, whatever their shape.
     row = {
         "id": "ui-3",
         "snippets": [{"id": "FUEL-A", "text": "Fuel pressure test."}],
