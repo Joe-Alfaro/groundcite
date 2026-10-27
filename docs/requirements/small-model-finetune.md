@@ -268,6 +268,9 @@ marked **GOTCHA Gn**; `n` refers to the hunt's numbering.
   `snippets` and `gold` are optional.
 - A row without structured snippets takes its provided IDs from the bracketed IDs in the prompt
   text. Checks that need gold are reported as `n/a`, and the judge decides the mode.
+- On prompt-only rows an unbracketed mention of a provided ID is a SOFT `citation_format` flag,
+  because those inferred IDs can include bracketed trouble codes or UI words; it stays
+  HARD on rows with structured snippets.
 - Tests feed three fixture sets, and each produces scored output:
   - (a) our format;
   - (b) prompt-only rows;

@@ -149,8 +149,9 @@ def parse_row(row: Any) -> Scenario:
         provided_ids = [s["id"] for s in snippets]
     else:
         provided_text = "\n".join(m["content"] for m in messages if m["role"] in PROVIDING_ROLES)
-        # Scraped tokens need a digit, so bracketed UI words like [OK] or [MAP] aren't IDs (D-022).
-        provided_ids = [i for i in parse_cited_ids(provided_text) if any(c.isdigit() for c in i)]
+        # Every bracketed token is provided, all-letter IDs included (R12, D-033). An inferred list
+        # can hold codes or UI words, so checks treat an unbracketed mention as SOFT on these rows.
+        provided_ids = parse_cited_ids(provided_text)
 
     category = row.get("category")
     if category is not None and not isinstance(category, str):

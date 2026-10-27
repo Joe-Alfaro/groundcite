@@ -28,6 +28,9 @@ Any other fields are ignored.
 - The **provided IDs** of a row are the `id`s of its `snippets`, in order. A row without
   `snippets` (a **prompt-only** row) takes its provided IDs from the bracketed IDs in its user and
   system text. IDs that appear only in assistant turns are never provided.
+- Because a prompt-only row's provided IDs can include bracketed trouble codes or UI words, an
+  unbracketed mention of a provided ID in a reply is only a SOFT `citation_format` flag on
+  prompt-only rows; on rows with `snippets` it stays HARD.
 
 ### Gold
 

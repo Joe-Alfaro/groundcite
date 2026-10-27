@@ -7,6 +7,8 @@ the versioned ``LEXICONS`` table, so a lexicon change is visible in results as a
 
 Checks are HARD (structural, exactly checkable) or SOFT (lexical) (D-028). Only a HARD failure
 forces Spec-adherence to 0 (``forces_zero``); SOFT results are reported and passed to the judge.
+Each result carries its ``severity``. ``run_checks`` scores a whole scenario and downgrades an
+unbracketed-ID ``citation_format`` failure to SOFT on prompt-only rows (D-033).
 Reply mode is structural: a reply that cites any bracketed ID is in cite mode, else abstain mode.
 """
 
@@ -15,11 +17,15 @@ from __future__ import annotations
 import re
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, replace
-from typing import Any, Literal, Protocol
+from typing import TYPE_CHECKING, Any, Literal, Protocol
 
 from groundcite.spec import CITATION_RE, parse_cited_ids
 
+if TYPE_CHECKING:
+    from groundcite.evalset import Scenario
+
 Mode = Literal["cite", "abstain"]
+Severity = Literal["HARD", "SOFT"]
 
 _NOUNS = r"(?:references?|snippets?|notes?|documents?|sources?|bulletins?|sections?)"
 _NEG = r"(?:don't|do not|doesn't|does not|didn't|did not|can't|cannot)"
@@ -174,6 +180,13 @@ class CheckResult:
     name: str
     passed: bool | None
     detail: str
+    # None means the check's class (HARD_CHECKS or SOFT_CHECKS), filled in after init;
+    # run_checks may downgrade it.
+    severity: Severity | None = None
+
+    def __post_init__(self) -> None:
+        if self.severity is None:
+            object.__setattr__(self, "severity", "HARD" if self.name in HARD_CHECKS else "SOFT")
 
 
 class Check(Protocol):
@@ -345,6 +358,22 @@ HARD_CHECKS: frozenset[str] = frozenset(
 SOFT_CHECKS: frozenset[str] = frozenset({"no_fix", "one_step"})
 
 
+def run_checks(reply: str, scenario: Scenario) -> list[CheckResult]:
+    """Run every check against a scenario's provided IDs and gold, each tagged with a severity.
+
+    On a prompt-only row (no structured snippets) the provided IDs are inferred from bracketed
+    tokens and can include trouble codes or UI words, so an unbracketed mention of one is only a
+    SOFT ``citation_format`` flag there (D-033). Structured rows keep it HARD.
+    """
+    results = [fn(reply, scenario.provided_ids, gold=scenario.gold) for fn in CHECKS.values()]
+    if scenario.snippets:
+        return results
+    return [
+        replace(r, severity="SOFT") if r.name == "citation_format" and r.passed is False else r
+        for r in results
+    ]
+
+
 def forces_zero(results: Iterable[CheckResult]) -> bool:
-    """True when any HARD check failed; n/a results and SOFT failures never force a zero."""
-    return any(r.name in HARD_CHECKS and r.passed is False for r in results)
+    """True when a HARD-severity check failed; n/a results and SOFT failures never force a zero."""
+    return any(r.severity == "HARD" and r.passed is False for r in results)
