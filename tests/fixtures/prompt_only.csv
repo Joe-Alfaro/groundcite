@@ -1,0 +1,7 @@
+id,prompt
+po-csv-001,"References:
+[TSB-0417] Some 2.0L engines may set lean codes at idle when the PCV hose cracks at the intake elbow. Inspect the hose at the elbow for cracks or a vacuum hiss with the engine idling.
+[SM-2210] Fuel system, fuel pressure test. Key on, engine off, connect a gauge at the rail test port.
+
+Complaint: 2015 compact sedan, 2.0L, P0171, rough idle when cold."
+po-csv-002,"References: [B-19-045] Rotor thickness variation check. [SM 6.2.1] Brake fluid level and condition. Complaint: the steering wheel shakes when braking from highway speed."

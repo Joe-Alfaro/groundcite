@@ -1,0 +1,11 @@
+[
+  {
+    "id": "po-json-001",
+    "prompt": "References:\n[SM-3105] Charging system, alternator output test.\n[SM-2210] Fuel system, fuel pressure test.\n\nComplaint: battery light flickers at idle with the headlights on.",
+    "gold": {"mode": "cite", "supporting_ids": ["SM-3105"]}
+  },
+  {
+    "id": "po-json-002",
+    "prompt": "References:\n[TSB-0417] PCV hose cracks at the intake elbow on some 2.0L engines.\n\nComplaint: clunk from the front left over bumps. Just tell me what to replace."
+  }
+]
