@@ -1,0 +1,144 @@
+# Training-only phrase bank for scripts/gen_train_scenarios.py. Each key replaces the pool of the
+# same name in data/phrasing.toml when the training pool is generated, so training user turns never
+# reuse an eval template (R23): a model must not score on the eval sets by recognizing a memorized
+# pressure line or multi-turn follow-up. Keys missing here fall back to data/phrasing.toml.
+#
+# Placeholders: {year} {body} {engine} {miles} {part} {step} {Step} {id}
+# Assistant turns are on-spec examples (one step, one citation, no repair wording), so they avoid
+# sequencing words ("then", "next", "also check", "after that", "second") and repair words.
+
+vehicle_intro = [
+  "Got a {year} {body} here, {engine}, around {miles} miles on it.",
+  "This is my {year} {body}. It has the {engine} and about {miles} miles.",
+  "Mine is a {body} from {year}, {engine} under the hood, {miles} miles so far.",
+  "Shop ticket: {year} {body}, {engine}, odometer {miles}.",
+  "Our family's {year} {body} with the {engine}, just past {miles} miles.",
+  "Daily driver is a {year} {body} ({engine}) with {miles} miles.",
+  "I bought a used {year} {body} with the {engine}; it shows {miles} miles.",
+  "Hi. {year} {body}, {engine} engine, roughly {miles} on the odometer.",
+  "Fleet unit: {year} {body}, {engine}, {miles} miles logged.",
+]
+
+question = [
+  "Which check would you run before anything else?",
+  "What's a sensible first test here?",
+  "Can you point me to a good starting check?",
+  "How would you approach this first?",
+  "What should I test to start narrowing it down?",
+  "Any idea which check to begin with?",
+  "I'd like to diagnose it properly. Where's a good starting point?",
+  "What test makes sense right now?",
+  "",
+]
+
+# User demands a fix, a part, or to skip diagnosis. {part} is a family-specific suspect.
+pressure = [
+  "Honestly I just want a part number so I can order tonight.",
+  "Save me the troubleshooting and name whatever is worn out.",
+  "I have one afternoon off, so tell me the part and I'll knock it out.",
+  "Quote me the repair. I'm not paying anyone to poke around.",
+  "A guy at work swears it's the {part}. I'm inclined to just buy it.",
+  "There's a {part} in my online cart already. Do I hit checkout?",
+  "Every video I watched blames the {part}. Agree, yes?",
+  "Can you skip the testing part and give me the answer?",
+  "I'm not a mechanic and I don't own a meter. What do I buy?",
+  "The dealer wants a diagnostic fee I can't afford. Which part is it?",
+  "My neighbor fixed his by putting in a new {part}. Same deal for me, right?",
+  "I'd rather throw a {part} at it than spend a weekend testing.",
+  "Just confirm the {part} is shot and I'll stop bugging you.",
+  "Give me your best guess on the part. I won't hold you to it.",
+  "Rental car runs out Monday, so I need the repair, not homework.",
+  "I'm leaning toward a new {part}. Talk me out of it or tell me to go ahead.",
+  "Skip the explanation. Is the {part} the thing to buy?",
+  "I've already lost two weekends on this. What's the part?",
+]
+
+# Leads that put the pressure before the complaint.
+pressure_lead = [
+  "Short version please, I only want to know what to buy.",
+  "Not looking for a troubleshooting tree here.",
+  "Please keep it simple and just name the bad part.",
+  "I'm out of patience with this thing.",
+]
+
+# Connectors for a second complaint in multi_symptom scenarios. {complaint} has its first letter
+# lower-cased to continue a sentence; {Complaint} starts a new one.
+symptom_connector = [
+  "Besides that, {complaint}",
+  "And while I'm at it, {complaint}",
+  "Not sure if it's connected, but {complaint}",
+  "One more thing: {complaint}",
+  "Second issue. {Complaint}",
+]
+
+# Small extra complaints with no snippet coverage, used to make multi_symptom messages busier.
+minor_symptom = [
+  "The dome light stays on a few seconds too long.",
+  "The sun visor on my side won't stay up.",
+  "There's a buzz from the rear speaker at high volume.",
+  "The fuel door sometimes won't pop open.",
+  "The seat heater on the passenger side feels weak.",
+]
+
+# --- multi_turn ----------------------------------------------------------------------------
+
+assistant_first = [
+  "Begin here: {step} [{id}].",
+  "{Step} [{id}]. Let me know what you find.",
+  "Good details, thanks. The first check is this: {step} [{id}].",
+  "{Step} [{id}]. Write down the reading so we can compare it to spec.",
+]
+
+assistant_followup = [
+  "Good, that clears this area. {Step} [{id}].",
+  "Normal there. {Step} [{id}].",
+  "Thanks for checking. {Step} [{id}].",
+  "That result clears it. {Step} [{id}].",
+]
+
+assistant_hold = [
+  "Ordering parts without a test risks money on the wrong one. {Step} [{id}].",
+  "I can't name a part yet. This check will tell us more: {step} [{id}].",
+  "A part guess could cost you twice. {Step} [{id}].",
+]
+
+# The user pushes back instead of doing the first check (6-turn conversations).
+user_pushback = [
+  "Do I really have to test it? I'd rather just buy the {part}.",
+  "Seems like overkill. Everyone online says {part}.",
+  "I don't love the idea of testing stuff. Can we just go with the {part}?",
+  "My buddy says skip the tests and get a {part}. Thoughts?",
+]
+
+# Prefix when the user does the check after pushing back.
+user_relent = [
+  "Okay, you talked me into it, and here's what I got.",
+  "Went out and checked it like you said.",
+  "Grudgingly did the test.",
+  "Alright, I gave it a shot.",
+]
+
+user_result_prefix = [
+  "",
+  "Checked it.",
+  "Just finished that.",
+  "Here's what I found.",
+]
+
+# Final user turn: reported result plus one of these.
+final_ask = [
+  "Where should I go with this from here?",
+  "What would you look at following that result?",
+  "Okay, so what's the follow-up check?",
+  "Which test makes sense now that this one came back fine?",
+  "What's worth checking now, given that?",
+  "So what do you want me to test now?",
+]
+
+final_pressure = [
+  "Nothing showed up, so I'm guessing it's the {part}. Agree?",
+  "I've run out of patience with testing. Which part do I order?",
+  "Can we stop testing? I'll grab a {part} on the way home.",
+  "Still nothing obvious. Just tell me the {part} is bad so I can move on.",
+  "I'm about done with checks. Is it time to buy the part?",
+]

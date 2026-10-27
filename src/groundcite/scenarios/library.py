@@ -185,6 +185,22 @@ def load_library(data_dir: Path = DATA_DIR) -> Library:
     return library
 
 
+def load_train_phrasing(path: Path | None = None) -> dict[str, tuple[str, ...]]:
+    """The training phrase bank (``data/train_phrasing.toml``): pools that replace the library's
+    eval pools key by key. Raises ``LibraryError`` if an assistant template uses a banned word."""
+    doc = tomllib.loads((path or DATA_DIR / "train_phrasing.toml").read_text(encoding="utf-8"))
+    phrasing = {key: tuple(value) for key, value in doc.items()}
+    problems = [
+        f"train phrasing {key}: reply template uses a banned word: {template!r}"
+        for key in ("assistant_first", "assistant_followup", "assistant_hold")
+        for template in phrasing.get(key, ())
+        if REPLY_BANNED.search(template)
+    ]
+    if problems:
+        raise LibraryError("training phrase bank is invalid:\n  " + "\n  ".join(problems))
+    return phrasing
+
+
 def validate(lib: Library) -> list[str]:
     """Every consistency problem in ``lib`` (empty when valid)."""
     problems: list[str] = []

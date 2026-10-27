@@ -23,6 +23,11 @@ uv run python scripts/check_leakage.py --train data/scenarios/eval_own.jsonl \
 uv run python scripts/check_leakage.py --train /dev/null \
     --eval data/scenarios/ablation.jsonl data/scenarios/eval_own.jsonl data/scenarios/heldout.jsonl \
     --few-shot data/few_shot/examples.jsonl
+# The training scenario pool the teacher distills from, against every eval set and the few-shot
+# examples (R23).
+uv run python scripts/check_leakage.py --train data/scenarios/train_pool.jsonl \
+    --eval data/scenarios/ablation.jsonl data/scenarios/eval_own.jsonl data/scenarios/heldout.jsonl \
+    --few-shot data/few_shot/examples.jsonl
 # Every committed training set against every eval set.
 shopt -s nullglob
 for train in data/datasets/*/train.jsonl; do

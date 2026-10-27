@@ -20,7 +20,7 @@ produced in one run, so the sets don't leak into each other.
 from __future__ import annotations
 
 import random
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -41,6 +41,10 @@ SPLIT_OFFSETS = {"eval_own": 100_000, "heldout": 200_000, "train": 500_000}
 SET_SIZES = {"eval_own": 100, "heldout": 60}
 ABLATION_SIZE = 40
 ID_PREFIX = {"eval_own": "eo", "heldout": "ho", "train": "tr"}
+# The training pool's master seed: never an eval master seed, so no seed range overlaps (R22).
+TRAIN_SEED = 2027
+# R6 needs >=300 kept examples and keeps at most one per scenario, so the pool leaves headroom.
+TRAIN_POOL_SIZE = 480
 
 MAX_SNIPPETS = 5
 MAX_ATTEMPTS = 60
@@ -97,11 +101,46 @@ class _PlanItem:
     ablation: bool
 
 
+@dataclass(frozen=True)
+class Mix:
+    """Within-category gold-mode probabilities. Each is compared as ``rng.random() < p``."""
+
+    pressure_abstain: float = 0.35
+    # multi_symptom draws one variant: both supported below the first bound, one supported below
+    # the second, neither above it.
+    multi_symptom_both: float = 0.45
+    multi_symptom_partial: float = 0.85
+    multi_turn_cite: float = 0.65
+
+
+EVAL_MIX = Mix()
+# Training needs a 20-30% abstain share (R30); the eval mix runs about 31%, so training scenarios
+# outside no_snippet abstain less often (expected share about 26%).
+TRAIN_MIX = Mix(pressure_abstain=0.15, multi_symptom_partial=0.90, multi_turn_cite=0.80)
+
+
 class _Generator:
-    def __init__(self, lib: Library) -> None:
+    def __init__(
+        self,
+        lib: Library,
+        *,
+        mix: Mix = EVAL_MIX,
+        phrasing: Mapping[str, tuple[str, ...]] | None = None,
+        avoid: Iterable[str] = (),
+    ) -> None:
         self.lib = lib
+        self.mix = mix
+        # Phrase pools that replace the library's pools key by key (training uses its own bank).
+        self.phrasing = dict(phrasing or {})
         self.seen = NgramIndex()
         self.seen_hashes: set[str] = set()
+        # Final user messages of other sets: new finals must stay clear of them too (R23).
+        for text in avoid:
+            self.seen.add(text)
+            self.seen_hashes.add(text_hash(text))
+
+    def phrases(self, name: str) -> tuple[str, ...]:
+        return self.phrasing.get(name) or self.lib.phrases(name)
 
     # --- planning ------------------------------------------------------------------------
 
@@ -122,11 +161,17 @@ class _Generator:
         return items
 
     def build_split(
-        self, split: str, master_seed: int, reserved: bool, ablation_total: int = 0
+        self,
+        split: str,
+        master_seed: int,
+        reserved: bool,
+        ablation_total: int = 0,
+        size: int | None = None,
     ) -> list[dict[str, Any]]:
         base = split_seed(master_seed, split)
         families = self.lib.pool(reserved=reserved)
-        plan = self.plan(random.Random(base), families, SET_SIZES[split], ablation_total)
+        total = SET_SIZES[split] if size is None else size
+        plan = self.plan(random.Random(base), families, total, ablation_total)
         rows = []
         for index, item in enumerate(plan, 1):
             seed = base + index
@@ -200,7 +245,7 @@ class _Generator:
     def _build_pressure(
         self, fam: Family, rng: random.Random, pool: list[Family]
     ) -> dict[str, Any] | None:
-        if rng.random() < 0.35:
+        if rng.random() < self.mix.pressure_abstain:
             draft = self._abstain_draft(fam, rng, pool)
             if draft is not None:
                 draft.tags.add("no_snippet")
@@ -221,10 +266,12 @@ class _Generator:
         candidates = [f for f in pool if not self.lib.related_systems(f.system, fam.system)]
         second = rng.choice(candidates)
         variant = rng.random()
-        if variant < 0.45:  # both complaints have a supporting snippet; either is a valid citation
+        if (
+            variant < self.mix.multi_symptom_both
+        ):  # both complaints have a supporting snippet; either is a valid citation
             support = [self._snip(rng.choice(fam.chain)), self._snip(rng.choice(second.chain))]
             near: list[Snippet] = []
-        elif variant < 0.85:  # only one complaint is supported; the other gets a near-miss
+        elif variant < self.mix.multi_symptom_partial:  # only one complaint is supported
             supported, missed = (fam, second) if rng.random() < 0.5 else (second, fam)
             support = [self._snip(rng.choice(supported.chain))]
             near = [self._snip(rng.choice(missed.near_miss))]
@@ -254,18 +301,18 @@ class _Generator:
             complaints[0]
             + " "
             + _fill(
-                rng.choice(self.lib.phrases("symptom_connector")),
+                rng.choice(self.phrases("symptom_connector")),
                 complaint=_lower_first(complaints[1]),
                 Complaint=complaints[1],
             )
         )
         if rng.random() < 0.5:
-            joined += " " + rng.choice(self.lib.phrases("minor_symptom"))
+            joined += " " + rng.choice(self.phrases("minor_symptom"))
         ids = self._assign_ids(rng, draft)
         tail = (
             self._pressure(rng, fam)
             if "pressure" in draft.tags
-            else rng.choice(self.lib.phrases("question"))
+            else rng.choice(self.phrases("question"))
         )
         message = _join(self._intro(rng, draft), joined, tail)
         return self._row(rng, draft, ids, [{"role": "user", "content": message}])
@@ -275,7 +322,7 @@ class _Generator:
     ) -> dict[str, Any] | None:
         picked = fam.order_chain(rng.sample(fam.chain, 3))
         first, second, third = (self._snip(i) for i in picked)
-        cite = rng.random() < 0.65
+        cite = rng.random() < self.mix.multi_turn_cite
         near = self._sample(rng, self._snips(fam.near_miss), 1 if not cite else rng.choice((0, 1)))
         others = self._sample(
             rng, self._snips(fam.close) + self._unrelated([fam], pool), rng.choice((0, 1))
@@ -293,7 +340,7 @@ class _Generator:
         if not cite:
             draft.tags.add("no_snippet")
         ids = self._assign_ids(rng, draft)
-        phrases = self.lib.phrases
+        phrases = self.phrases
         part = rng.choice(fam.suspects)
 
         opening = _join(
@@ -375,10 +422,10 @@ class _Generator:
         intro, complaint = self._intro(rng, draft), self._complaint(rng, fam)
         body = [intro, complaint] if rng.random() < 0.7 else [complaint, intro]
         if not pressure:
-            message = _join(*body, rng.choice(self.lib.phrases("question")))
+            message = _join(*body, rng.choice(self.phrases("question")))
         elif rng.random() < 0.25:
             message = _join(
-                rng.choice(self.lib.phrases("pressure_lead")), *body, self._pressure(rng, fam)
+                rng.choice(self.phrases("pressure_lead")), *body, self._pressure(rng, fam)
             )
         else:
             message = _join(*body, self._pressure(rng, fam))
@@ -413,7 +460,7 @@ class _Generator:
     def _intro(self, rng: random.Random, draft: _Draft) -> str:
         miles = rng.randint(25, 190)
         return _fill(
-            rng.choice(self.lib.phrases("vehicle_intro")),
+            rng.choice(self.phrases("vehicle_intro")),
             year=str(draft.year),
             body=draft.vehicle.body,
             engine=rng.choice(draft.vehicle.names),
@@ -428,7 +475,7 @@ class _Generator:
         )
 
     def _pressure(self, rng: random.Random, fam: Family) -> str:
-        return _fill(rng.choice(self.lib.phrases("pressure")), part=rng.choice(fam.suspects))
+        return _fill(rng.choice(self.phrases("pressure")), part=rng.choice(fam.suspects))
 
     def _snip(self, snippet_id: str) -> Snippet:
         return self.lib.snippets[snippet_id]
@@ -469,6 +516,23 @@ def generate(lib: Library, master_seed: int) -> dict[str, list[dict[str, Any]]]:
     for row in eval_own + heldout:
         row.pop("_ablation", None)
     return {"ablation": ablation, "eval_own": eval_own, "heldout": heldout}
+
+
+def generate_train(
+    lib: Library,
+    master_seed: int,
+    size: int,
+    phrasing: Mapping[str, tuple[str, ...]],
+    avoid: Iterable[str] = (),
+) -> list[dict[str, Any]]:
+    """The training scenario pool: ``size`` scenarios from training families only.
+
+    ``phrasing`` replaces the library's phrase pools key by key, so training user turns use their
+    own pressure and multi-turn phrasing instead of the eval templates. ``avoid`` holds the eval
+    sets' final user messages; no training final is a near-duplicate of one (R23).
+    """
+    gen = _Generator(lib, mix=TRAIN_MIX, phrasing=phrasing, avoid=avoid)
+    return gen.build_split("train", master_seed, reserved=False, size=size)
 
 
 def _fill(template: str, **values: str) -> str:
