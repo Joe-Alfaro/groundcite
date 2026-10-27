@@ -246,9 +246,12 @@ def test_judge_is_not_called_for_deterministic_rejects(
 ) -> None:
     seen = judge.seen  # type: ignore[attr-defined]
     assert seen, "the judge was never called"
+    # Match the whole delimited reply block of the judge input: a truncated reject such as
+    # (7, 1) can be a prefix of a kept reply, so a bare substring check would misfire.
     for reply in built["pre_judge_replies"]:
         if reply:
-            assert not any(reply in text for text in seen), f"judged a pre-judge reject: {reply}"
+            block = f"<<<\n{reply}\n>>>"
+            assert not any(block in text for text in seen), f"judged a pre-judge reject: {reply}"
     assert judge.calls <= 15
 
 
