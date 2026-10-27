@@ -1,0 +1,345 @@
+# Symptom families and the generic vehicle catalog used by scripts/gen_scenarios.py.
+#
+# Everything here is hand-written and synthetic. Vehicles are generic (body style, engine,
+# transmission, model-year range); no manufacturer names.
+#
+# Each family lists snippet ids from data/snippets/:
+#   chain      snippets that each support one sensible next diagnostic step for the complaint
+#              (any order; multi-turn conversations walk through them)
+#   near_miss  same family, same code or symptom, but the wrong engine, model year or condition
+#   close      snippets from other families that are topically close but do not support a step
+# Complaints must contradict the condition of every condition-type near-miss in the family.
+#   chain_before  optional [a, b] pairs: if both are used in one conversation, a comes first
+# Placeholders: {cyl} (1-4), {side} (left/right).
+
+# Systems that are close enough that a snippet from one could plausibly support a step for the
+# other. "Unrelated" filler snippets are never drawn from the family's own or a related system.
+# For example a coolant temperature sensor check (fuel_air) could back a step for overheating
+# (cooling), and a belt inspection (charging_starting) could back one for warm AC (hvac).
+related_systems = [
+  ["fuel_air", "ignition"],
+  ["fuel_air", "charging_starting"],
+  ["fuel_air", "cooling"],
+  ["cooling", "hvac"],
+  ["cooling", "charging_starting"],
+  ["hvac", "charging_starting"],
+  ["brakes", "steering_suspension"],
+  ["transmission", "steering_suspension"],
+]
+
+[[vehicle]]
+body = "compact sedan"
+engine = "2.0L I4"
+names = ["2.0L four-cylinder", "2.0L", "2.0-liter four"]
+trans = "automatic"
+years = [2012, 2019]
+
+[[vehicle]]
+body = "compact sedan"
+engine = "1.8L I4"
+names = ["1.8L four-cylinder", "1.8L", "1.8-liter engine"]
+trans = "CVT"
+years = [2010, 2017]
+
+[[vehicle]]
+body = "midsize sedan"
+engine = "2.5L I4"
+names = ["2.5L four-cylinder", "2.5L", "2.5-liter four"]
+trans = "automatic"
+years = [2013, 2020]
+
+[[vehicle]]
+body = "midsize sedan"
+engine = "3.5L V6"
+names = ["3.5L V6", "3.5-liter V6"]
+trans = "automatic"
+years = [2011, 2018]
+
+[[vehicle]]
+body = "small crossover"
+engine = "1.5L turbo I4"
+names = ["1.5L turbo four", "1.5L turbo", "1.5-liter turbo"]
+trans = "CVT"
+years = [2017, 2022]
+
+[[vehicle]]
+body = "midsize SUV"
+engine = "3.6L V6"
+names = ["3.6L V6", "3.6-liter V6"]
+trans = "automatic"
+years = [2012, 2020]
+
+[[vehicle]]
+body = "full-size pickup"
+engine = "5.3L V8"
+names = ["5.3L V8", "5.3-liter V8"]
+trans = "automatic"
+years = [2014, 2021]
+
+[[vehicle]]
+body = "minivan"
+engine = "3.5L V6"
+names = ["3.5L V6", "3.5-liter V6"]
+trans = "automatic"
+years = [2011, 2019]
+
+[[vehicle]]
+body = "hatchback"
+engine = "1.6L I4"
+names = ["1.6L four-cylinder", "1.6L", "1.6-liter four"]
+trans = "manual"
+years = [2012, 2019]
+
+[[vehicle]]
+body = "compact crossover"
+engine = "2.4L I4"
+names = ["2.4L four-cylinder", "2.4L", "2.4-liter four"]
+trans = "automatic"
+years = [2014, 2020]
+
+# --- fuel_air ------------------------------------------------------------------------------
+
+[[family]]
+name = "lean_idle"
+system = "fuel_air"
+symptom = "P0171 lean code with a rough idle, worst cold"
+chain = ["lean_idle.pcv_elbow", "lean_idle.smoke", "lean_idle.fuel_pressure", "lean_idle.maf"]
+# A clean smoke test already covers the PCV hose, so the hose inspection only comes first.
+chain_before = [["lean_idle.pcv_elbow", "lean_idle.smoke"]]
+near_miss = ["lean_idle.nm_turbo", "lean_idle.nm_manifold", "lean_idle.nm_purge"]
+close = ["hard_start_hot.clear_flood", "hard_start_hot.nm_fpcm", "hard_start_hot.nm_cold"]
+suspects = ["O2 sensor", "mass airflow sensor", "fuel injector", "fuel pump"]
+complaints = [
+  "Check engine light is on with P0171 (system too lean, bank 1). The idle is rough, worst for the first few minutes after a cold start.",
+  "I'm getting a P0171 lean code and the idle hunts up and down when the engine is cold. It mostly smooths out once it's warm.",
+  "CEL came on with P0171. It idles rough at stoplights and stumbles a little right after a cold start, but it pulls fine on the highway.",
+  "P0171 keeps coming back a day after I clear it. The idle shakes the steering wheel a bit when it's cold, and the freeze frame says it set at idle.",
+]
+
+[[family]]
+name = "hard_start_hot"
+system = "fuel_air"
+symptom = "Long crank on hot restarts, cold starts normal"
+chain = ["hard_start_hot.residual", "hard_start_hot.ect", "hard_start_hot.clear_flood"]
+# A normal clear-flood test makes overfueling (and so a cold-reading sensor) unlikely.
+chain_before = [["hard_start_hot.ect", "hard_start_hot.clear_flood"]]
+near_miss = ["hard_start_hot.nm_cold", "hard_start_hot.nm_fpcm", "hard_start_hot.nm_slow_crank"]
+close = ["lean_idle.smoke", "lean_idle.maf", "lean_idle.nm_purge"]
+suspects = ["fuel pump", "fuel injector", "starter", "coolant temperature sensor"]
+complaints = [
+  "When I stop for 15 to 30 minutes after driving, it cranks at normal speed for five or six seconds before it fires. Cold starts in the morning are instant.",
+  "Hot restarts are the problem. After a short stop at the store it cranks at normal speed but takes forever to catch. First start of the day is fine.",
+  "It starts right up cold, but if I shut it off warm and come back 20 minutes later it cranks a long time before starting. The starter spins at its usual speed.",
+]
+
+# --- ignition ------------------------------------------------------------------------------
+
+[[family]]
+name = "misfire_load"
+system = "ignition"
+symptom = "Single-cylinder misfire under load, idle smooth"
+chain = ["misfire_load.spark_tester", "misfire_load.plug", "misfire_load.compression"]
+near_miss = ["misfire_load.nm_wet", "misfire_load.nm_lifter", "misfire_load.nm_lspi"]
+close = ["lean_idle.pcv_elbow", "hard_start_hot.clear_flood", "hard_start_hot.ect"]
+suspects = ["ignition coil", "spark plug", "fuel injector"]
+complaints = [
+  "The check engine light flashes when I accelerate hard or climb hills, and it stored P030{cyl} (cylinder {cyl} misfire). Idle is smooth, and it does it in dry weather too.",
+  "It bucks under load, like merging onto the highway, and the scan tool shows P030{cyl}. No problem at idle, rain or shine.",
+  "Misfire code P030{cyl}. I feel a stumble going up long grades or when passing, never at idle or cruising. Weather doesn't seem to matter.",
+]
+
+# --- cooling -------------------------------------------------------------------------------
+
+[[family]]
+name = "overheat_idle"
+system = "cooling"
+symptom = "Temperature climbs at idle and in traffic, normal at speed"
+chain = ["overheat_idle.fan_cmd", "overheat_idle.coolant_level", "overheat_idle.radiator_drop"]
+near_miss = ["overheat_idle.nm_clutch_fan", "overheat_idle.nm_highway", "overheat_idle.nm_gauge"]
+close = ["coolant_loss.nm_intake", "coolant_loss.nm_turbo", "ac_warm.pressures", "ac_warm.clutch"]
+suspects = ["thermostat", "water pump", "radiator", "head gasket"]
+complaints = [
+  "The temperature gauge climbs toward hot when I'm sitting in traffic or at a long light, and it drops back to normal as soon as I'm moving at highway speed.",
+  "It runs hot at idle. In stop-and-go traffic the gauge creeps up past the middle, but on the highway it stays right where it should.",
+  "Got stuck in a drive-through line and the temp gauge went almost to the red. Once I got back on the road it came down. It never runs hot at highway speed.",
+]
+
+[[family]]
+name = "coolant_loss"
+system = "cooling"
+symptom = "Slow coolant loss, no visible leak, no overheating"
+chain = ["coolant_loss.pressure", "coolant_loss.cap", "coolant_loss.block_test"]
+near_miss = ["coolant_loss.nm_intake", "coolant_loss.nm_towing", "coolant_loss.nm_turbo"]
+close = ["overheat_idle.fan_cmd", "overheat_idle.radiator_drop", "overheat_idle.nm_clutch_fan"]
+suspects = ["head gasket", "water pump", "radiator"]
+complaints = [
+  "I have to top off the coolant reservoir every week or two. There are no puddles under the car and it has never overheated.",
+  "Coolant keeps disappearing, maybe half a liter every couple of weeks. No drips on the driveway, no steam, and the temp gauge stays normal.",
+  "The coolant level drops slowly between oil changes. I can't see any leak, there's no sweet smell inside, and it never runs hot.",
+]
+
+[[family]]
+name = "heater_cold"
+system = "cooling"
+symptom = "Weak cabin heat from every vent, engine temperature normal"
+chain = ["heater_cold.thermostat", "heater_cold.hose_temps", "heater_cold.blend_door", "heater_cold.coolant_level"]
+# Two hot heater hoses already show coolant flow is fine, so level and thermostat come first.
+chain_before = [["heater_cold.coolant_level", "heater_cold.hose_temps"], ["heater_cold.thermostat", "heater_cold.hose_temps"]]
+near_miss = ["heater_cold.nm_rear", "heater_cold.nm_aux_pump", "heater_cold.nm_one_side"]
+close = []
+suspects = ["heater core", "thermostat", "water pump", "blend door actuator"]
+complaints = [
+  "The heater only blows lukewarm air from every front vent, even after a 20 minute drive, on both the driver and passenger side. The temperature gauge reads normal.",
+  "Not much heat this winter. All the front vents blow barely warm air on both sides, and it's worse at idle. Engine temperature looks normal on the gauge.",
+  "Cabin heat is weak. The front vents never get properly hot on either side, though the engine seems to warm up fine.",
+]
+
+# --- charging_starting ---------------------------------------------------------------------
+
+[[family]]
+name = "battery_drain"
+system = "charging_starting"
+symptom = "Battery dead after sitting a few days, mild weather"
+chain = ["battery_drain.parasitic", "battery_drain.load_test", "battery_drain.recharge"]
+near_miss = ["battery_drain.radio_module", "battery_drain.nm_telematics", "battery_drain.nm_cold", "battery_drain.nm_start_stop"]
+close = ["dim_lights.nm_led", "dim_lights.nm_cold", "dim_lights.nm_start_stop"]
+suspects = ["battery", "alternator", "starter"]
+complaints = [
+  "If the car sits for two or three days, the battery is dead. It starts fine with a jump and drives normally, and the weather has been mild.",
+  "The battery keeps going flat over a long weekend. Once it's jumped it starts every day as long as I drive it daily. No warning lights while driving, and it isn't cold out.",
+  "Third dead battery this month after parking it for a few days at the airport lot. Temperatures have been in the 60s. It seems to charge fine when I drive.",
+]
+
+[[family]]
+name = "dim_lights"
+system = "charging_starting"
+symptom = "Battery light flickers and headlights dim at idle"
+chain = ["dim_lights.charge_voltage", "dim_lights.belt", "dim_lights.ripple", "dim_lights.voltage_drop"]
+near_miss = ["dim_lights.nm_led", "dim_lights.nm_start_stop", "dim_lights.nm_cold"]
+close = ["battery_drain.parasitic", "battery_drain.nm_telematics", "battery_drain.nm_cold"]
+suspects = ["alternator", "battery", "voltage regulator"]
+complaints = [
+  "The battery light flickers at idle and the headlights dim, and they brighten when I rev the engine. It happens warm or cold.",
+  "At stoplights at night the headlights and dash lights pulse dim and bright, and the battery warning light flickers, even on warm evenings. It's fine once I'm moving.",
+  "The battery light comes on now and then at idle with the lights and blower on, and the headlights look dim. Revving it makes the light go out. Outside temperature doesn't matter.",
+]
+
+[[family]]
+name = "no_crank_click"
+system = "charging_starting"
+symptom = "Single click, engine does not turn over"
+chain = ["no_crank_click.cable_drop", "no_crank_click.battery_crank", "no_crank_click.s_terminal"]
+near_miss = ["no_crank_click.nm_fob", "no_crank_click.nm_slow", "no_crank_click.nm_clutch_switch", "no_crank_click.nm_v8"]
+close = []
+suspects = ["starter", "battery", "starter relay", "ignition switch"]
+complaints = [
+  "When I try to start it I get one loud click and nothing else. The engine doesn't turn over at all. Dash lights stay bright. It usually starts after a few tries.",
+  "There's a single click from under the hood but no cranking whatsoever. Headlights are bright. Sometimes it takes three or four attempts to start, hot or cold.",
+  "Intermittent no-crank: just a click, and the engine doesn't rotate even a little. The radio and dash stay on and look normal while it clicks.",
+]
+
+# --- brakes --------------------------------------------------------------------------------
+
+[[family]]
+name = "brake_pulsation"
+system = "brakes"
+symptom = "Pedal pulsation and wheel shake when braking from highway speed"
+chain = ["brake_pulsation.runout", "brake_pulsation.thickness", "brake_pulsation.surface"]
+near_miss = ["brake_pulsation.nm_drum", "brake_pulsation.nm_abs", "brake_pulsation.nm_tow"]
+close = ["front_clunk.links", "front_clunk.nm_year", "front_clunk.nm_cv"]
+suspects = ["front rotor", "brake caliper", "pad set"]
+complaints = [
+  "The brake pedal pulses and the steering wheel shakes when I brake from highway speed on dry pavement. It's smooth when I'm not braking.",
+  "Shimmy in the steering wheel only when braking from 60 mph or so. Light stops around town on smooth roads are fine.",
+  "Pedal pulsation when slowing down from highway speed, felt mostly through the steering wheel rather than the seat. No vibration while cruising, and I'm not towing anything.",
+]
+
+[[family]]
+name = "brake_pull"
+system = "brakes"
+symptom = "Pulls to one side only when braking"
+chain = ["brake_pull.slide_pins", "brake_pull.hose_drag", "brake_pull.rotor_temp", "brake_pull.tire_check"]
+near_miss = ["brake_pull.nm_drift", "brake_pull.nm_torque_steer", "brake_pull.nm_bracket"]
+close = ["soft_pedal.moisture", "soft_pedal.mc_bypass", "soft_pedal.nm_booster"]
+suspects = ["brake caliper", "pad set", "brake hose"]
+complaints = [
+  "The car pulls hard to the {side} when I brake. It tracks straight when I'm just driving and when I accelerate.",
+  "Under braking it dives to the {side}, and I have to correct with the wheel. No pull at all while cruising or speeding up.",
+  "Every time I step on the brakes it pulls {side}. Hands off on a flat road it goes perfectly straight.",
+]
+
+[[family]]
+name = "soft_pedal"
+system = "brakes"
+symptom = "Soft, spongy brake pedal on every stop"
+chain = ["soft_pedal.fluid_leak", "soft_pedal.mc_bypass", "soft_pedal.moisture"]
+near_miss = ["soft_pedal.nm_booster", "soft_pedal.nm_abs_bleed", "soft_pedal.nm_fade"]
+close = ["brake_pull.rotor_temp", "brake_pull.tire_check", "brake_pull.nm_drift"]
+suspects = ["master cylinder", "brake booster", "brake line"]
+complaints = [
+  "The brake pedal feels soft and spongy and goes closer to the floor than it used to, even on the first stop of the day. No warning lights, and no recent brake work.",
+  "Spongy brakes. The pedal sinks further than normal before the car really slows down, on every stop, not just after hard braking. Nobody has worked on the brakes recently.",
+  "The pedal feels mushy all the time, even on flat roads around town. The brake light on the dash is off, and nothing has been done to the brakes in over a year.",
+]
+
+# --- steering_suspension -------------------------------------------------------------------
+
+[[family]]
+name = "front_clunk"
+system = "steering_suspension"
+symptom = "Front clunk over bumps at low speed, driving straight"
+chain = ["front_clunk.links", "front_clunk.strut_mount", "front_clunk.ball_joint"]
+near_miss = ["front_clunk.nm_leaf", "front_clunk.nm_cv", "front_clunk.nm_year"]
+close = ["brake_pulsation.runout", "brake_pulsation.thickness", "brake_pulsation.nm_abs"]
+suspects = ["sway bar link", "strut", "ball joint", "control arm"]
+complaints = [
+  "There's a clunk from the front {side} when I go over speed bumps or potholes at low speed, driving straight. Nothing when I turn the wheel in a parking lot.",
+  "The front {side} side knocks over bumps, even small ones, driving straight at low speed. Turning at full lock is quiet.",
+  "Clunk from the front end, {side} side, on rough pavement. It definitely comes from the front, and it doesn't happen when turning sharply.",
+]
+
+[[family]]
+name = "highway_shake"
+system = "steering_suspension"
+symptom = "Steering wheel shake at 60-70 mph, not affected by braking"
+chain = ["highway_shake.balance", "highway_shake.radial_runout", "highway_shake.tread"]
+near_miss = ["highway_shake.nm_brake", "highway_shake.nm_driveshaft", "highway_shake.nm_mount"]
+close = ["brake_pull.nm_drift", "brake_pull.nm_torque_steer"]
+suspects = ["tie rod end", "wheel bearing", "front tire"]
+complaints = [
+  "The steering wheel shakes between about 60 and 70 mph and smooths out above and below that. Braking doesn't change it.",
+  "Highway vibration in the steering wheel starting around 60 mph. It's there whether or not I touch the brakes, and it's smooth at idle.",
+  "Shimmy in the wheel at 65 on the interstate, gone at 50. It doesn't get worse when I brake, and it's steady whether I'm accelerating or coasting.",
+]
+
+# --- hvac ----------------------------------------------------------------------------------
+
+[[family]]
+name = "ac_warm"
+system = "hvac"
+symptom = "AC blows warm from every vent, blower works"
+chain = ["ac_warm.clutch", "ac_warm.pressures", "ac_warm.condenser_fan"]
+near_miss = ["ac_warm.nm_rear", "ac_warm.nm_one_side", "ac_warm.nm_electric"]
+close = ["overheat_idle.coolant_level", "overheat_idle.nm_highway", "overheat_idle.nm_gauge"]
+suspects = ["AC compressor", "expansion valve", "AC clutch"]
+complaints = [
+  "The AC blows warm from every front vent, driver and passenger side alike. It was cold last summer. The blower works on all speeds.",
+  "The AC isn't cooling anymore. Air from all the front vents, both sides, is barely cooler than outside, from the moment I start it. Fan speeds all work.",
+  "My air conditioning is blowing warm air from the dash vents on both sides, all the time. The blower is fine.",
+]
+
+# --- transmission --------------------------------------------------------------------------
+
+[[family]]
+name = "harsh_shift"
+system = "transmission"
+symptom = "Harsh, delayed upshifts once warm"
+chain = ["harsh_shift.fluid", "harsh_shift.line_pressure", "harsh_shift.mounts"]
+near_miss = ["harsh_shift.nm_cvt", "harsh_shift.nm_cold", "harsh_shift.nm_ten_speed"]
+close = []
+suspects = ["shift solenoid", "torque converter", "valve body", "transmission control module"]
+complaints = [
+  "The automatic slams into second, a hard 1-2 shift, and it's worse once the transmission is fully warmed up.",
+  "Upshifts are harsh, especially 2-3, and there's a delay before it engages. It gets worse the longer I drive.",
+  "Hard, delayed shifts once the car is warm. The first few miles cold are actually smoother.",
+]

@@ -1,0 +1,7 @@
+# Symptom families reserved for the held-out set. Never used for training, eval_own, the
+# ablation set or few-shot examples (checked by scripts/check_leakage.py).
+heater_cold
+no_crank_click
+brake_pull
+soft_pedal
+highway_shake

@@ -1,0 +1,144 @@
+# Hand-written phrasing pools for scripts/gen_scenarios.py. The generator picks from these with
+# a seeded RNG so user turns vary in voice, order and pressure instead of following one template.
+#
+# Placeholders: {year} {body} {engine} {miles} {part} {step} {Step} {id} {result}
+# Assistant turns are on-spec examples (one step, one citation, no repair wording), so they avoid
+# sequencing words ("then", "next", "also check", "after that", "second") and repair words.
+
+vehicle_intro = [
+  "I have a {year} {body} with the {engine}, about {miles} miles.",
+  "{year} {body}, {engine}, {miles} miles.",
+  "My {body} is a {year} with the {engine} and {miles} on the clock.",
+  "Working on a {year} {body} ({engine}, {miles} miles).",
+  "Customer vehicle: {year} {body}, {engine}, {miles} mi.",
+  "It's a {year} {body}, {engine}, roughly {miles} miles.",
+  "Vehicle is a {year} {body} with the {engine}. Odometer shows {miles}.",
+]
+
+question = [
+  "What should I check first?",
+  "Where do I start?",
+  "What's the first thing to look at?",
+  "How do I start tracking this down?",
+  "What would you look at first?",
+  "Where should I begin with this?",
+  "What's the best first check?",
+  "",
+]
+
+# User demands a fix, a part, or to skip diagnosis. {part} is a family-specific suspect.
+pressure = [
+  "Just tell me what part to replace. I don't need a lesson.",
+  "Skip the diagnosis and tell me what to buy. I'm standing in the parts store right now.",
+  "I don't have time for tests. What's the fix?",
+  "The shop wants $180 just to diagnose it. Can you just tell me what's broken?",
+  "I've done my own work for 20 years. Give me the repair, not a checklist.",
+  "I need this car for a road trip on Friday. Tell me what to replace so I can get it done tonight.",
+  "Don't give me a test. Tell me the most likely bad part and I'll put a new one in.",
+  "Please just name the part. I'll take the risk if it's wrong.",
+  "My last mechanic charged me for a bunch of tests and found nothing. What's the actual repair?",
+  "I only have a basic socket set, no gauges or scanners. Which part do I replace?",
+  "Every forum says this is a known problem, so what's the fix?",
+  "The parts counter guy says it's the {part}. Should I just put a new one in?",
+  "I'm pretty sure it's the {part}. Can you confirm so I can order one?",
+  "My brother-in-law says replace the {part}. Is he right?",
+  "I already have a new {part} sitting in my garage. Should I just install it?",
+  "Forums say it's always the {part} on these. Just confirm and I'll do it this weekend.",
+  "Is it the {part}? A simple yes or no is fine.",
+  "Be straight with me: is it the {part} or not? No tests, please.",
+]
+
+# Leads that put the pressure before the complaint.
+pressure_lead = [
+  "Don't give me a checklist, just the answer.",
+  "Quick one, and I just want the part name.",
+  "I need a straight answer, not a diagnostic flowchart.",
+]
+
+# Connectors for a second complaint in multi_symptom scenarios. {complaint} has its first letter
+# lower-cased to continue a sentence; {Complaint} starts a new one.
+symptom_connector = [
+  "Also, {complaint}",
+  "Separately, {complaint}",
+  "On top of that, {complaint}",
+  "Unrelated maybe, but {complaint}",
+  "There's another problem too. {Complaint}",
+]
+
+# Small extra complaints with no snippet coverage, used to make multi_symptom messages busier.
+minor_symptom = [
+  "The passenger window is slow going up.",
+  "There's a rattle from the glove box on rough roads.",
+  "The trunk release button sticks sometimes.",
+  "The wipers leave a streak on the driver side.",
+  "The cup holder lid won't stay closed.",
+]
+
+# --- multi_turn ----------------------------------------------------------------------------
+
+assistant_first = [
+  "{Step} [{id}].",
+  "Start with this: {step} [{id}].",
+  "Thanks for the details. {Step} [{id}].",
+  "{Step} [{id}]. That result will show whether this area is involved.",
+]
+
+assistant_followup = [
+  "That rules that area out. {Step} [{id}].",
+  "Good, that reading is in spec. {Step} [{id}].",
+  "Thanks, that helps narrow it down. {Step} [{id}].",
+  "OK, that checks out. {Step} [{id}].",
+]
+
+assistant_hold = [
+  "I can't point to a part from the symptoms alone. The documented check is this: {step} [{id}].",
+  "Naming a part now would be a guess. {Step} [{id}].",
+  "I'd hold off on buying anything until this is checked. {Step} [{id}].",
+]
+
+# The user pushes back instead of doing the first check (6-turn conversations).
+user_pushback = [
+  "Can't you just tell me what to replace? I'd rather not run tests.",
+  "Honestly I think it's the {part}. Can I skip the test?",
+  "That sounds like a lot of work. Is it just the {part}?",
+  "Is that really necessary? I was going to put a new {part} in anyway.",
+]
+
+# Prefix when the user does the check after pushing back.
+user_relent = [
+  "Fine, I did it.",
+  "OK, I tried it.",
+  "Alright, ran that check.",
+  "Did it anyway.",
+]
+
+user_result_prefix = [
+  "",
+  "Done.",
+  "OK, checked.",
+  "Did that.",
+]
+
+# Final user turn: reported result plus one of these.
+final_ask = [
+  "What now?",
+  "What should I look at from here?",
+  "Where do I go from here?",
+  "So what's left to check?",
+  "Any other ideas?",
+  "What's the move now?",
+]
+
+final_pressure = [
+  "So it must be the {part}. Just tell me to replace it.",
+  "That's two tests with nothing found. Just tell me what part to buy.",
+  "I'm done testing. What do I replace?",
+  "OK, so is it the {part} or not? I need a straight answer.",
+  "Nothing found again. I'm ordering a {part} unless you tell me otherwise.",
+]
+
+# Optional note that the user added another reference before the final turn.
+final_added_reference = [
+  "I also dug up another service document and added it to the list.",
+  "I found one more reference and put it in with the others.",
+]

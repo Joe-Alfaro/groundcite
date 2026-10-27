@@ -13,6 +13,19 @@ echo "==> mypy src"
 uv run mypy src
 echo "==> pytest"
 uv run pytest
+echo "==> leakage"
+# Committed eval sets: eval_own (training families) must not leak into heldout. The report is
+# deterministic, so it only changes when the data does.
+uv run python scripts/check_leakage.py --train data/scenarios/eval_own.jsonl \
+    --eval data/scenarios/heldout.jsonl --report data/scenarios/leakage_report.md
+# Every committed training set against every eval set.
+shopt -s nullglob
+for train in data/datasets/*/train.jsonl; do
+    uv run python scripts/check_leakage.py --train "$train" \
+        --eval data/scenarios/ablation.jsonl data/scenarios/eval_own.jsonl data/scenarios/heldout.jsonl \
+        --report "$(dirname "$train")/leakage_report.md"
+done
+shopt -u nullglob
 echo "==> scrub_check"
 uv run python scripts/scrub_check.py --repo .
 
