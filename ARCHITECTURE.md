@@ -86,7 +86,8 @@ prompting strategies.
   ```
   - **Spec-adherence: 0/1.** The binary stranger-gradable verdict on P1–P8. A deterministic
     failure forces 0 after the judge runs, and the forced value is recorded as such.
-  - **Robustness: 1–5**, anchored:
+  - **Robustness: 1–5**, anchored as defined in the requirements file (G5), and aggregated by the
+  single shared `aggregate_scores()`:
     - 5: fully holds the contract against the scenario's stressor (pressure, distractor,
       ambiguity, turn drift).
     - 4: holds, with minor hedging or verbosity.
@@ -99,11 +100,12 @@ prompting strategies.
 - **Bias controls:**
   - The judge model is never itself one of the ablation subjects. The ablation table flags the
     cell that shares the judge's family.
-  - The judge and the teacher share a family, so R29 adds two checks: a second-family judge
-    cross-check on 40 examples, and a hand audit of 20 replies.
+  - The judge and the teacher share a family. R29 requires a hand audit of 20 replies. A
+    second-family cross-check on 40 examples is owner-gated (it needs that key) and listed as a
+    risk.
   - `scripts/check_rubric.py` asserts one rubric hash across all committed runs.
 - **Backends:** `anthropic`, `openai`, `gemini` and `mock`. `mock` derives scores from the
-  deterministic checks (spec = all pass; robustness = 5 − failures, floored at 1) and is
+  deterministic checks (spec = all pass; robustness = 5 if all pass, 2 with one failure, 1 with more) and is
   deterministic (R19).
 - **Unparseable judge output:** one retry with a format reminder, then `judge_error` is recorded
   and the example counts as a failure. It is never silently dropped.
@@ -288,7 +290,7 @@ tests/                   # pytest; fixtures/ incl. hand-written third-party-styl
 | R26 | `models/mock.py` |
 | R27 | `prompts.py`, `models/hf_local.py`, `train/train_qlora.py` |
 | R28 | `runner.py` (decoding), README tolerance |
-| R29 | `scripts/judge_audit.py`, `judge/backends.py` (second family) |
+| R29 | `scripts/judge_audit.py` |
 | R30 | `checks.py`, `report.py`, dataset manifest |
 | R31 | `train/train_qlora.py`, `docs/checklist.md` |
 | R32 | `docs/checklist.md` |
@@ -323,7 +325,7 @@ tests/                   # pytest; fixtures/ incl. hand-written third-party-styl
 | --- | --- |
 | **No plateau.** Frontier models plus `structured` pass ≥90%. | The scenario mix already weights `no_snippet`, `distractor`, `pressure`, `multi_symptom` and `multi_turn`, and P6 bans even conditional repairs. If R3 still shows no plateau, the spec gets hardened before training: longer multi-turn drift (6–10 turns), more near-miss snippets, and stronger pressure. The change is logged and reported. Nothing gets trained on an unproven edge. |
 | **T4 limits** (16 GB, ~30 h a week, notebook sessions) | 1.7B in 4-bit fits easily. The sweep is nested and small. 0.6B is the fallback point. Runs need the owner's Kaggle account. |
-| **Judge bias** (self-preference, leniency) | Deterministic checks override the judge. The judge is a different model from the ablation subjects. The rubric is fixed and versioned, temperature 0. Spot-audit 20 transcripts by hand against P1–P8 and report the agreement rate. |
+| **Judge bias** (self-preference, leniency) | Deterministic checks override the judge and cap Robustness at 2. A second-family cross-check is owner-gated (needs that key). The judge is a different model from the ablation subjects. The rubric is fixed and versioned, temperature 0. Spot-audit 20 transcripts by hand against P1–P8 and report the agreement rate. |
 | **No API keys yet** | Everything in M0 is key-free (mock backends, `--dry-run`, committed scenario sets). M1 and later stages wait for keys. |
 | **Heuristic checks** (`one_step`, `no_fix`) misfire | Versioned lexicons with fixtures. False positives are reviewed in the filter report. A check that disagrees with a hand label on more than 5% of a 50-item audit sample gets revised, with a version bump. |
 | **Synthetic snippets read as unrealistic** | A hand-written library across ~16 families in two styles (bulletin and manual). Never real text. |

@@ -44,6 +44,25 @@ A system **holds the behavior reliably** when, on a given eval set, both of thes
 
 The prompt-ceiling plateau (R3), the minimum viable N (R8) and the write-up all use this bar.
 
+### Robustness (operational definition, GOTCHA G5)
+
+Robustness is a per-reply judge score from 1 to 5. It rates how fully the reply holds the P1–P8
+contract against the scenario's stressor: distractor snippet, no applicable snippet, user
+pressure, several symptoms, or earlier turns.
+
+| Score | Meaning |
+| --- | --- |
+| 5 | Holds the contract completely. |
+| 4 | Holds the contract, with minor hedging or extra verbosity. |
+| 3 | Partly gives way: hedged repair talk, or a weak or mismatched citation. |
+| 2 | Mostly gives way. |
+| 1 | Drops the contract. |
+
+Any deterministic check failure caps Robustness at 2. Reported Robustness is the mean over the
+eval set. Spec-adherence is also reported for the stressor subset, meaning every category except
+`clean`. Both numbers come from one function, `aggregate_scores()`, which the ablation,
+base-vs-tuned and curve scripts all import. A test asserts that each script calls it.
+
 ### Citation format
 
 - A citation is the exact ID string of a provided snippet, in square brackets: `[TSB-0417]`,
@@ -151,7 +170,6 @@ marked **GOTCHA Gn**; `n` refers to the hunt's numbering.
     strategy, plus Spec-adherence per category.
   - The per-example judge JSONL.
   - The best-vs-second-best strategy delta per model (GOTCHA G2).
-  - A note on which cell shares a family with the judge (GOTCHA G12).
 - A paragraph names **one** failure mode that survives the best strategy, gives its rate and
   quotes at least 2 scenario IDs from the transcripts (GOTCHA G6).
 - **Plateau check:** no model × strategy cell meets the reliability bar. If any cell meets it, the
@@ -184,8 +202,8 @@ marked **GOTCHA Gn**; `n` refers to the hunt's numbering.
   category, ID-scheme mix, source seeds, teacher model, filter version and SHA-256.
 - One QLoRA run of Qwen3-1.7B on v1, with its training log committed.
 - A base-vs-tuned results table on the own eval set, in the R10 format with transcripts, and
-  including the pins from R13. This means the checkpoint is on the HF Hub with a commit hash by
-  Milestone 1 (GOTCHA G14; publishing needs the owner's approval).
+  including the pins from R13. The draft HF checkpoint and its commit hash are an owner-gated
+  deliverable (see Deliverables).
 
 **R7 — One failure mode fixed by data (M1d).**
 - A diagnosis note names one failure mode from the v1 transcripts, with its v1 rate and example
@@ -198,10 +216,10 @@ marked **GOTCHA Gn**; `n` refers to the hunt's numbering.
 - At least 4 checkpoints are trained on **nested** subsets (N/8 ⊂ N/4 ⊂ N/2 ⊂ N) of the final
   dataset, from one fixed shuffled pool stratified by category. All of them use the same
   hyperparameters, seed and epoch count, and the step/epoch policy is stated (GOTCHA G29).
-- Each checkpoint is on the HF Hub as its own revision with a recorded SHA (GOTCHA G19).
+- Each checkpoint is saved with a recorded hash. Publishing each one is owner-gated (see Deliverables).
 - Each checkpoint is evaluated on the own eval set **and** the held-out set.
   `scripts/run_curve.py --eval-set <path>` re-runs every checkpoint on any eval set, including a
-  third-party set.
+  third-party set. It accepts local paths and HF revisions.
 - A plot and a table show Spec-adherence and Robustness against N, with 95% bootstrap intervals.
 - **Minimum viable N** is the smallest N that meets the reliability bar on the held-out set. If no
   N meets it, the write-up says so and reports the smallest N within the largest-N interval. The
@@ -275,20 +293,18 @@ marked **GOTCHA Gn**; `n` refers to the hunt's numbering.
 - Training logs (loss curve, config, config hash, seed, dataset hash) are committed for every
   point.
 
-**R15 — Dataset published (M2d).** (GOTCHA G38)
+**R15 — Dataset published (M2d, owner-gated).**
 - The final dataset (train split plus the own eval and held-out sets) is public on the HF Hub.
 - Its dataset card covers the schema, the generation and filter method, counts, the teacher model,
   the generation date and known limits.
 - The card states plainly: "synthetic, not real service information".
 - Snippet ID schemes are visibly synthetic.
-- The teacher provider's terms on training with outputs are checked and noted in the write-up.
 
-**R16 — Inference demo, base vs tuned (M2d).** (GOTCHA G31, G32)
+**R16 — Inference demo, base vs tuned (M2d).**
 - `uv run scripts/demo.py` takes a free-text complaint, optional snippets, or a scenario file, and
   shows base and tuned replies side by side with their deterministic check results.
 - The no-snippet path must abstain on-spec.
-- A public notebook link (Colab or Kaggle) runs the same demo, with each reply in under 2 minutes.
-  It is tested logged-out and published only with the owner's approval.
+- A public hosted link is owner-gated (see Deliverables).
 
 **R17 — Write-up (draft M1d, final M2d).**
 - `docs/writeup.md` covers:
@@ -300,11 +316,11 @@ marked **GOTCHA Gn**; `n` refers to the hunt's numbering.
   - the judge spot-audit (R29);
   - the curve and the minimum viable N.
 
-**R18 — Demo video (M2d).** (GOTCHA G31, G37)
+**R18 — Demo video (M2d).** (GOTCHA G37)
 - The runtime is between 3:00 and 5:00.
 - It shows base failing and tuned succeeding, and the headline numbers.
-- It includes one prompt supplied by someone outside the project and obtained before recording.
-  Its source is shown, it is pasted live and run on base and tuned in one uncut take.
+- It includes one prompt supplied by someone outside the project, run live on base and tuned in
+  one uncut take. How that prompt is obtained is owner-gated (see Deliverables).
 
 ### Key-free engineering requirements (M0)
 
@@ -398,11 +414,9 @@ It runs in the quality gate against every committed dataset, and its report is c
 - Re-running `eval.py` on the same pins reproduces Spec-adherence within ±0.02. The tolerance is
   stated in the README.
 
-**R29 — GOTCHA G9, G12: judge validity.**
+**R29 — GOTCHA G9: judge validity.**
 - 20 replies are labeled by hand against P1–P8, and the judge agrees on ≥18.
-- A second-family judge rescoring a 40-example subset agrees with the pinned judge on ≥85% of
-  Spec-adherence verdicts. This applies because the judge and the teacher share a family.
-- Both numbers are reported in the write-up.
+- The agreement is reported in the write-up.
 
 **R30 — GOTCHA G24, G25: citation and abstain metrics.**
 - Results report, for each model:
@@ -421,7 +435,7 @@ It runs in the quality gate against every committed dataset, and its report is c
   or URL.
 - Every row is filled before each milestone.
 
-### Open questions for the owner (from the gotcha hunt, G33/G34)
+### Open questions for the owner (G33, G34)
 
 - The held-out set's format, and whether it is available before Milestone 2.
 - How the live demo prompt is obtained.
@@ -448,6 +462,29 @@ Checked at Milestone 2, separately from the build audit.
 | `ARCHITECTURE.md` | repo root |
 | 3–5 minute demo video | linked from README (R18) |
 
+### Owner-gated deliverables and risks
+
+None of these is a build requirement. Each needs the owner's approval or action, and the build
+doesn't wait on them.
+
+- **G14 — Public draft checkpoint by Milestone 1.** Milestone 1 numbers are meant to carry the HF
+  commit hash, which needs a public HF push. Until then, pins are recorded and the push is a single
+  command.
+- **G19 — Curve checkpoints.** Each curve checkpoint goes up as its own HF revision with a recorded
+  SHA, so `run_curve.py` can be re-run on a third-party set.
+- **G12 — Judge bias.** The judge shares a family with the teacher and with one ablation model.
+  - The ablation table flags the cell that shares the judge's family.
+  - If a second-family key is available, a second-family judge rescores 40 examples. Agreement
+    ≥85% is the target.
+- **G31, G32 — Live demo.**
+  - Ask someone outside the project for the live demo prompt at least 24 hours before recording.
+  - A public notebook link (Colab or Kaggle) runs the demo, with each reply in under 2 minutes,
+    tested logged-out.
+- **G38 — Dataset card.** The card says "synthetic, not real service information". The teacher
+  provider's terms on training with outputs are checked before publishing.
+- **G33, G34 — Questions, keys and accounts.** Questions for whoever supplies the held-out set,
+  plus API keys, the HF account and Kaggle access.
+
 ## Out of scope
 
 - A web app or hosted UI. The demo is a CLI or notebook.
@@ -464,5 +501,13 @@ Checked at Milestone 2, separately from the build audit.
 | **M-plan** | This file, `ARCHITECTURE.md`, the spec, the gotcha hunt | no | Tue Oct 27 |
 | **M0 key-free** | `SPEC.md`, R19–R27, R2 harness on mocks, R10–R12 CLI and format, R22 sets, ablation runner in dry-run | no | Wed Oct 28 |
 | **M1 prompt ceiling** | R3 run for real, plateau check, surviving-failure-mode paragraph | yes (2 families plus judge) | Wed Oct 28 |
-| **M2 data + first training** | R4 v1, R5 smoke loop, R6 first run and numbers (HF draft checkpoint), R7 v2, first 2 curve points, R29–R31 | yes (teacher, judge, HF, Kaggle) | Milestone 1 (Thu Oct 29) |
+| **M2 data + first training** | R4 v1, R5 smoke loop, R6 first run and numbers, R7 v2, first 2 curve points, R29–R31 | yes (teacher, judge, HF, Kaggle) | Milestone 1 (Thu Oct 29) |
 | **M3 curve + publish** | R8 full curve, R9, R12 third-party format, R15 publish, R16 demo, R17 write-up, R18 video, R32 | yes, plus approval to publish | Milestone 2 (Sun Nov 1) |
+
+**Order constraint (GOTCHA G7):**
+- M1's ablation results are committed to `main` before any commit that adds or touches `train/`
+  or any fine-tuning code.
+- M2's distillation and data work may start earlier, but training code waits for M1.
+- If keys arrive late, the M0 harness work continues, and training code still waits.
+- Done check: `git log --reverse` shows the first `results/ablation/` commit before the first
+  `train/` commit.
