@@ -115,6 +115,12 @@ class Family:
     # step only makes sense once earlier stages are done, and its reported result makes every
     # earlier-stage step moot.
     chain_order: tuple[tuple[str, ...], ...] = ()
+    # Transmissions the complaint makes sense on (``None``: any). A harsh-shift complaint, for
+    # example, only fits an automatic, even in a scenario no chain snippet constrains.
+    trans: tuple[str, ...] | None = None
+
+    def fits(self, vehicle: Vehicle) -> bool:
+        return self.trans is None or vehicle.trans in self.trans
 
     def stage(self, snippet_id: str) -> int:
         return next(i for i, stage in enumerate(self.chain_order) if snippet_id in stage)
@@ -264,6 +270,8 @@ def _validate_family(lib: Library, family: Family) -> list[str]:
         problems.append(f"{name}: chain_order needs at least 2 non-empty stages")
     if len(flat) != len(set(flat)) or set(flat) != set(family.chain):
         problems.append(f"{name}: chain_order must list every chain snippet exactly once")
+    if family.trans is not None and not any(family.fits(v) for v in lib.vehicles):
+        problems.append(f"{name}: no catalog vehicle has a transmission in {family.trans}")
     for complaint in family.complaints:
         extra = set(PLACEHOLDER.findall(complaint)) - COMPLAINT_PLACEHOLDERS
         if extra:
@@ -336,4 +344,5 @@ def _family(raw: dict[str, Any]) -> Family:
         suspects=tuple(raw["suspects"]),
         complaints=tuple(raw["complaints"]),
         chain_order=tuple(tuple(str(i) for i in stage) for stage in raw.get("chain_order", ())),
+        trans=_opt_tuple(raw.get("trans")),
     )

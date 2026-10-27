@@ -169,7 +169,7 @@ class _Generator:
     ) -> dict[str, Any] | None:
         support = [self._snip(rng.choice(fam.chain))]
         others = self._sample(rng, self._unrelated([fam], pool), rng.randint(1, 3))
-        draft = self._draft(rng, support, others, [])
+        draft = self._draft(rng, [fam], support, others, [])
         if draft is None:
             return None
         return self._single_turn(rng, fam, draft, pressure=False)
@@ -182,7 +182,7 @@ class _Generator:
         extra = self._sample(
             rng, self._snips(fam.close) + self._unrelated([fam], pool), rng.randint(0, 1)
         )
-        draft = self._draft(rng, support, near + extra, near)
+        draft = self._draft(rng, [fam], support, near + extra, near)
         if draft is None:
             return None
         pressure = rng.random() < 0.15
@@ -208,7 +208,7 @@ class _Generator:
             support = [self._snip(rng.choice(fam.chain))]
             near = self._sample(rng, self._snips(fam.near_miss), rng.choice((0, 1)))
             others = self._sample(rng, self._unrelated([fam], pool), rng.randint(1, 2))
-            draft = self._draft(rng, support, near + others, near)
+            draft = self._draft(rng, [fam], support, near + others, near)
             if draft is not None and near:
                 draft.tags.add("distractor")
         if draft is None:
@@ -238,7 +238,7 @@ class _Generator:
         ]
         filler_pool = close + self._unrelated([fam, second], pool)
         others = self._sample(rng, filler_pool, rng.randint(0 if support else 1, 1))
-        draft = self._draft(rng, support, near + others, near)
+        draft = self._draft(rng, [fam, second], support, near + others, near)
         if draft is None:
             return None
         if near and support:
@@ -284,7 +284,7 @@ class _Generator:
         # they no longer support a *next* step, so only the third one is gold.
         support = [third] if cite else []
         draft = self._draft(
-            rng, support, [first, second] + near + others, near, also_apply=[first, second]
+            rng, [fam], support, [first, second] + near + others, near, also_apply=[first, second]
         )
         if draft is None:
             return None
@@ -312,9 +312,8 @@ class _Generator:
             )
         messages.append(_assistant(rng.choice(phrases("assistant_followup")), second, ids))
 
+        # One snippet list holds for the whole conversation, so the user never "adds" a reference.
         final = [rng.choice(second.results)]
-        if (support or near) and rng.random() < 0.35:
-            final.append(rng.choice(phrases("final_added_reference")))
         if rng.random() < 0.45:
             draft.tags.add("pressure")
             final.append(_fill(rng.choice(phrases("final_pressure")), part=part))
@@ -333,18 +332,20 @@ class _Generator:
         others = near + close
         if len(others) < 2 or rng.random() < 0.3:
             others += self._sample(rng, self._unrelated([fam], pool), 1)
-        return self._draft(rng, [], others[:MAX_SNIPPETS], near)
+        return self._draft(rng, [fam], [], others[:MAX_SNIPPETS], near)
 
     def _draft(
         self,
         rng: random.Random,
+        families: Sequence[Family],
         support: list[Snippet],
         others: list[Snippet],
         near: list[Snippet],
         also_apply: Sequence[Snippet] = (),
     ) -> _Draft | None:
-        """Pick a vehicle and year that every supporting (and ``also_apply``) snippet applies to
-        and no vehicle-mismatch snippet does. ``None`` if the combination is impossible."""
+        """Pick a vehicle and year that every complaint's family fits, every supporting (and
+        ``also_apply``) snippet applies to and no vehicle-mismatch snippet does. ``None`` if the
+        combination is impossible."""
         snippets = support + [s for s in others if s not in support]
         if not 2 <= len(snippets) <= MAX_SNIPPETS or len(set(snippets)) != len(snippets):
             return None
@@ -353,6 +354,7 @@ class _Generator:
         options = [
             (vehicle, year)
             for vehicle in self.lib.vehicles
+            if all(f.fits(vehicle) for f in families)
             for year in range(vehicle.years[0], vehicle.years[1] + 1)
             if all(s.applies.matches(vehicle, year) for s in must)
             and not any(s.applies.matches(vehicle, year) for s in must_not)

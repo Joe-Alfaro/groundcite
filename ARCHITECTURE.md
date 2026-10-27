@@ -135,6 +135,9 @@ prompting strategies.
 - Required: `id`, plus either `messages` (ending with a user turn) or `prompt`. Everything else
   is optional.
 - Without `snippets`, the provided IDs come from the bracketed IDs in the prompt text.
+- Gold with two or more `supporting_ids` is any-of: citing any one of them is correct, and the
+  reply still cites exactly one. Our sets use this for multi_symptom rows where both complaints
+  have a supporting snippet.
 - CSV with an `id` and a `prompt` column, and a JSON array, are also accepted (R12).
 
 **Training chat record** (`data/datasets/vN/train.jsonl`):

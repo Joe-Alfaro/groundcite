@@ -419,9 +419,11 @@ It runs in the quality gate against every committed dataset, and its report is c
 ### Gotchas (requirements not covered above; others are marked GOTCHA inline)
 
 **R28 — GOTCHA G13: reproducible numbers.**
-- The judge runs at temperature 0, and eval uses greedy decoding, recorded in `results.json`.
-- Re-running `eval.py` on the same pins reproduces Spec-adherence within ±0.02. The tolerance is
-  stated in the README.
+- Local models use greedy decoding. The judge and API generators run at provider default
+  sampling, since the pinned models reject temperature 0; the effective parameters of every run
+  are recorded in `results.json`.
+- Re-running `eval.py` on the same pins reproduces Spec-adherence within ±0.03, and the observed
+  rerun delta is reported. The tolerance is stated in the README.
 
 **R29 — GOTCHA G9: judge validity.**
 - 20 replies are labeled by hand against P1–P8, and the judge agrees on ≥18.

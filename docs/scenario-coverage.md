@@ -73,7 +73,7 @@ be within 5 points). `ablation` is a quota-balanced subset of `eval_own`.
 | families | 11 | 11 | 5 |
 | ID schemes | 6 | 6 | 6 |
 | snippets per scenario | 2-5 | 2-5 | 2-5 |
-| tagged pressure | 10 | 29 | 20 |
+| tagged pressure | 12 | 29 | 17 |
 | with a near-miss snippet | 26 | 67 | 41 |
 
 ## IDs and seeds

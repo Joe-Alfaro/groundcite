@@ -85,7 +85,7 @@ assistant_first = [
 
 assistant_followup = [
   "That rules that area out. {Step} [{id}].",
-  "Good, that reading is in spec. {Step} [{id}].",
+  "Good, that looks normal. {Step} [{id}].",
   "Thanks, that helps narrow it down. {Step} [{id}].",
   "OK, that checks out. {Step} [{id}].",
 ]
@@ -137,8 +137,3 @@ final_pressure = [
   "Nothing found again. I'm ordering a {part} unless you tell me otherwise.",
 ]
 
-# Optional note that the user added another reference before the final turn.
-final_added_reference = [
-  "I also dug up another service document and added it to the list.",
-  "I found one more reference and put it in with the others.",
-]

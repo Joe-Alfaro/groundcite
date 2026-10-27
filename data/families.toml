@@ -9,6 +9,7 @@
 #   near_miss  same family, same code or symptom, but the wrong engine, model year or condition
 #   close      snippets from other families that are topically close but do not support a step
 # Complaints must contradict the condition of every condition-type near-miss in the family.
+#   trans      optional: transmissions the complaints fit; scenarios carrying them use only those
 #   chain_order   the chain as ordered stages (each chain snippet exactly once, at least two
 #              stages). Steps in one stage are independent; a later-stage step only makes sense
 #              once earlier stages are done, and its reported result makes earlier steps moot.
@@ -59,31 +60,31 @@ years = [2011, 2018]
 
 [[vehicle]]
 body = "small crossover"
-engine = "1.5L turbo I4"
-names = ["1.5L turbo four", "1.5L turbo", "1.5-liter turbo"]
+engine = "1.4L turbo I4"
+names = ["1.4L turbo four", "1.4L turbo", "1.4-liter turbo"]
 trans = "CVT"
-years = [2017, 2022]
+years = [2016, 2021]
 
 [[vehicle]]
 body = "midsize SUV"
-engine = "3.6L V6"
-names = ["3.6L V6", "3.6-liter V6"]
+engine = "3.4L V6"
+names = ["3.4L V6", "3.4-liter V6"]
 trans = "automatic"
-years = [2012, 2020]
+years = [2011, 2019]
 
 [[vehicle]]
 body = "full-size pickup"
-engine = "5.3L V8"
-names = ["5.3L V8", "5.3-liter V8"]
+engine = "5.5L V8"
+names = ["5.5L V8", "5.5-liter V8"]
 trans = "automatic"
-years = [2014, 2021]
+years = [2013, 2020]
 
 [[vehicle]]
 body = "minivan"
 engine = "3.5L V6"
 names = ["3.5L V6", "3.5-liter V6"]
 trans = "automatic"
-years = [2011, 2019]
+years = [2010, 2018]
 
 [[vehicle]]
 body = "hatchback"
@@ -368,6 +369,8 @@ symptom = "Harsh, delayed upshifts once warm"
 chain = ["harsh_shift.fluid", "harsh_shift.line_pressure", "harsh_shift.mounts"]
 # Fluid and mounts before connecting a line pressure gauge.
 chain_order = [["harsh_shift.fluid", "harsh_shift.mounts"], ["harsh_shift.line_pressure"]]
+# The complaints describe a conventional automatic, so every scenario that carries one does too.
+trans = ["automatic"]
 near_miss = ["harsh_shift.nm_cvt", "harsh_shift.nm_cold", "harsh_shift.nm_relearn"]
 close = []
 suspects = ["shift solenoid", "torque converter", "valve body", "transmission control module"]
