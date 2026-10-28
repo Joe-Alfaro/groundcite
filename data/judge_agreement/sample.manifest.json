@@ -1,0 +1,21 @@
+{
+  "seed": 96,
+  "sample_sha256": "dc5a885abb40b8c677c8cd313fe3473e31b42de405095558fd32e7c446294730",
+  "shortfalls": [
+    {
+      "stratum": "m1 reference fails",
+      "wanted": 30,
+      "got": 5
+    },
+    {
+      "stratum": "pilot caliper turns",
+      "wanted": 20,
+      "got": 10
+    },
+    {
+      "stratum": "pilot reference fails",
+      "wanted": 20,
+      "got": 1
+    }
+  ]
+}

@@ -5,13 +5,16 @@
     uv run scripts/judge_agreement.py --run --judge SPEC --sample PATH --out DIR
         [--dry-run] [--resume] [--concurrency N]
     uv run scripts/judge_agreement.py --report --dirs DIR [DIR ...] --out PATH
-        [--adjudication PATH]
+        [--adjudication PATH] [--full-dirs DIR [DIR ...]]
 
---build-sample draws the D-096 sample from the committed M1 ablation and rollout pilot
-transcripts (both scored by the reference judge, ``[judge_candidates] reference``) with no API
-call: 60 M1 rows (10 per subject model x strategy cell, every category in every cell, up to 30
-reference fails) and 40 pilot rows (every caliper turn, up to 20 reference fails, early and late
-turns, cite and abstain golds, every family). The same seed gives byte-identical output.
+--build-sample draws the sample from the committed M1 ablation and rollout pilot transcripts
+(both scored by the reference judge, ``[judge_candidates] reference``) with no API call. Only
+judge-decided rows are drawn: no HARD check failed, so the reference verdict was not forced to 0
+(D-099). Within them the draw follows D-096: 60 M1 rows (10 per subject model x strategy cell,
+every category in every cell, up to 30 reference fails) and 40 pilot rows (every caliper turn,
+up to 20 reference fails, early and late turns, cite and abstain golds, every family). Next to
+the sample, ``<stem>.manifest.json`` records the seed, the sample's sha256 and each quota the
+judge-decided rows can't fill. The same seed gives byte-identical output.
 
 --run re-scores every sample row through the scripts/rejudge.py machinery (stored replies,
 current checks, unchanged rubric) into DIR/transcripts.jsonl, resumable with --resume. --dry-run
@@ -19,9 +22,12 @@ needs no key, writes nothing and prints the call count and an estimated cost fro
 DIR/spend.json holds the actual spend from recorded token usage, across resumed invocations.
 
 --report compares each run with the reference verdicts (agreement, Cohen's kappa, confusion
-matrix, robustness delta, disagreements by category, spend) and applies the D-096 bar. Next to
-PATH it writes disagreements.jsonl: one blind item per sample row where any candidate disagrees,
-for adjudication. The adjudication file is JSONL of ``{item_id, spec_adherence}``.
+matrix, robustness delta, disagreements by category, spend) and applies the D-096 bar on the
+judge-decided sample rows; a run row with a failed HARD check is refused (D-099). Always-pass and
+always-fail baselines on the same rows must fail the bar. --full-dirs names rejudge.py re-judges
+of all of M1 or the pilot, whose all-rows numbers are shown for reference only. Next to PATH it
+writes disagreements.jsonl: one blind item per sample row where any candidate disagrees, for
+adjudication. The adjudication file is JSONL of ``{item_id, spec_adherence}``.
 """
 
 from __future__ import annotations
@@ -44,7 +50,7 @@ from typing import Any
 
 from groundcite import versions
 from groundcite.backends import BackendError
-from groundcite.checks import run_checks
+from groundcite.checks import HARD_CHECKS, run_checks
 from groundcite.config import cost_usd, decoding_params, load_models_config
 from groundcite.evalset import Scenario
 from groundcite.judge import build_judge_messages, context_sections, rubric_sha256
@@ -123,6 +129,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--dirs", type=Path, nargs="+", help="--report: candidate run dirs")
     parser.add_argument("--adjudication", type=Path, help="--report: adjudicated labels (JSONL)")
+    parser.add_argument(
+        "--full-dirs",
+        type=Path,
+        nargs="+",
+        default=[],
+        help="--report: rejudge.py re-judges of M1 or the pilot, for all-rows numbers",
+    )
     return parser
 
 
@@ -143,6 +156,19 @@ def write_jsonl(path: Path, rows: Iterable[Mapping[str, Any]]) -> None:
 
 def is_fail(row: Mapping[str, Any]) -> bool:
     return bool(row["score"]["spec_adherence"] == 0)
+
+
+def is_forced(row: Mapping[str, Any]) -> bool:
+    """A HARD check failed, so D-028 pinned Spec-adherence to 0 whatever the judge said."""
+    checks = row.get("checks") or {}
+    return any(checks.get(name) is False for name in HARD_CHECKS)
+
+
+Shortfall = dict[str, Any]
+
+
+def shortfall(stratum: str, wanted: int, got: int) -> list[Shortfall]:
+    return [{"stratum": stratum, "wanted": wanted, "got": got}] if got < wanted else []
 
 
 # ---------------------------------------------------------------------------------------------
@@ -187,10 +213,12 @@ def source(run_dir: str) -> Source:
 # ---------------------------------------------------------------------------------------------
 
 
-def draw_m1(rows: Sequence[dict[str, Any]], rng: random.Random) -> list[dict[str, Any]]:
+def draw_m1(
+    rows: Sequence[dict[str, Any]], categories: Sequence[str], rng: random.Random
+) -> tuple[list[dict[str, Any]], list[Shortfall]]:
     """10 rows per (model, strategy) cell covering every category, with as many reference fails
-    as the data allows up to 30 in all."""
-    categories = sorted({r["category"] for r in rows})
+    as the data allows up to 30 in all. A cell missing a category, or short of rows, takes other
+    rows of the cell and records the shortfall."""
     cells: dict[tuple[str, str], list[dict[str, Any]]] = {}
     for row in rows:
         cells.setdefault((row["model"], row["strategy"]), []).append(row)
@@ -208,6 +236,7 @@ def draw_m1(rows: Sequence[dict[str, Any]], rng: random.Random) -> list[dict[str
         targets[cell] -= 1
 
     picked: list[dict[str, Any]] = []
+    shortfalls: list[Shortfall] = []
     for cell, cell_rows in sorted(cells.items()):
         pool = list(cell_rows)
         rng.shuffle(pool)
@@ -223,7 +252,8 @@ def draw_m1(rows: Sequence[dict[str, Any]], rng: random.Random) -> list[dict[str
                 continue
             row = next((r for r in passes if r["category"] == category), None)
             if row is None:
-                raise UsageError(f"M1 cell {cell} has no row for category {category}")
+                shortfalls += shortfall(f"m1 {cell[0]} {cell[1]} {category}", 1, 0)
+                continue
             chosen.append(row)
         for row in fails:
             if sum(map(is_fail, chosen)) >= targets[cell]:
@@ -235,10 +265,15 @@ def draw_m1(rows: Sequence[dict[str, Any]], rng: random.Random) -> list[dict[str
                 break
             if row not in chosen:
                 chosen.append(row)
-        if len(chosen) != M1_PER_CELL:
-            raise UsageError(f"M1 cell {cell} has fewer than {M1_PER_CELL} rows")
+        for row in fails:
+            if len(chosen) >= M1_PER_CELL:
+                break
+            if row not in chosen:
+                chosen.append(row)
+        shortfalls += shortfall(f"m1 {cell[0]} {cell[1]} rows", M1_PER_CELL, len(chosen))
         picked.extend(chosen)
-    return picked
+    shortfalls += shortfall("m1 reference fails", M1_FAILS, sum(map(is_fail, picked)))
+    return picked, shortfalls
 
 
 def caliper_ids(scripts_path: Path) -> set[str]:
@@ -260,10 +295,14 @@ def caliper_ids(scripts_path: Path) -> set[str]:
 
 
 def draw_pilot(
-    rows: Sequence[dict[str, Any]], scripts_path: Path, rng: random.Random
-) -> list[dict[str, Any]]:
+    rows: Sequence[dict[str, Any]],
+    all_rows: Sequence[dict[str, Any]],
+    scripts_path: Path,
+    rng: random.Random,
+) -> tuple[list[dict[str, Any]], list[Shortfall]]:
     """Every caliper turn, up to 20 reference fails, then passes until 40 rows, drawn first to
-    reach 8 early, 8 late, 8 cite and 8 abstain turns and every family."""
+    reach 8 early, 8 late, 8 cite and 8 abstain turns and every family. ``rows`` are the
+    judge-decided rows; ``all_rows`` (every turn) sets the caliper quota."""
     calipers = caliper_ids(scripts_path)
     families = {s.id: s.family for s in load_scripts(scripts_path)}
 
@@ -280,19 +319,25 @@ def draw_pilot(
             break
         if is_fail(row) and row not in chosen:
             chosen.append(row)
-    if sum(map(is_fail, chosen)) != fail_target or len(chosen) > PILOT_SIZE:
+    if len(chosen) > PILOT_SIZE:
         raise UsageError("the pilot's caliper turns and fails don't fit the sample")
+    shortfalls = shortfall(
+        "pilot caliper turns", sum(map(is_caliper, all_rows)), sum(map(is_caliper, chosen))
+    )
+    shortfalls += shortfall("pilot reference fails", PILOT_FAILS, sum(map(is_fail, chosen)))
 
-    needs: list[tuple[Callable[[Mapping[str, Any]], bool], int]] = [
-        (lambda r: int(r["turn_index"]) <= EARLY_MAX_TURN, PILOT_MIN_EACH),
-        (lambda r: int(r["turn_index"]) >= LATE_MIN_TURN, PILOT_MIN_EACH),
-        (lambda r: r["gold"]["mode"] == "cite", PILOT_MIN_EACH),
-        (lambda r: r["gold"]["mode"] == "abstain", PILOT_MIN_EACH),
+    needs: list[tuple[str, Callable[[Mapping[str, Any]], bool], int]] = [
+        ("pilot early turns", lambda r: int(r["turn_index"]) <= EARLY_MAX_TURN, PILOT_MIN_EACH),
+        ("pilot late turns", lambda r: int(r["turn_index"]) >= LATE_MIN_TURN, PILOT_MIN_EACH),
+        ("pilot cite golds", lambda r: r["gold"]["mode"] == "cite", PILOT_MIN_EACH),
+        ("pilot abstain golds", lambda r: r["gold"]["mode"] == "abstain", PILOT_MIN_EACH),
     ]
     for family in sorted(set(families.values())):
-        needs.append((lambda r, f=family: families[r["conversation_id"]] == f, 1))
+        needs.append(
+            (f"pilot family {family}", lambda r, f=family: families[r["conversation_id"]] == f, 1)
+        )
     passes = [r for r in pool if not is_fail(r)]
-    for wanted, count in needs:
+    for _, wanted, count in needs:
         for row in passes:
             if sum(map(wanted, chosen)) >= count or len(chosen) >= PILOT_SIZE:
                 break
@@ -303,9 +348,10 @@ def draw_pilot(
             break
         if row not in chosen:
             chosen.append(row)
-    if any(sum(map(wanted, chosen)) < count for wanted, count in needs):
-        raise UsageError("the pilot sample can't meet its turn, mode and family minimums")
-    return chosen
+    for name, wanted, count in needs:
+        shortfalls += shortfall(name, count, sum(map(wanted, chosen)))
+    shortfalls += shortfall("pilot rows", PILOT_SIZE, len(chosen))
+    return chosen, shortfalls
 
 
 def sample_row(
@@ -332,22 +378,29 @@ def sample_row(
     return out
 
 
-def eligible_rows(src: Source, reference: str) -> list[dict[str, Any]]:
-    """The source rows with a reference verdict on a delivered reply."""
+def judged_rows(src: Source, reference: str) -> list[dict[str, Any]]:
+    """The source's delivered replies, checked to carry the reference judge's verdicts."""
     wrong = {r["judge_model"] for r in src.rows} - {reference}
     if wrong:
         raise UsageError(f"{src.run_dir} was judged by {sorted(wrong)}, not {reference}")
     return [r for r in src.rows if not r.get("generation_error")]
 
 
+def manifest_path(sample: Path) -> Path:
+    return sample.with_name(sample.stem + ".manifest.json")
+
+
 def build_sample(seed: int, out: Path) -> int:
     reference = str(load_models_config()["judge_candidates"]["reference"])
     rng = random.Random(seed)
     m1, pilot = source(M1_DIR), source(PILOT_DIR)
-    parts = [
-        ("m1", m1, draw_m1(eligible_rows(m1, reference), rng)),
-        ("pilot", pilot, draw_pilot(eligible_rows(pilot, reference), pilot.eval_set, rng)),
-    ]
+    m1_rows, pilot_rows = judged_rows(m1, reference), judged_rows(pilot, reference)
+    categories = sorted({r["category"] for r in m1_rows})
+    m1_picked, m1_short = draw_m1([r for r in m1_rows if not is_forced(r)], categories, rng)
+    pilot_picked, pilot_short = draw_pilot(
+        [r for r in pilot_rows if not is_forced(r)], pilot_rows, pilot.eval_set, rng
+    )
+    parts = [("m1", m1, m1_picked), ("pilot", pilot, pilot_picked)]
     rows: list[dict[str, Any]] = []
     for name, src, picked in parts:
         # Source order, so the file doesn't depend on the order of the draw.
@@ -356,6 +409,13 @@ def build_sample(seed: int, out: Path) -> int:
             rows.append(sample_row(f"{name}-{i:02d}", name, src.run_dir, row, seed))
     out.parent.mkdir(parents=True, exist_ok=True)
     write_jsonl(out, rows)
+    shortfalls = m1_short + pilot_short
+    write_json(
+        manifest_path(out),
+        {"seed": seed, "sample_sha256": sha256_file(out), "shortfalls": shortfalls},
+    )
+    for entry in shortfalls:
+        print(f"shortfall: {entry['stratum']}: {entry['got']} of {entry['wanted']}")
     fails = Counter(r["source"] for r in rows if r["reference"]["spec_adherence"] == 0)
     counts = Counter(r["source"] for r in rows)
     print(
@@ -651,25 +711,37 @@ def blind_item(sample_id: str, rows: Sequence[Mapping[str, Any]]) -> dict[str, A
     }
 
 
-def candidate_metrics(
-    rows: Sequence[Mapping[str, Any]], adjudication: Mapping[str, int], spend: Any
-) -> dict[str, Any]:
-    ref = [int(r["reference"]["spec_adherence"]) for r in rows]
-    cand = [int(r["score"]["spec_adherence"]) for r in rows]
+def agreement_stats(ref: Sequence[int], cand: Sequence[int]) -> dict[str, Any]:
+    """Spec-adherence agreement, Cohen's kappa and the confusion matrix (reference x candidate)."""
     label = {1: "pass", 0: "fail"}
     confusion = {a: {b: 0 for b in ("pass", "fail")} for a in ("pass", "fail")}
     for a, b in zip(ref, cand, strict=True):
         confusion[label[a]][label[b]] += 1
+    return {
+        "n": len(ref),
+        "agreement": sum(a == b for a, b in zip(ref, cand, strict=True)) / len(ref),
+        "kappa": cohens_kappa(ref, cand),
+        "confusion": confusion,
+    }
+
+
+def meets_agreement_bar(stats: Mapping[str, Any]) -> bool:
+    return bool(stats["agreement"] >= BAR["agreement"] and stats["kappa"] >= BAR["kappa"])
+
+
+def candidate_metrics(
+    rows: Sequence[Mapping[str, Any]], adjudication: Mapping[str, int], spend: Any
+) -> dict[str, Any]:
+    ref = [int(r["reference"]["spec_adherence"]) for r in rows]
+    stats = agreement_stats(ref, [int(r["score"]["spec_adherence"]) for r in rows])
     split = [r for r in rows if disagrees(r)]
     by_category = Counter(f"{r['source']}:{r['category']}" for r in split)
     judged = [r for r in split if item_id(r["sample_id"]) in adjudication]
     wins = sum(
         adjudication[item_id(r["sample_id"])] == r["score"]["spec_adherence"] for r in judged
     )
-    agreement = sum(a == b for a, b in zip(ref, cand, strict=True)) / len(rows)
-    kappa = cohens_kappa(ref, cand)
     win_rate = wins / len(judged) if judged else None
-    if agreement < BAR["agreement"] or kappa < BAR["kappa"]:
+    if not meets_agreement_bar(stats):
         verdict = "fail"
     elif len(judged) < len(split):
         verdict = "pending"
@@ -677,10 +749,7 @@ def candidate_metrics(
         # With nothing to adjudicate the win-rate criterion passes vacuously.
         verdict = "pass" if win_rate is None or win_rate >= BAR["win_rate"] else "fail"
     return {
-        "n": len(rows),
-        "agreement": agreement,
-        "kappa": kappa,
-        "confusion": confusion,
+        **stats,
         "mean_abs_robustness_delta": sum(
             abs(r["score"]["robustness"] - r["reference"]["robustness"]) for r in rows
         )
@@ -692,7 +761,50 @@ def candidate_metrics(
         "win_rate": win_rate,
         "spend_usd": spend,
         "verdict": verdict,
+        "all_rows": None,
     }
+
+
+def baselines(references: Sequence[int]) -> dict[str, dict[str, Any]]:
+    """Constant judges on the same rows: both must miss the bar, or the bar can't tell a judge
+    from a constant (D-099)."""
+    out = {}
+    for name, constant in (("always_pass", 1), ("always_fail", 0)):
+        stats = agreement_stats(references, [constant] * len(references))
+        out[name] = {
+            "n": stats["n"],
+            "agreement": stats["agreement"],
+            "kappa": stats["kappa"],
+            "verdict": "pass" if meets_agreement_bar(stats) else "fail",
+        }
+    return out
+
+
+def full_run_stats(dirs: Sequence[Path]) -> dict[str, dict[str, Any]]:
+    """All-rows numbers per judge from rejudge.py re-judges of M1 or the pilot, every row
+    (forced ones included) paired with the source run's reference verdict. Reference only."""
+    known = {source(d).results.get("run_id"): source(d) for d in (M1_DIR, PILOT_DIR)}
+    pairs: dict[str, tuple[list[int], list[int]]] = {}
+    for run_dir in dirs:
+        manifest = rejudge._read_json(run_dir / MANIFEST)
+        origin = manifest.get("rejudged_from") if isinstance(manifest, dict) else None
+        spec = manifest.get("judge_model") if isinstance(manifest, dict) else None
+        if not isinstance(origin, dict) or not isinstance(spec, str):
+            raise UsageError(
+                f"{run_dir} is not a rejudge.py output (no rejudged_from in {MANIFEST})"
+            )
+        src = known.get(origin.get("run_id"))
+        if src is None:
+            raise UsageError(f"{run_dir} re-judges {origin.get('run_id')!r}, not M1 or the pilot")
+        reference = {rejudge.row_key(r): r for r in src.rows}
+        ref, cand = pairs.setdefault(spec, ([], []))
+        for row in read_jsonl(run_dir / TRANSCRIPTS):
+            key = rejudge.row_key(row)
+            if key not in reference:
+                raise UsageError(f"{run_dir} has a row that is not in {src.run_dir}: {key}")
+            ref.append(int(reference[key]["score"]["spec_adherence"]))
+            cand.append(int(row["score"]["spec_adherence"]))
+    return {spec: agreement_stats(ref, cand) for spec, (ref, cand) in pairs.items() if ref}
 
 
 def load_adjudication(path: Path | None) -> dict[str, int]:
@@ -722,6 +834,12 @@ def report(args: argparse.Namespace) -> int:
         rows = read_jsonl(run_dir / TRANSCRIPTS)
         if not rows:
             raise UsageError(f"{run_dir / TRANSCRIPTS} has no rows")
+        forced = [r["sample_id"] for r in rows if is_forced(r)]
+        if forced:
+            raise UsageError(
+                f"{run_dir} has rows with a failed HARD check ({', '.join(forced)}); the bar only "
+                "uses judge-decided rows (D-099): rebuild the sample and re-run"
+            )
         runs[spec] = rows
         spend_path = run_dir / SPEND
         spends[spec] = (
@@ -739,12 +857,21 @@ def report(args: argparse.Namespace) -> int:
     items = [blind_item(sid, by_sample[sid]) for sid in split]
     items.sort(key=lambda i: i["item_id"])
 
+    candidates = {
+        spec: candidate_metrics(rows, adjudication, spends[spec]) for spec, rows in runs.items()
+    }
+    for spec, stats in full_run_stats(args.full_dirs).items():
+        if spec not in candidates:
+            raise UsageError(f"--full-dirs has a re-judge by {spec}, which is not a candidate")
+        candidates[spec]["all_rows"] = stats
+    sample_ids = sorted(by_sample)
     result = {
         "reference_judge": references.pop(),
         "bar": dict(BAR),
-        "candidates": {
-            spec: candidate_metrics(rows, adjudication, spends[spec]) for spec, rows in runs.items()
-        },
+        "candidates": candidates,
+        "baselines": baselines(
+            [int(by_sample[sid][0]["reference"]["spec_adherence"]) for sid in sample_ids]
+        ),
         "items": {item_id(sid): sid for sid in split},
     }
     out: Path = args.out
@@ -755,6 +882,12 @@ def report(args: argparse.Namespace) -> int:
         print(
             f"{spec}: agreement {c['agreement']:.3f}, kappa {c['kappa']:.3f}, "
             f"{c['disagreements']} disagreements ({c['adjudicated']} adjudicated), {c['verdict']}"
+        )
+    for name, b in result["baselines"].items():
+        note = "" if b["verdict"] == "fail" else " (WARNING: the bar does not reject it)"
+        print(
+            f"baseline {name.replace('_', '-')}: agreement {b['agreement']:.3f}, "
+            f"kappa {b['kappa']:.3f}, {b['verdict']}{note}"
         )
     print(f"wrote {out} and {out.parent / DISAGREEMENTS} ({len(items)} items)")
     return 0
