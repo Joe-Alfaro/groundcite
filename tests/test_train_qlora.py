@@ -395,7 +395,8 @@ def test_labels_with_the_cached_qwen_tokenizer() -> None:
 
 @pytest.fixture(scope="module")
 def smoke_run(tmp_path_factory: pytest.TempPathFactory) -> dict[str, Any]:
-    """One <=20-step peft run on the tiny model, shared by the log tests."""
+    """One <=20-step CPU-only peft run on the tiny model, shared by the log tests (D-078: no
+    MPS on the dev Mac)."""
     mp = pytest.MonkeyPatch()
     root = tmp_path_factory.mktemp("smoke")
     try:
@@ -413,7 +414,7 @@ def smoke_run(tmp_path_factory: pytest.TempPathFactory) -> dict[str, Any]:
         out = root / "out"
         code = run_train(
             ["--dataset", str(data), "--out", str(out), "--seed", "7", "--base", str(base)]
-            + ["--backend", "peft", "--max-steps", "4"]
+            + ["--backend", "peft", "--max-steps", "4", "--device", "cpu"]
         )
     finally:
         mp.undo()

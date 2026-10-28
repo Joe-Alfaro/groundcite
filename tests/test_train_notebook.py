@@ -2,8 +2,9 @@
 
 ``train/kaggle_train.ipynb`` is committed without outputs. A code cell tagged ``parameters``
 pins ``REPO_URL`` and ``REPO_COMMIT`` (a full 40-hex SHA); the notebook clones the repo, checks
-out that commit, installs from ``uv.lock``, reads ``HF_TOKEN`` from Kaggle Secrets into the
-environment without printing it, and runs ``train/train_qlora.py``.
+out that commit, installs ``train/requirements-kaggle.txt`` around Kaggle's torch
+(tests/test_kaggle_notebooks.py), reads ``HF_TOKEN`` from Kaggle Secrets into the environment
+without printing it, and runs ``train/train_qlora.py``.
 
 ``scripts/smoke_loop.sh`` (R5) runs generate (mock teacher) -> filter (mock judge) -> train
 (peft, <=20 steps) -> eval (mock judge) on a smoke batch of <=32 examples, and the README
@@ -72,14 +73,6 @@ def test_notebook_clones_and_checks_out_the_pinned_commit(notebook: dict[str, An
     code = _code(notebook)
     assert re.search(r"git clone[^\n]*REPO_URL", code)
     assert re.search(r"git[^\n]*checkout[^\n]*REPO_COMMIT", code)
-
-
-def test_notebook_installs_from_the_lockfile(notebook: dict[str, Any]) -> None:
-    code = _code(notebook)
-    assert re.search(r"uv (sync|export)[^\n]*--(frozen|locked)", code), (
-        "install the pinned dependencies from uv.lock (uv sync --frozen, or uv export --frozen "
-        "piped to pip)"
-    )
 
 
 def test_notebook_reads_hf_token_from_kaggle_secrets(notebook: dict[str, Any]) -> None:
