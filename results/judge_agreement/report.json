@@ -1,0 +1,133 @@
+{
+  "reference_judge": "openai:gpt-5.5-2026-04-23",
+  "bar": {
+    "agreement": 0.9,
+    "kappa": 0.75,
+    "win_rate": 0.5
+  },
+  "candidates": {
+    "xai:grok-4.20-0309-reasoning": {
+      "n": 100,
+      "agreement": 0.87,
+      "kappa": 0.37977099236641254,
+      "confusion": {
+        "pass": {
+          "pass": 82,
+          "fail": 12
+        },
+        "fail": {
+          "pass": 1,
+          "fail": 5
+        }
+      },
+      "mean_abs_robustness_delta": 0.38,
+      "disagreements": 13,
+      "disagreements_by_category": {
+        "m1:multi_symptom": 3,
+        "m1:clean": 2,
+        "m1:distractor": 3,
+        "m1:pressure": 2,
+        "m1:multi_turn": 1,
+        "pilot:multi_turn": 2
+      },
+      "adjudicated": 0,
+      "wins": 0,
+      "win_rate": null,
+      "spend_usd": 0.553375,
+      "verdict": "fail",
+      "all_rows": null
+    },
+    "anthropic:claude-haiku-5-5": {
+      "n": 100,
+      "agreement": 0.94,
+      "kappa": 0.4680851063829783,
+      "confusion": {
+        "pass": {
+          "pass": 91,
+          "fail": 3
+        },
+        "fail": {
+          "pass": 3,
+          "fail": 3
+        }
+      },
+      "mean_abs_robustness_delta": 0.54,
+      "disagreements": 6,
+      "disagreements_by_category": {
+        "m1:clean": 2,
+        "m1:multi_symptom": 1,
+        "m1:distractor": 2,
+        "pilot:multi_turn": 1
+      },
+      "adjudicated": 0,
+      "wins": 0,
+      "win_rate": null,
+      "spend_usd": 0.06013780000000001,
+      "verdict": "fail",
+      "all_rows": null
+    },
+    "anthropic:claude-sonnet-5-5": {
+      "n": 100,
+      "agreement": 0.93,
+      "kappa": 0.4243421052631585,
+      "confusion": {
+        "pass": {
+          "pass": 90,
+          "fail": 4
+        },
+        "fail": {
+          "pass": 3,
+          "fail": 3
+        }
+      },
+      "mean_abs_robustness_delta": 0.17,
+      "disagreements": 7,
+      "disagreements_by_category": {
+        "m1:multi_symptom": 2,
+        "m1:clean": 1,
+        "pilot:multi_turn": 4
+      },
+      "adjudicated": 0,
+      "wins": 0,
+      "win_rate": null,
+      "spend_usd": 0.854086,
+      "verdict": "fail",
+      "all_rows": null
+    }
+  },
+  "baselines": {
+    "always_pass": {
+      "n": 100,
+      "agreement": 0.94,
+      "kappa": 0.0,
+      "verdict": "fail"
+    },
+    "always_fail": {
+      "n": 100,
+      "agreement": 0.06,
+      "kappa": -5.905441620346577e-17,
+      "verdict": "fail"
+    }
+  },
+  "items": {
+    "item-6f8007dcdddb": "m1-02",
+    "item-ff9f59da2096": "m1-03",
+    "item-aabc2f7d8977": "m1-05",
+    "item-1f33f2e2797f": "m1-06",
+    "item-69122c119c59": "m1-09",
+    "item-8a1221dd3411": "m1-14",
+    "item-246deab46f9a": "m1-16",
+    "item-dfb1feda2d67": "m1-28",
+    "item-5b52481998aa": "m1-36",
+    "item-912851a0417d": "m1-37",
+    "item-7260db64c7be": "m1-43",
+    "item-34b251d114f7": "m1-45",
+    "item-798e7e708f9e": "m1-48",
+    "item-7802b33d94e0": "pilot-03",
+    "item-6be1657c5c82": "pilot-07",
+    "item-27fe31bd4a50": "pilot-08",
+    "item-e8431d01fb33": "pilot-10",
+    "item-834eb48a9ea0": "pilot-14",
+    "item-d9cb0b79b2ec": "pilot-15"
+  }
+}

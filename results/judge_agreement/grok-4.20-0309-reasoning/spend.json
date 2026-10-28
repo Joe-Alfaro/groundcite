@@ -1,0 +1,8 @@
+{
+  "judge_model": "xai:grok-4.20-0309-reasoning",
+  "calls": 100,
+  "input_tokens": 232388,
+  "output_tokens": 12750,
+  "reasoning_tokens": 92406,
+  "cost_usd": 0.553375
+}

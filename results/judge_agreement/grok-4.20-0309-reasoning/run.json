@@ -1,0 +1,5 @@
+{
+  "sample_sha256": "dc5a885abb40b8c677c8cd313fe3473e31b42de405095558fd32e7c446294730",
+  "judge_model": "xai:grok-4.20-0309-reasoning",
+  "rubric_sha256": "636a9c79b9ba0ad02b082351bd25e385c0963c9d8edffedad3919e56b556b4bf"
+}

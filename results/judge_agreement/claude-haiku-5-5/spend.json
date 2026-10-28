@@ -1,0 +1,8 @@
+{
+  "judge_model": "anthropic:claude-haiku-5-5",
+  "calls": 100,
+  "input_tokens": 330358,
+  "output_tokens": 54204,
+  "reasoning_tokens": 0,
+  "cost_usd": 0.06013780000000001
+}
