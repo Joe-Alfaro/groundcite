@@ -151,6 +151,8 @@ def _install_fakes(
     monkeypatch.setitem(sys.modules, "peft", peft)
     monkeypatch.setattr(hub, "fetch_adapter_config", fetch)
     monkeypatch.setattr(backends, "fetch_adapter_config", fetch, raising=False)
+    # No train_log.json: these adapters recorded no chat-template hash (tests/test_template_drift).
+    monkeypatch.setattr(hub, "fetch_train_log", lambda repo, revision=None: None, raising=False)
     return fakes
 
 

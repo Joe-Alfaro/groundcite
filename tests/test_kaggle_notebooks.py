@@ -5,7 +5,8 @@ Both ``train/kaggle_train.ipynb`` and ``train/kaggle_eval.ipynb``:
 - keep Kaggle's preinstalled CUDA torch: the repo installs with ``pip install --no-deps``, plus
   the explicit pinned list ``train/requirements-kaggle.txt`` (``name==version`` lines; no torch,
   torchvision, torchaudio, triton or nvidia-* packages; every runtime dependency of the project
-  except torch; versions equal to uv.lock except transformers, which Unsloth caps). Neither
+  except torch; versions equal to uv.lock except transformers, which Unsloth caps, and
+  huggingface-hub, which that transformers caps; the list resolves on Kaggle's platform). Neither
   notebook runs ``uv export`` or ``uv sync``, and no pip command names torch, triton or nvidia-*;
 - set ``CUDA_VISIBLE_DEVICES=0`` before the model run (Kaggle's accelerator is "GPU T4 x2");
 - keep ``REPO_URL``, ``HUB_REPO`` and the data path (``DATASET`` and ``KAGGLE_DATASET`` in the
@@ -27,8 +28,12 @@ faked.
 from __future__ import annotations
 
 import json
+import os
 import re
 import shlex
+import shutil
+import socket
+import subprocess
 import tomllib
 from pathlib import Path
 from typing import Any
@@ -53,6 +58,14 @@ FILLED = {"REPO_URL": "https://example.com/someone/repo.git", "HUB_REPO": "someo
 # What each notebook's model run looks like.
 MODEL_RUN = {"train": "train/train_qlora.py", "eval": "eval.py"}
 FORBIDDEN = re.compile(r"^(torch|torchvision|torchaudio|triton|nvidia-.*)$")
+# Kaggle pins that may differ from uv.lock: Unsloth caps transformers (D-077), and that
+# transformers caps huggingface-hub below the uv.lock version (B1).
+UV_LOCK_EXEMPT = {"transformers", "huggingface-hub"}
+# Declared requirement ranges of pinned releases, from their PyPI metadata (requires_dist).
+KNOWN_REQUIRES = {
+    ("transformers", "5.17.0"): {"huggingface-hub": ">=1.5.0,<2.0"},
+}
+NO_SOLUTION = "No solution found"
 
 
 def _load(path: Path) -> dict[str, Any]:
@@ -240,15 +253,89 @@ def test_requirements_list_covers_the_project_runtime_and_unsloth() -> None:
     assert {"unsloth", "unsloth-zoo"} <= set(pins)
 
 
-def test_requirements_list_matches_uv_lock_except_transformers() -> None:
+def test_requirements_list_matches_uv_lock_except_transformers_and_the_hub() -> None:
+    """transformers is capped by Unsloth, and huggingface-hub by that transformers (B1)."""
     lock = tomllib.loads((REPO_ROOT / "uv.lock").read_text(encoding="utf-8"))
     locked = {_norm(p["name"]): p["version"] for p in lock["package"] if "version" in p}
     drift = {
         name: (version, locked[name])
         for name, version in _requirements().items()
-        if name in locked and name != "transformers" and version != locked[name]
+        if name in locked and name not in UV_LOCK_EXEMPT and version != locked[name]
     }
     assert not drift, f"pins differ from uv.lock: {drift}"
+
+
+# ---------------------------------------------------------------------------------------------
+# The pinned list resolves (B1): pip on Kaggle must not hit ResolutionImpossible
+# ---------------------------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(("package", "version"), sorted(KNOWN_REQUIRES))
+def test_pins_satisfy_the_known_declared_ranges(package: str, version: str) -> None:
+    """Ranges read from the published metadata (``requires_dist``) of the pinned releases.
+
+    transformers 5.17.0 declares ``huggingface-hub>=1.5.0,<2.0``; pinning hub 2.x makes
+    ``pip install -r`` fail in both notebooks."""
+    from packaging.specifiers import SpecifierSet
+
+    pins = _requirements()
+    if pins.get(package) != version:
+        pytest.skip(f"{package} is not pinned at {version}; the resolve test covers it")
+    for dependency, spec in KNOWN_REQUIRES[(package, version)].items():
+        assert dependency in pins, f"{package}=={version} needs {dependency}{spec}; pin it"
+        assert pins[dependency] in SpecifierSet(spec), (
+            f"{dependency}=={pins[dependency]} breaks {package}=={version} ({dependency}{spec})"
+        )
+
+
+def _compile(*extra: str) -> subprocess.CompletedProcess[str]:
+    uv = shutil.which("uv")
+    assert uv is not None
+    return subprocess.run(
+        [
+            uv,
+            "pip",
+            "compile",
+            str(REQUIREMENTS),
+            "--python-version",
+            "3.11",
+            "--python-platform",
+            "x86_64-manylinux_2_28",
+            "--no-header",
+            "--quiet",
+            "-o",
+            os.devnull,
+            *extra,
+        ],
+        capture_output=True,
+        text=True,
+        timeout=180,
+        check=False,
+        cwd=REPO_ROOT,
+    )
+
+
+def _pypi_reachable() -> bool:
+    try:
+        socket.create_connection(("pypi.org", 443), timeout=3).close()
+    except OSError:
+        return False
+    return True
+
+
+def test_requirements_list_resolves_on_kaggles_platform() -> None:
+    """A full resolve of every pin and its transitive ranges, for Kaggle's Python and platform.
+
+    Uses uv's cache offline first; falls back to PyPI when the cache lacks metadata, and skips
+    only when neither works."""
+    if shutil.which("uv") is None:
+        pytest.skip("uv is not installed")
+    done = _compile("--offline")
+    if done.returncode != 0 and NO_SOLUTION not in done.stderr:
+        if not _pypi_reachable():
+            pytest.skip("uv's cache lacks the metadata and PyPI is unreachable")
+        done = _compile()
+    assert done.returncode == 0, f"pip would fail on Kaggle:\n{done.stderr[-2000:]}"
 
 
 # ---------------------------------------------------------------------------------------------

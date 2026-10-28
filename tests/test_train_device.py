@@ -493,6 +493,9 @@ def test_the_template_sha_at_eval_time_equals_the_one_recorded_at_train_time(
     eos_id = int(tiny_tokenizer().eos_token_id)
     monkeypatch.setattr(torch.backends.mps, "is_available", lambda: False)
     monkeypatch.setattr(hub, "fetch_adapter_config", lambda repo, revision=None: dict(adapter))
+    # Eval reads the pushed train_log.json and compares the hashes (tests/test_template_drift).
+    log = _log(out)
+    monkeypatch.setattr(hub, "fetch_train_log", lambda repo, revision=None: log, raising=False)
     monkeypatch.setattr(
         transformers.AutoModelForCausalLM,
         "from_pretrained",
@@ -504,3 +507,124 @@ def test_the_template_sha_at_eval_time_equals_the_one_recorded_at_train_time(
     reply = backend.generate([{"role": "user", "content": "The engine stalls."}], "system", {})
     assert isinstance(reply, str)
     assert backend.chat_template_sha256 == recorded
+
+
+# ---------------------------------------------------------------------------------------------
+# (4) The Unsloth 4-bit load honors the pinned revision, and the log says what loaded (H1)
+# ---------------------------------------------------------------------------------------------
+
+MIRROR = "unsloth/Qwen3-1.7B-unsloth-bnb-4bit"
+MIRROR_SHA = "1" * 40
+
+
+def _fake_unsloth(
+    monkeypatch: pytest.MonkeyPatch, tiny_base: Path, *, always_remap: bool = False
+) -> list[dict[str, Any]]:
+    """Install a fake ``unsloth`` whose FastLanguageModel acts like Unsloth 2026.10.10: with
+    ``load_in_4bit`` and without ``use_exact_model_name=True`` it swaps a known base for its
+    pre-quantized mirror and drops ``revision`` (the mirror has no such commit). ``always_remap``
+    stands for an Unsloth that can't load the exact pinned repo at all. The loaded model reports
+    what it really is in ``config._name_or_path`` and ``config._commit_hash``, as transformers
+    sets them."""
+    import sys
+    import types
+
+    import peft
+    import torch
+    import transformers
+
+    loads: list[dict[str, Any]] = []
+    real_model = transformers.AutoModelForCausalLM.from_pretrained
+
+    class FastLanguageModel:
+        @staticmethod
+        def from_pretrained(model_name: str, **kwargs: Any) -> tuple[Any, Any]:
+            loads.append({"model_name": model_name, **kwargs})
+            exact = bool(kwargs.get("use_exact_model_name")) and not always_remap
+            if kwargs.get("load_in_4bit") and not exact and model_name == DEFAULT_BASE:
+                name, revision = MIRROR, MIRROR_SHA
+            else:
+                name, revision = model_name, kwargs.get("revision")
+            model = real_model(str(tiny_base), dtype=torch.float32)
+            model.config._name_or_path = name
+            model.config._commit_hash = revision
+            return model, tiny_tokenizer()
+
+        @staticmethod
+        def get_peft_model(model: Any, **kwargs: Any) -> Any:
+            config = peft.LoraConfig(
+                r=kwargs["r"],
+                lora_alpha=kwargs["lora_alpha"],
+                lora_dropout=kwargs["lora_dropout"],
+                target_modules=kwargs["target_modules"],
+                bias="none",
+                task_type="CAUSAL_LM",
+            )
+            return peft.get_peft_model(model, config)
+
+    module = types.ModuleType("unsloth")
+    module.FastLanguageModel = FastLanguageModel  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "unsloth", module)
+    return loads
+
+
+def _train_unsloth(dataset: Path, out: Path) -> int:
+    argv = ["--dataset", str(dataset), "--out", str(out), "--seed", "3", "--backend", "unsloth"]
+    return _main(load_train_module(), [*argv, "--max-steps", "2", "--device", "cuda"])
+
+
+def test_unsloth_loads_the_exact_pinned_base_revision(
+    stack: dict[str, Any],
+    dataset: Path,
+    tmp_path: Path,
+    tiny_base: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """``use_exact_model_name=True`` stops Unsloth swapping in its 4-bit mirror (which has no
+    such commit, so the pinned revision would be dropped); it quantizes the pinned repo itself."""
+    _fake_cuda(monkeypatch)
+    loads = _fake_unsloth(monkeypatch, tiny_base)
+    out = tmp_path / "out"
+    assert _train_unsloth(dataset, out) == 0
+    assert len(loads) == 1, "one Unsloth base load"
+    load = loads[0]
+    assert load["model_name"] == DEFAULT_BASE
+    assert load.get("revision") == _pinned_revision()
+    assert load.get("load_in_4bit") is True
+    assert load.get("use_exact_model_name") is True, (
+        "without it Unsloth loads unsloth/...-bnb-4bit at its default branch"
+    )
+
+
+def test_unsloth_run_logs_the_base_it_actually_loaded(
+    stack: dict[str, Any],
+    dataset: Path,
+    tmp_path: Path,
+    tiny_base: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _fake_cuda(monkeypatch)
+    _fake_unsloth(monkeypatch, tiny_base)
+    out = tmp_path / "out"
+    assert _train_unsloth(dataset, out) == 0
+    loaded = _log(out)["runtime"].get("loaded_base")
+    assert loaded == {"name": DEFAULT_BASE, "revision": _pinned_revision()}, (
+        "runtime.loaded_base records the repo and commit the weights came from"
+    )
+
+
+def test_unsloth_log_does_not_claim_the_pin_when_a_mirror_loaded(
+    stack: dict[str, Any],
+    dataset: Path,
+    tmp_path: Path,
+    tiny_base: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """If Unsloth still swaps in its mirror, the log names the mirror and its commit, not the
+    configured base at the pinned revision."""
+    _fake_cuda(monkeypatch)
+    _fake_unsloth(monkeypatch, tiny_base, always_remap=True)
+    out = tmp_path / "out"
+    assert _train_unsloth(dataset, out) == 0
+    loaded = _log(out)["runtime"].get("loaded_base")
+    assert loaded == {"name": MIRROR, "revision": MIRROR_SHA}

@@ -13,7 +13,8 @@ distilled scenario). Every stage runs under ``timeout 120`` (or ``gtimeout``) wi
 command the script fails before running any stage. It never names a Qwen3 checkpoint.
 
 ``--kaggle`` trains the real ``Qwen/Qwen3-0.6B`` with ``--device cuda``; a notebook under
-``train/`` runs it.
+``train/`` runs it. Kaggle has no ``uv``, so ``--kaggle`` runs every stage with ``python`` (the
+notebook's pip-installed environment) and never calls ``uv``.
 
 The script is executed for real, but ``uv``, ``python``, ``python3``, ``timeout`` and
 ``gtimeout`` are stubs that record their arguments and environment, so nothing is trained.
@@ -109,9 +110,9 @@ def _write(path: Path, text: str) -> None:
     path.chmod(path.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
 
 
-def _stubs(directory: Path, *, timeout: bool = True) -> Path:
+def _stubs(directory: Path, *, timeout: bool = True, uv: bool = True) -> Path:
     directory.mkdir(parents=True, exist_ok=True)
-    for tool in ("uv", "python", "python3"):
+    for tool in ("uv", "python", "python3") if uv else ("python", "python3"):
         _write(directory / tool, TOOL_STUB)
     if timeout:
         for tool in ("timeout", "gtimeout"):
@@ -119,9 +120,15 @@ def _stubs(directory: Path, *, timeout: bool = True) -> Path:
     return directory
 
 
-def _run(tmp_path: Path, *args: str, timeout: bool = True, system_path: str | None = None) -> Run:
+def _run(
+    tmp_path: Path,
+    *args: str,
+    timeout: bool = True,
+    system_path: str | None = None,
+    uv: bool = True,
+) -> Run:
     assert SMOKE_LOOP.is_file(), f"{SMOKE_LOOP} is missing"
-    stubs = _stubs(tmp_path / "bin", timeout=timeout)
+    stubs = _stubs(tmp_path / "bin", timeout=timeout, uv=uv)
     log = tmp_path / "calls.log"
     env = {
         k: v
@@ -254,6 +261,33 @@ def test_kaggle_mode_trains_the_real_small_qwen3_on_cuda(kaggle: Run) -> None:
     assert steps is not None and 1 <= int(steps) <= 20
     assert not any(c.text.endswith("make_tiny_base.py") for c in kaggle.calls)
     assert all(c.cuda_visible_devices != "" for c in kaggle.calls), "Kaggle must see its GPU"
+
+
+KAGGLE_STAGES = (
+    "scripts/distill.py",
+    "scripts/build_dataset.py",
+    "train/train_qlora.py",
+    "eval.py",
+)
+
+
+def test_kaggle_mode_never_calls_uv(kaggle: Run) -> None:
+    """Kaggle has no uv, and ``uv run`` would build a fresh .venv from uv.lock (PyPI torch with
+    its CUDA wheels, no Unsloth), bypassing the notebook's install around Kaggle's torch (H2)."""
+    assert [c.text for c in kaggle.calls if c.tool == "uv"] == []
+    for script in KAGGLE_STAGES:
+        call = kaggle.stage(script)
+        assert call.tool in {"python", "python3"}, f"{script} runs via {call.tool}"
+
+
+def test_kaggle_mode_runs_without_uv_installed(tmp_path: Path) -> None:
+    system_path = "/usr/bin:/bin"
+    if shutil.which("uv", path=system_path):
+        pytest.skip("this system has uv on /usr/bin:/bin")
+    run = _run(tmp_path, "--kaggle", str(tmp_path / "out"), uv=False, system_path=system_path)
+    assert run.code == 0, f"--kaggle must not need uv: {run.stderr}"
+    for script in KAGGLE_STAGES:
+        assert run.stage(script).tool in {"python", "python3"}
 
 
 def test_a_kaggle_notebook_runs_the_kaggle_smoke_loop() -> None:
