@@ -376,12 +376,15 @@ class MockJudge:
     """Scores from the deterministic check lines in the judge input (R19).
 
     Failures are checks marked FAIL (N/A is ignored): none -> (1, 5), one -> (0, 2), more ->
-    (0, 1).
+    (0, 1). It also answers the hint screen (recognized by its ``"meta_leak"`` output key) and
+    never flags: the regex stage stays the only leak check in key-free runs.
     """
 
     name = "mock:judge"
 
     def generate(self, messages: Messages, system: str | None, params: Mapping[str, Any]) -> str:
+        if system is not None and '"meta_leak"' in system:
+            return json.dumps({"meta_leak": False, "reason": "Mock screen: never flags."})
         text = "\n".join(m["content"] for m in messages)
         failed = [name for name, _, status in CHECK_LINE_RE.findall(text) if status == "FAIL"]
         if not failed:

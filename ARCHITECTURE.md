@@ -66,7 +66,7 @@ prompting strategies.
 | `judge.py`, `rubrics/` | The versioned rubric (built from `SPEC.md`), judge input, output parser, retry and HARD-check forcing. |
 | `backends.py`, `config.py`, `keys.py` | One `Backend` registry for subjects and the judge: `hf:` (transformers, loaded lazily), `anthropic:`, `openai:` and `mock:` (`compliant`, `naive`, `judge`). Pinned model ids and decoding params from `config/models.toml`. |
 | `scenarios/` | Snippet library loader, family registry (train vs reserved), seeded generator. |
-| `distill.py`, `filter.py` | Teacher generation and the quality filter with a rejection report. |
+| `distill.py`, `filter.py`, `hint_screen.py` | Teacher generation, the quality filter with a rejection report, and the semantic hint-leak screen (its own prompt, `rubrics/hint_screen_v1.md`, separate from the eval rubric). |
 | `dataset.py` | Build vN, manifest, nested sweep subsets. |
 | `leakage.py` | Overlap checks (R23). |
 | `runner.py`, `report.py` | Eval loop, automatic base rows (R10), aggregation, bootstrap intervals, markdown and JSON tables. |
@@ -183,7 +183,7 @@ prompting strategies.
 ```json
 {"messages": [{"role": "system", ...}, {"role": "user", ...}, ..., {"role": "assistant", "content": "<target reply>"}],
  "meta": {"scenario_id": "tr-0913", "category": "pressure", "family": "misfire", "teacher": "<model id>",
-          "filter_version": "f1", "judge": {"spec_adherence": 1, "robustness": 5}}}
+          "filter_version": "f2", "judge": {"spec_adherence": 1, "robustness": 5}}}
 ```
 It sits next to a `manifest.json` (counts, hashes, versions) and `rejections.jsonl`.
 

@@ -1,10 +1,12 @@
-"""The R4 quality filter: deterministic stages, the judge, near-duplicates and selection.
+"""The R4 quality filter: deterministic stages, the hint screen, the judge, near-duplicates and
+selection.
 
 A candidate passes through the stages in ``REJECTION_REASONS`` order and is rejected at the first
 it fails. The deterministic stages run before the judge, so the judge is never paid for a reply a
-rule already rejects. HARD and SOFT checks both reject here (D-028): training data favors
-precision, so a lexical false alarm costs one candidate, while a lexical miss would teach the
-student the wrong behavior.
+rule already rejects; the semantic hint screen (``groundcite.hint_screen``) runs next, so a reply
+it flags never gets a full rubric call either. HARD and SOFT checks both reject here (D-028):
+training data favors precision, so a lexical false alarm costs one candidate, while a lexical miss
+would teach the student the wrong behavior.
 """
 
 from __future__ import annotations
@@ -17,10 +19,11 @@ from typing import Any
 from groundcite.checks import CheckResult, run_checks
 from groundcite.distill import HINT_HEADER
 from groundcite.evalset import Scenario
+from groundcite.hint_screen import ScreenResult
 from groundcite.judge import JudgeResult
 from groundcite.leakage import JACCARD_THRESHOLD, NgramIndex, text_hash
 
-FILTER_VERSION = "f1"
+FILTER_VERSION = "f2"
 
 GENERATION_ERROR = "generation_error"
 HINT_LEAK = "hint_leak"
@@ -28,6 +31,7 @@ UNCLEAN_END = "unclean_end"
 GOLD_MISMATCH = "gold_mismatch"
 HARD_CHECK = "hard_check"
 SOFT_CHECK = "soft_check"
+HINT_LEAK_SEMANTIC = "hint_leak_semantic"
 JUDGE_ERROR = "judge_error"
 JUDGE_SPEC = "judge_spec"
 JUDGE_ROBUSTNESS = "judge_robustness"
@@ -40,6 +44,7 @@ REJECTION_REASONS = (
     GOLD_MISMATCH,
     HARD_CHECK,
     SOFT_CHECK,
+    HINT_LEAK_SEMANTIC,
     JUDGE_ERROR,
     JUDGE_SPEC,
     JUDGE_ROBUSTNESS,
@@ -109,6 +114,8 @@ class Outcome:
     candidate: Candidate
     teacher: str
     rejection: Rejection | None = None
+    screen: ScreenResult | None = None
+    screened: bool = False
     judge: JudgeResult | None = None
 
 
@@ -140,6 +147,15 @@ def deterministic_stage(candidate: Candidate) -> Rejection | None:
         return Rejection(HARD_CHECK, _describe(hard), names)
     if soft := _failed(candidate.checks, "SOFT"):
         return Rejection(SOFT_CHECK, _describe(soft), names)
+    return None
+
+
+def hint_screen_stage(result: ScreenResult) -> Rejection | None:
+    """Reject a flagged reply as a semantic hint leak; an unparseable screen fails closed."""
+    if result.error:
+        return Rejection(JUDGE_ERROR, f"hint screen: {result.error}")
+    if result.meta_leak:
+        return Rejection(HINT_LEAK_SEMANTIC, f"hint screen: {result.reason}")
     return None
 
 

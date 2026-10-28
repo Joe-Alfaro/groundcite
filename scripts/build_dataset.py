@@ -5,8 +5,9 @@
         --out data/datasets/v1 [--judge SPEC] [--concurrency C]
 
 Stages, in order (the first failure is the rejection reason; see ``groundcite.filter``):
-generation_error, hint_leak, unclean_end, gold_mismatch, hard_check, soft_check, then the judge
-(judge_error, judge_spec, judge_robustness), near_duplicate and not_selected. One example is kept
+generation_error, hint_leak, unclean_end, gold_mismatch, hard_check, soft_check, then the
+semantic hint screen (hint_leak_semantic), the judge (judge_error, judge_spec, judge_robustness),
+near_duplicate and not_selected. One example is kept
 per scenario. Writes train.jsonl, rejections.jsonl, manifest.json and filter_report.md into a new
 or empty ``--out``; the same input gives the same bytes.
 """
@@ -41,8 +42,10 @@ from groundcite.filter import (
     Rejection,
     deterministic_stage,
     final_user_message,
+    hint_screen_stage,
     judge_stage,
 )
+from groundcite.hint_screen import HINT_SCREEN_VERSION, hint_screen_sha256, screen_reply
 from groundcite.judge import judge_reply, rubric_sha256
 from groundcite.keys import MissingKeyError
 from groundcite.prompts import render_messages
@@ -142,16 +145,27 @@ def load_candidates(path: Path) -> list[tuple[Candidate, dict[str, Any]]]:
 
 
 def judge_all(outcomes: Sequence[Outcome], backend: Retrying, concurrency: int) -> None:
-    """Judge the candidates that survived the deterministic stages; scenarios run in parallel.
+    """Screen and judge the candidates that survived the deterministic stages; scenarios run in
+    parallel.
 
-    Within a scenario, candidates are judged in index order and judging stops at the first one
-    that passes with the top Robustness: no later candidate can beat it (ties go to the lowest
-    index), so selection is unchanged and the judge is paid less.
+    Each candidate goes through the hint screen first and reaches the rubric judge only if the
+    screen passes it. Within a scenario, candidates are judged in index order and judging stops
+    at the first one that passes with the top Robustness: no later candidate can beat it (ties go
+    to the lowest index), so selection is unchanged and the judge (and the screen) is paid less.
     """
 
     def scenario(group: list[Outcome]) -> None:
         for outcome in group:
             c = outcome.candidate
+            outcome.screened = True
+            try:
+                outcome.screen = screen_reply(c.scenario, c.reply.strip(), backend)
+            except BackendError as exc:
+                outcome.rejection = Rejection(JUDGE_ERROR, f"hint screen request failed: {exc}")
+                continue
+            outcome.rejection = hint_screen_stage(outcome.screen)
+            if outcome.rejection is not None:
+                continue
             try:
                 outcome.judge = judge_reply(c.scenario, c.reply.strip(), c.checks, backend)
             except BackendError as exc:
@@ -292,6 +306,9 @@ def manifest(
         "filter_version": FILTER_VERSION,
         "judge_model": judge_model,
         "rubric_sha256": rubric_sha256(),
+        "hint_screen_version": HINT_SCREEN_VERSION,
+        "hint_screen_sha256": hint_screen_sha256(),
+        "hint_screen_calls": sum(o.screened for o in outcomes),
         "train_sha256": hashlib.sha256(train_bytes).hexdigest(),
         "candidates_sha256": hashlib.sha256(candidates_bytes).hexdigest(),
         "selection_rule": SELECTION_RULE,
@@ -322,6 +339,8 @@ def filter_report(m: Mapping[str, Any]) -> str:
         f"{100 * ABSTAIN_SHARE_RANGE[1]:.0f}% | {'yes' if m['abstain_share_in_range'] else 'NO'} |",
         f"| Teacher | `{m['teacher_model']}` (prompt {m['teacher_prompt_version']}) |",
         f"| Judge | `{m['judge_model']}` |",
+        f"| Hint screen | {m['hint_screen_version']} (`{m['hint_screen_sha256'][:12]}`), "
+        f"{m['hint_screen_calls']} calls |",
         f"| Filter version | {m['filter_version']} |",
         "",
         "## Rejections by reason",

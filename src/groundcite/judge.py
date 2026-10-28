@@ -122,10 +122,8 @@ def _gold_section(gold: Mapping[str, Any] | None) -> str:
     return f"Gold mode: {gold['mode']}; supporting snippet ID(s): {supporting}"
 
 
-def build_judge_messages(
-    scenario: Scenario, reply: str, checks: Sequence[CheckResult]
-) -> tuple[str, list[dict[str, str]]]:
-    """Return ``(system, messages)`` for judging ``reply`` to ``scenario``."""
+def context_sections(scenario: Scenario) -> list[str]:
+    """The conversation and reference-snippet sections shared by the judge and the hint screen."""
     turns = "\n\n".join(
         f"[turn {i}] {m['role']}:\n{m['content']}" for i, m in enumerate(scenario.messages, 1)
     )
@@ -134,9 +132,18 @@ def build_judge_messages(
     else:
         snippets = "(No structured snippets; any references appear inline in the conversation.)"
     provided = ", ".join(scenario.provided_ids) or "none"
-    sections = [
+    return [
         f"## Conversation\n\n{turns}",
         f"## Reference snippets\n\nProvided IDs: {provided}\n\n{snippets}",
+    ]
+
+
+def build_judge_messages(
+    scenario: Scenario, reply: str, checks: Sequence[CheckResult]
+) -> tuple[str, list[dict[str, str]]]:
+    """Return ``(system, messages)`` for judging ``reply`` to ``scenario``."""
+    sections = [
+        *context_sections(scenario),
         f"## Reply to grade\n\n<<<\n{reply}\n>>>",
         f"## Gold label\n\n{_gold_section(scenario.gold)}",
         "## Deterministic checks\n\n" + "\n".join(_check_line(c) for c in checks),
@@ -153,7 +160,8 @@ def build_judge_messages(
 _FENCE_RE = re.compile(r"```(?:json)?\s*(.*?)\s*```", re.DOTALL | re.IGNORECASE)
 
 
-def _load_object(text: str) -> Any:
+def load_json_object(text: str) -> Any:
+    """The first JSON value in ``text``: the whole text, a ```json fence or the outer braces."""
     candidates = [text.strip()]
     candidates += [m.group(1) for m in _FENCE_RE.finditer(text)]
     start, end = text.find("{"), text.rfind("}")
@@ -180,7 +188,7 @@ def _int_field(obj: Mapping[str, Any], key: str, allowed: range) -> int:
 
 def parse_judge_output(text: str) -> JudgeVerdict:
     """Parse a judge answer: a JSON object, optionally in a ```json fence."""
-    obj = _load_object(text)
+    obj = load_json_object(text)
     if not isinstance(obj, dict):
         raise JudgeParseError(f"expected a JSON object, got {type(obj).__name__}")
     spec = _int_field(obj, "spec_adherence", range(0, 2))
