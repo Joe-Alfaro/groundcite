@@ -393,7 +393,7 @@ def test_mock_judge_answers_the_screen_with_a_valid_verdict() -> None:
 
     row = scenario_row(7)
     result = hs.screen_reply(
-        parse_row(row), _render(NORMAL[2], row), backends.build_backend("mock:judge"), params={}
+        parse_row(row), _render(NORMAL[2], row), backends.get_backend("mock:judge"), params={}
     )
     assert result.error is None
     assert result.meta_leak is False
