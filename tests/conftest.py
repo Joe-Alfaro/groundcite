@@ -9,7 +9,7 @@ from typing import Any
 
 import pytest
 
-KEY_VARS = ("ANTHROPIC_API_KEY", "OPENAI_API_KEY", "GEMINI_API_KEY", "HF_TOKEN")
+KEY_VARS = ("ANTHROPIC_API_KEY", "OPENAI_API_KEY", "GEMINI_API_KEY", "HF_TOKEN", "XAI_API_KEY")
 
 
 class NetworkBlocked(RuntimeError):
