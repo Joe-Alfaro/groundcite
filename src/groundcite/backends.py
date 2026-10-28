@@ -1,8 +1,9 @@
 """Generation and judge backends behind one interface (R10, R19, R25, R26).
 
 ``get_backend(spec)`` resolves a spec by its provider prefix: ``anthropic:``, ``openai:``,
-``hf:`` (a bare ``org/repo`` means ``hf:``) or ``mock:``. Every backend has ``.name`` (the full
-spec) and ``.generate(messages, system, params) -> str``.
+``xai:``, ``hf:`` (a bare ``org/repo`` means ``hf:``) or ``mock:``. Every backend has ``.name``
+(the full spec) and ``.generate(messages, system, params) -> str``. API backends also append each
+successful call's token usage to ``.usage`` (``{input_tokens, output_tokens, reasoning_tokens}``).
 
 API backends call the official SDKs by default. Tests inject ``transport(url, headers, body)``
 instead, which receives the exact JSON request body. Keys are resolved when the backend is built,
@@ -19,6 +20,7 @@ from collections.abc import Callable, Mapping, Sequence
 from typing import Any, Protocol
 
 from groundcite import hub
+from groundcite.config import load_models_config
 from groundcite.judge import CHECK_LINE_RE
 from groundcite.keys import get_key, optional_key, redact
 from groundcite.prompts import chat_template_sha256, render_chat_text
@@ -32,6 +34,8 @@ Transport = Callable[[str, Mapping[str, str], Mapping[str, Any]], Mapping[str, A
 ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
 ANTHROPIC_VERSION = "2023-06-01"
 OPENAI_URL = "https://api.openai.com/v1/chat/completions"
+XAI_BASE_URL = "https://api.x.ai/v1"
+XAI_APIS = {"responses": f"{XAI_BASE_URL}/responses", "chat": f"{XAI_BASE_URL}/chat/completions"}
 
 # Sampling parameters a model may reject (Claude Opus 5.5 rejects temperature; some OpenAI
 # reasoning snapshots do too). Only these are dropped on a rejection; anything else fails loudly.
@@ -130,6 +134,8 @@ class _ApiBackend:
         self._client: Any = None
         # The decoding parameters the last successful call actually ran with (R13).
         self.effective_params: dict[str, Any] | None = None
+        # Token usage, one entry per successful call, for spend reporting (D-095).
+        self.usage: list[dict[str, int | None]] = []
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}(name={self.name!r})"
@@ -156,7 +162,9 @@ class _ApiBackend:
                 rejected.add(param)
                 del sent[param]
         self.effective_params = dict(sent)
-        return self._text(response)
+        text = self._text(response)
+        self.usage.append(self._usage(response))
+        return text
 
     def restore_effective_params(
         self, requested: Mapping[str, Any], recorded: Mapping[str, Any]
@@ -184,6 +192,46 @@ class _ApiBackend:
 
     def _text(self, response: Mapping[str, Any]) -> str:
         raise NotImplementedError
+
+    def _usage(self, response: Mapping[str, Any]) -> dict[str, int | None]:
+        raise NotImplementedError
+
+
+def _usage_entry(
+    input_tokens: Any, output_tokens: Any, total_tokens: Any, reasoning_tokens: Any
+) -> dict[str, int | None]:
+    """One call's usage with ``output_tokens`` as visible output only.
+
+    Providers differ on whether the output count includes reasoning. When the total equals input
+    plus output, it does, and the reasoning tokens are subtracted; otherwise (xAI chat reports
+    reasoning on top) the output count is kept as reported.
+    """
+    inp, out = int(input_tokens or 0), int(output_tokens or 0)
+    reasoning = int(reasoning_tokens) if reasoning_tokens is not None else None
+    if reasoning is not None and total_tokens is not None and int(total_tokens) == inp + out:
+        out -= reasoning
+    return {"input_tokens": inp, "output_tokens": out, "reasoning_tokens": reasoning}
+
+
+def _chat_usage(response: Mapping[str, Any]) -> dict[str, int | None]:
+    usage = response.get("usage") or {}
+    details = usage.get("completion_tokens_details") or {}
+    return _usage_entry(
+        usage.get("prompt_tokens"),
+        usage.get("completion_tokens"),
+        usage.get("total_tokens"),
+        details.get("reasoning_tokens"),
+    )
+
+
+def _chat_text(name: str, response: Mapping[str, Any]) -> str:
+    """The assistant message's content; ``reasoning_content`` is never the reply."""
+    choice = response["choices"][0]
+    content = choice["message"].get("content")
+    if not content:
+        reason = choice.get("finish_reason")
+        raise BackendError(f"{name} returned no content (finish_reason={reason})")
+    return str(content)
 
 
 class AnthropicBackend(_ApiBackend):
@@ -222,6 +270,11 @@ class AnthropicBackend(_ApiBackend):
             raise BackendError(f"{self.name} returned no text content")
         return "".join(texts)
 
+    def _usage(self, response: Mapping[str, Any]) -> dict[str, int | None]:
+        # Anthropic bills thinking inside output_tokens and reports no separate reasoning count.
+        usage = response.get("usage") or {}
+        return _usage_entry(usage.get("input_tokens"), usage.get("output_tokens"), None, None)
+
 
 class OpenAIBackend(_ApiBackend):
     url = OPENAI_URL
@@ -247,12 +300,89 @@ class OpenAIBackend(_ApiBackend):
         return result
 
     def _text(self, response: Mapping[str, Any]) -> str:
-        choice = response["choices"][0]
-        content = choice["message"].get("content")
-        if not content:
-            reason = choice.get("finish_reason")
-            raise BackendError(f"{self.name} returned no content (finish_reason={reason})")
-        return str(content)
+        return _chat_text(self.name, response)
+
+    def _usage(self, response: Mapping[str, Any]) -> dict[str, int | None]:
+        return _chat_usage(response)
+
+
+class XAIBackend(_ApiBackend):
+    """``xai:<model>`` through the openai SDK pointed at xAI (D-095, D-098).
+
+    ``api`` picks the Responses API (``"responses"``) or Chat Completions (``"chat"``); the
+    default is ``[xai] api`` in ``config/models.toml``. The pinned decoding table must use that
+    API's output-token cap (``max_output_tokens`` or ``max_completion_tokens``).
+    """
+
+    key_var = "XAI_API_KEY"
+
+    def __init__(
+        self, spec: str, transport: Transport | None = None, *, api: str | None = None
+    ) -> None:
+        if api is None:
+            api = str(load_models_config().get("xai", {}).get("api", "responses"))
+        if api not in XAI_APIS:
+            raise ValueError(f"unknown xai api {api!r}; use one of {sorted(XAI_APIS)}")
+        self.api = api
+        self.url = XAI_APIS[api]
+        super().__init__(spec, transport)
+
+    def _body(
+        self, messages: Messages, system: str | None, params: Mapping[str, Any]
+    ) -> dict[str, Any]:
+        msgs = [dict(m) for m in messages]
+        if self.api == "responses":
+            body: dict[str, Any] = {"model": self.model, "input": msgs}
+            if system is not None:
+                body["instructions"] = system
+            return {**body, **params}
+        if system is not None:
+            msgs.insert(0, {"role": "system", "content": system})
+        return {"model": self.model, "messages": msgs, **params}
+
+    def _headers(self) -> dict[str, str]:
+        return {"Authorization": f"Bearer {self._key}", "content-type": "application/json"}
+
+    def _sdk_call(self, body: dict[str, Any]) -> Mapping[str, Any]:
+        if self._client is None:
+            import openai
+
+            self._client = openai.OpenAI(
+                api_key=self._key, base_url=XAI_BASE_URL, max_retries=SDK_MAX_RETRIES
+            )
+        if self.api == "responses":
+            result: Mapping[str, Any] = self._client.responses.create(**body).model_dump()
+        else:
+            result = self._client.chat.completions.create(**body).model_dump()
+        return result
+
+    def _text(self, response: Mapping[str, Any]) -> str:
+        if self.api == "chat":
+            return _chat_text(self.name, response)
+        # Reasoning items precede the answer; the reply is the message items' output text.
+        texts = [
+            part.get("text") or ""
+            for item in response.get("output") or []
+            if item.get("type") == "message"
+            for part in item.get("content") or []
+            if part.get("type") == "output_text"
+        ]
+        if not any(texts):
+            status = response.get("status")
+            raise BackendError(f"{self.name} returned no output text (status={status})")
+        return "".join(texts)
+
+    def _usage(self, response: Mapping[str, Any]) -> dict[str, int | None]:
+        if self.api == "chat":
+            return _chat_usage(response)
+        usage = response.get("usage") or {}
+        details = usage.get("output_tokens_details") or {}
+        return _usage_entry(
+            usage.get("input_tokens"),
+            usage.get("output_tokens"),
+            usage.get("total_tokens"),
+            details.get("reasoning_tokens"),
+        )
 
 
 # ---------------------------------------------------------------------------------------------
@@ -508,6 +638,7 @@ def _mock(spec: str, transport: Transport | None = None) -> Backend:
 BACKENDS: dict[str, Callable[[str, Transport | None], Backend]] = {
     "anthropic:": AnthropicBackend,
     "openai:": OpenAIBackend,
+    "xai:": XAIBackend,
     "hf:": HFBackend,
     "mock:": _mock,
 }

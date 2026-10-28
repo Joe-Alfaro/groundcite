@@ -14,7 +14,7 @@ from dotenv import dotenv_values
 
 ENV_FILE_VAR = "GROUNDCITE_ENV_FILE"
 DEFAULT_ENV_FILE = Path(__file__).resolve().parents[2] / ".env"
-KEY_VARS = ("ANTHROPIC_API_KEY", "OPENAI_API_KEY", "GEMINI_API_KEY", "HF_TOKEN")
+KEY_VARS = ("ANTHROPIC_API_KEY", "OPENAI_API_KEY", "GEMINI_API_KEY", "HF_TOKEN", "XAI_API_KEY")
 REDACTED = "[REDACTED]"
 
 
