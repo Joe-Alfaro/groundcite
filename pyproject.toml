@@ -5,8 +5,12 @@ description = "Fine-tuning a small instruct model for grounded, cited diagnostic
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    # Training (train/train_qlora.py): the transformers Trainer needs accelerate; the Hub push
+    # uses huggingface-hub. Unsloth is a Kaggle-only install in train/kaggle_train.ipynb.
+    "accelerate==1.15.0",
     "anthropic==2.3.0",
     "openai==3.40.0",
+    "huggingface-hub==2.3.0",
     "peft==0.21.2",
     "python-dotenv==1.2.4",
     # Local hf: models (eval.py --model hf:...). Core, not an extra, so the eval is one command.

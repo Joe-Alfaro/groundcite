@@ -1,0 +1,40 @@
+# The one versioned QLoRA training config (R7, R8, R31). Frozen for v1, v2 and every curve point:
+# a bad result is fixed with data, never by editing this file. train_log.json records the
+# resolved config (this file plus any --base/--max-steps/--epochs override) and its SHA-256.
+version = 1
+
+[model]
+base = "Qwen/Qwen3-1.7B"
+# QLoRA: the frozen base is loaded in 4-bit NF4 on the GPU backend. The peft backend on CPU/MPS
+# has no bitsandbytes and trains the same LoRA on a full-precision base (logged as runtime).
+load_in_4bit = true
+
+[lora]
+r = 16
+alpha = 32
+dropout = 0.05
+# All attention and MLP projections of every Qwen3 decoder layer.
+target_modules = ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]
+
+[train]
+learning_rate = 2e-4
+lr_scheduler_type = "cosine"
+# A float below 1 is a fraction of the total steps.
+warmup_steps = 0.05
+weight_decay = 0.0
+max_grad_norm = 1.0
+optim = "adamw_torch"
+# Effective batch 8: about 50 optimizer steps per epoch at N=400, and still a few at N=50.
+per_device_train_batch_size = 4
+gradient_accumulation_steps = 2
+# Every curve point trains for the same number of epochs (R8, GOTCHA G29).
+step_policy = "epochs"
+num_train_epochs = 3
+# The p99 zero-shot prompt plus reply is about 1,030 Qwen3 tokens; 2048 leaves headroom for
+# longer teacher replies and multi-turn scenarios. Training refuses data whose p99 exceeds it.
+max_seq_length = 2048
+gradient_checkpointing = true
+logging_steps = 1
+# The T4 (sm_75) has no bf16 (R31, GOTCHA G28).
+fp16 = true
+bf16 = false
