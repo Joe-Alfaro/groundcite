@@ -91,6 +91,11 @@ the user reported is used up. A near-miss twin (same procedure, wrong engine, ye
 transmission, body or condition) never supports a step. When no live snippet supports a further
 step, the gold is abstain.
 
+Gold is any-of: it lists every such snippet, and citing any one of them is correct. The order in
+which a technician would usually run the checks does not narrow it, because the model never sees
+that order, unless the snippet texts themselves state one ("after confirming X, ..."); no pilot
+snippet does. Adding a snippet never removes a snippet that is still in scope and not yet done.
+
 ## Scoring and metrics
 
 Every assistant turn becomes one transcript row with the usual fields plus `conversation_id`,

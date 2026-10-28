@@ -18,21 +18,25 @@ echo "==> leakage"
 # deterministic, so it only changes when the data does.
 uv run python scripts/check_leakage.py --train data/scenarios/eval_own.jsonl \
     --eval data/scenarios/heldout.jsonl --report data/scenarios/leakage_report.md
-# The few-shot examples against every eval set (R3, R23): disjoint ids and final messages, and no
-# reserved family. There is no training set in this comparison, so --train is empty.
+# The few-shot examples against every eval set, the rollout pilot included (R3, R23): disjoint
+# ids and final messages, and no reserved family. There is no training set in this comparison,
+# so --train is empty.
 uv run python scripts/check_leakage.py --train /dev/null \
     --eval data/scenarios/ablation.jsonl data/scenarios/eval_own.jsonl data/scenarios/heldout.jsonl \
+    data/scenarios/rollout_pilot.jsonl \
     --few-shot data/few_shot/examples.jsonl
-# The training scenario pool the teacher distills from, against every eval set and the few-shot
-# examples (R23).
+# The training scenario pool the teacher distills from, against every eval set (the rollout
+# pilot included) and the few-shot examples (R23).
 uv run python scripts/check_leakage.py --train data/scenarios/train_pool.jsonl \
     --eval data/scenarios/ablation.jsonl data/scenarios/eval_own.jsonl data/scenarios/heldout.jsonl \
+    data/scenarios/rollout_pilot.jsonl \
     --few-shot data/few_shot/examples.jsonl
-# Every committed training set against every eval set.
+# Every committed training set against every eval set, the rollout pilot included.
 shopt -s nullglob
 for train in data/datasets/*/train.jsonl; do
     uv run python scripts/check_leakage.py --train "$train" \
         --eval data/scenarios/ablation.jsonl data/scenarios/eval_own.jsonl data/scenarios/heldout.jsonl \
+        data/scenarios/rollout_pilot.jsonl \
         --report "$(dirname "$train")/leakage_report.md"
 done
 shopt -u nullglob
