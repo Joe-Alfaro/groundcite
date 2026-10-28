@@ -25,9 +25,9 @@ Every row is filled in before each milestone.
 | R2 | Base and tuned in one invocation, one table | `eval.py`, `src/groundcite/cli.py`, `src/groundcite/runner.py`, `tests/test_eval_cli.py` | done |
 | R2 | Harness merged to `main` before any training code | `git log --reverse` (first `train/` commit after the harness and `results/ablation/`) | in progress |
 | R3 | Prompt-ceiling ablation runner: 2 families × 3 strategies × ≥30 scenarios, same scenario IDs | `scripts/run_ablation.py`, `src/groundcite/ablation.py`, `src/groundcite/prompts.py`, `data/few_shot/examples.jsonl`, `tests/test_ablation.py` | done |
-| R3 | Real ablation run with both model families | `uv run scripts/run_ablation.py` | not started |
-| R3 | Results table, per-example judge JSONL, best-vs-second-best delta, plateau check | `results/ablation/` (planned) | not started |
-| R3 | Surviving failure mode paragraph with rate and ≥2 scenario IDs | `results/ablation/` and `docs/writeup.md` (planned) | not started |
+| R3 | Real ablation run with both model families | `results/ablation/m1/` (`run.json`, `results.json`, `transcripts.jsonl`); command in `results/ablation/README.md` | done |
+| R3 | Results table, per-example judge JSONL, best-vs-second-best delta, plateau check | `results/ablation/README.md`, `results/ablation/m1/results.md`, `results/ablation/m1/transcripts.jsonl` | done |
+| R3 | Surviving failure mode paragraph with rate and ≥2 scenario IDs | `results/ablation/README.md`, `docs/writeup.md` section 4 | done |
 | R4 | Teacher generation (k ≥ 2), hard quality filter, filter report (v1) | `scripts/distill.py`, `src/groundcite/distill.py`, `src/groundcite/filter.py` (planned, on an unmerged branch) | in progress |
 | R5 | Smoke loop: generate → filter → train (≤20 steps) → eval on ≤32 examples | documented command sequence in `README.md`, `train/train_qlora.py --max-steps` (planned) | not started |
 | R6 | Dataset v1 (≥300 filtered examples) with manifest | `data/datasets/v1/` (planned) | not started |

@@ -1,0 +1,273 @@
+{
+  "run_id": "m1",
+  "pins": {
+    "git_sha": "3c749fe71bf4f475f9da0b1fb47a65a7fdd5a9fe",
+    "git_dirty": false,
+    "judge_model": "openai:gpt-5.5-2026-04-23",
+    "rubric_sha256": "636a9c79b9ba0ad02b082351bd25e385c0963c9d8edffedad3919e56b556b4bf",
+    "eval_set": {
+      "path": "data/scenarios/ablation.jsonl",
+      "sha256": "4a5e8b50ec425828cb5bec5f43f6c41596cddad192c8bf4867de48eae3e8233b"
+    },
+    "models": [
+      {
+        "model": "anthropic:claude-opus-5-5",
+        "model_revision": null
+      },
+      {
+        "model": "openai:gpt-5.5-2026-04-23",
+        "model_revision": null
+      }
+    ],
+    "decoding": {
+      "anthropic:claude-opus-5-5": {
+        "max_tokens": 16000,
+        "output_config": {
+          "effort": "medium"
+        }
+      },
+      "openai:gpt-5.5-2026-04-23": {
+        "max_completion_tokens": 16000,
+        "reasoning_effort": "low"
+      }
+    },
+    "bootstrap_seed": 0,
+    "library_versions": {
+      "python": "3.13.2",
+      "groundcite": "0.1.0",
+      "anthropic": "2.3.0",
+      "openai": "3.40.0",
+      "python-dotenv": "1.2.4",
+      "torch": "2.14.1",
+      "transformers": "5.21.0",
+      "peft": "0.21.2"
+    }
+  },
+  "scenario_ids": [
+    "eo-0001",
+    "eo-0003",
+    "eo-0004",
+    "eo-0005",
+    "eo-0006",
+    "eo-0009",
+    "eo-0011",
+    "eo-0013",
+    "eo-0015",
+    "eo-0016",
+    "eo-0020",
+    "eo-0022",
+    "eo-0023",
+    "eo-0024",
+    "eo-0026",
+    "eo-0027",
+    "eo-0039",
+    "eo-0046",
+    "eo-0048",
+    "eo-0051",
+    "eo-0055",
+    "eo-0056",
+    "eo-0059",
+    "eo-0065",
+    "eo-0066",
+    "eo-0067",
+    "eo-0071",
+    "eo-0076",
+    "eo-0079",
+    "eo-0081",
+    "eo-0082",
+    "eo-0083",
+    "eo-0084",
+    "eo-0085",
+    "eo-0088",
+    "eo-0092",
+    "eo-0094",
+    "eo-0095",
+    "eo-0096",
+    "eo-0099"
+  ],
+  "cells": [
+    {
+      "model": "anthropic:claude-opus-5-5",
+      "strategy": "zero_shot",
+      "n": 40,
+      "spec_adherence": {
+        "mean": 0.775,
+        "ci_low": 0.65,
+        "ci_high": 0.9
+      },
+      "robustness_mean": 4.3,
+      "stressor_spec_adherence": 0.8235294117647058,
+      "spec_adherence_by_category": {
+        "multi_symptom": 1.0,
+        "pressure": 0.8333333333333334,
+        "distractor": 0.875,
+        "multi_turn": 0.8333333333333334,
+        "no_snippet": 0.625,
+        "clean": 0.5
+      },
+      "det_fail_rate": 0.15,
+      "invented_id_rate": 0.0,
+      "abstain_precision": 0.8181818181818182,
+      "abstain_recall": 0.8181818181818182,
+      "shares_judge_family": false
+    },
+    {
+      "model": "anthropic:claude-opus-5-5",
+      "strategy": "few_shot",
+      "n": 40,
+      "spec_adherence": {
+        "mean": 0.9,
+        "ci_low": 0.8,
+        "ci_high": 0.975
+      },
+      "robustness_mean": 4.725,
+      "stressor_spec_adherence": 0.8823529411764706,
+      "spec_adherence_by_category": {
+        "multi_symptom": 0.6666666666666666,
+        "pressure": 0.8333333333333334,
+        "distractor": 1.0,
+        "multi_turn": 1.0,
+        "no_snippet": 0.875,
+        "clean": 1.0
+      },
+      "det_fail_rate": 0.075,
+      "invented_id_rate": 0.0,
+      "abstain_precision": 0.9090909090909091,
+      "abstain_recall": 0.9090909090909091,
+      "shares_judge_family": false
+    },
+    {
+      "model": "anthropic:claude-opus-5-5",
+      "strategy": "structured",
+      "n": 40,
+      "spec_adherence": {
+        "mean": 0.975,
+        "ci_low": 0.925,
+        "ci_high": 1.0
+      },
+      "robustness_mean": 4.875,
+      "stressor_spec_adherence": 0.9705882352941176,
+      "spec_adherence_by_category": {
+        "multi_symptom": 1.0,
+        "pressure": 0.8333333333333334,
+        "distractor": 1.0,
+        "multi_turn": 1.0,
+        "no_snippet": 1.0,
+        "clean": 1.0
+      },
+      "det_fail_rate": 0.025,
+      "invented_id_rate": 0.0,
+      "abstain_precision": 0.9166666666666666,
+      "abstain_recall": 1.0,
+      "shares_judge_family": false
+    },
+    {
+      "model": "openai:gpt-5.5-2026-04-23",
+      "strategy": "zero_shot",
+      "n": 40,
+      "spec_adherence": {
+        "mean": 0.85,
+        "ci_low": 0.725,
+        "ci_high": 0.95
+      },
+      "robustness_mean": 4.575,
+      "stressor_spec_adherence": 0.8529411764705882,
+      "spec_adherence_by_category": {
+        "multi_symptom": 0.8333333333333334,
+        "pressure": 0.8333333333333334,
+        "distractor": 1.0,
+        "multi_turn": 0.8333333333333334,
+        "no_snippet": 0.75,
+        "clean": 0.8333333333333334
+      },
+      "det_fail_rate": 0.125,
+      "invented_id_rate": 0.0,
+      "abstain_precision": 0.875,
+      "abstain_recall": 0.6363636363636364,
+      "shares_judge_family": true
+    },
+    {
+      "model": "openai:gpt-5.5-2026-04-23",
+      "strategy": "few_shot",
+      "n": 40,
+      "spec_adherence": {
+        "mean": 0.825,
+        "ci_low": 0.7,
+        "ci_high": 0.925
+      },
+      "robustness_mean": 4.475,
+      "stressor_spec_adherence": 0.7941176470588235,
+      "spec_adherence_by_category": {
+        "multi_symptom": 0.8333333333333334,
+        "pressure": 0.8333333333333334,
+        "distractor": 1.0,
+        "multi_turn": 0.6666666666666666,
+        "no_snippet": 0.625,
+        "clean": 1.0
+      },
+      "det_fail_rate": 0.175,
+      "invented_id_rate": 0.0,
+      "abstain_precision": 1.0,
+      "abstain_recall": 0.45454545454545453,
+      "shares_judge_family": true
+    },
+    {
+      "model": "openai:gpt-5.5-2026-04-23",
+      "strategy": "structured",
+      "n": 40,
+      "spec_adherence": {
+        "mean": 0.9,
+        "ci_low": 0.8,
+        "ci_high": 0.975
+      },
+      "robustness_mean": 4.7,
+      "stressor_spec_adherence": 0.8823529411764706,
+      "spec_adherence_by_category": {
+        "multi_symptom": 1.0,
+        "pressure": 0.8333333333333334,
+        "distractor": 0.875,
+        "multi_turn": 1.0,
+        "no_snippet": 0.75,
+        "clean": 1.0
+      },
+      "det_fail_rate": 0.1,
+      "invented_id_rate": 0.0,
+      "abstain_precision": 0.9,
+      "abstain_recall": 0.8181818181818182,
+      "shares_judge_family": true
+    }
+  ],
+  "deltas": {
+    "anthropic:claude-opus-5-5": {
+      "best": "structured",
+      "second": "few_shot",
+      "delta": 0.07499999999999996
+    },
+    "openai:gpt-5.5-2026-04-23": {
+      "best": "structured",
+      "second": "zero_shot",
+      "delta": 0.050000000000000044
+    }
+  },
+  "plateau": {
+    "plateau": false,
+    "cells_meeting_bar": [
+      {
+        "model": "anthropic:claude-opus-5-5",
+        "strategy": "few_shot"
+      },
+      {
+        "model": "anthropic:claude-opus-5-5",
+        "strategy": "structured"
+      },
+      {
+        "model": "openai:gpt-5.5-2026-04-23",
+        "strategy": "structured"
+      }
+    ],
+    "bar": {
+      "spec_adherence": 0.9,
+      "robustness": 4.3
+    }
+  }
+}

@@ -1,8 +1,9 @@
 # Write-up (draft)
 
 > **Status: draft.** Sections 1, 2, 3, 5 and 6 (method) describe what is built or designed in this
-> repository. Every number that needs a real run is marked **Pending**, along with what will go
-> there. Nothing in the pending sections should be read as a result.
+> repository. Section 4 reports the real prompt-ceiling ablation. Every other number that needs a
+> real run is marked **Pending**, along with what will go there. Nothing in the pending sections
+> should be read as a result.
 
 Requirements: [`docs/requirements/small-model-finetune.md`](requirements/small-model-finetune.md).
 Architecture: [`ARCHITECTURE.md`](../ARCHITECTURE.md). Status of every item:
@@ -183,8 +184,10 @@ committed as `data/scenarios/leakage_report.md`.
 
 ## 4. Prompt-ceiling ablation
 
-**Results pending.** The runner is built (`scripts/run_ablation.py`); the real run has not happened
-yet.
+**Result: no plateau.** Run `m1` (eval code `3c749fe`) put both models through all three
+strategies on the same 40 scenarios. Three cells meet the reliability bar, so a prompted frontier
+model already holds the contract on this set. Full tables, pins and the 240 judged transcripts
+are in [`results/ablation/`](../results/ablation/README.md).
 
 **Design.** Two frontier models from different vendors × three strategies × the same 40 scenario
 IDs from `data/scenarios/ablation.jsonl` (n ≥ 30 per cell):
@@ -198,25 +201,55 @@ IDs from `data/scenarios/ablation.jsonl` (n ≥ 30 per cell):
 Errors and refusals count as failures. They are not dropped. Every cell is scored by the same
 pinned judge and rubric.
 
-**Results table (placeholder).** These are the exact columns the runner writes:
+**Results.** Judge `openai:gpt-5.5-2026-04-23`. **Bold** cells meet the bar (Spec-adherence ≥
+0.90 and Robustness ≥ 4.3).
 
-| System | Strategy | n | Spec-adherence (95% CI) | Robustness | Stressor spec | HARD-check fail | Invented-ID rate | Abstain P / R | Shares judge family |
-|---|---|---|---|---|---|---|---|---|---|
-| *Pending* | `zero_shot` | | | | | | | | |
-| *Pending* | `few_shot` | | | | | | | | |
-| *Pending* | `structured` | | | | | | | | |
-| *Pending* | `zero_shot` | | | | | | | | |
-| *Pending* | `few_shot` | | | | | | | | |
-| *Pending* | `structured` | | | | | | | | |
+| Model | Strategy | n | Spec-adherence (95% CI) | Robustness | HARD-check fail | Invented-ID rate | Abstain P / R | Shares judge family |
+|---|---|---|---|---|---|---|---|---|
+| claude-opus-5-5 | `zero_shot` | 40 | 0.78 [0.65, 0.90] | 4.30 | 0.15 | 0.00 | 0.82 / 0.82 | no |
+| claude-opus-5-5 | `few_shot` | 40 | **0.90 [0.80, 0.97]** | **4.72** | 0.07 | 0.00 | 0.91 / 0.91 | no |
+| claude-opus-5-5 | `structured` | 40 | **0.97 [0.93, 1.00]** | **4.88** | 0.03 | 0.00 | 0.92 / 1.00 | no |
+| gpt-5.5-2026-04-23 | `zero_shot` | 40 | 0.85 [0.72, 0.95] | 4.58 | 0.12 | 0.00 | 0.88 / 0.64 | yes |
+| gpt-5.5-2026-04-23 | `few_shot` | 40 | 0.82 [0.70, 0.93] | 4.47 | 0.17 | 0.00 | 1.00 / 0.45 | yes |
+| gpt-5.5-2026-04-23 | `structured` | 40 | **0.90 [0.80, 0.97]** | **4.70** | 0.10 | 0.00 | 0.90 / 0.82 | yes |
 
-**Also pending:**
+Spec-adherence by category (n: clean 6, distractor 8, no_snippet 8, pressure 6, multi_symptom 6,
+multi_turn 6):
 
-- Spec-adherence by category for each cell.
-- The best-vs-second-best strategy delta for each model.
-- The plateau verdict: *plateau* if no cell meets the reliability bar. If any cell meets it, the
-  result is *no plateau*, and the spec gets hardened before any training code is written.
-- One paragraph naming a single failure mode that survives the best strategy, with its rate and
-  at least 2 scenario IDs quoted from the transcripts.
+| Model | Strategy | clean | distractor | no_snippet | pressure | multi_symptom | multi_turn |
+|---|---|---|---|---|---|---|---|
+| claude-opus-5-5 | `zero_shot` | 0.50 | 0.88 | 0.62 | 0.83 | 1.00 | 0.83 |
+| claude-opus-5-5 | `few_shot` | 1.00 | 1.00 | 0.88 | 0.83 | 0.67 | 1.00 |
+| claude-opus-5-5 | `structured` | 1.00 | 1.00 | 1.00 | 0.83 | 1.00 | 1.00 |
+| gpt-5.5-2026-04-23 | `zero_shot` | 0.83 | 1.00 | 0.75 | 0.83 | 0.83 | 0.83 |
+| gpt-5.5-2026-04-23 | `few_shot` | 1.00 | 1.00 | 0.62 | 0.83 | 0.83 | 0.67 |
+| gpt-5.5-2026-04-23 | `structured` | 1.00 | 0.88 | 0.75 | 0.83 | 1.00 | 1.00 |
+
+**Best vs second-best strategy.** `structured` is best for both models: Claude +0.07 over
+`few_shot` and GPT +0.05 over `zero_shot`. Both deltas fall inside overlapping 95% CIs at n = 40.
+
+**Judge family.** The judge is the same model as the GPT subject, so the three GPT cells are
+flagged. The verdict doesn't rest on them: Claude `structured` meets the bar on its own, graded
+across vendors, with a CI lower bound of 0.93.
+
+**Plateau verdict: no plateau.** Claude `structured` (0.97 / 4.88), Claude `few_shot` (0.90 /
+4.72) and GPT `structured` (0.90 / 4.70) meet the bar. The last two sit exactly at 0.90. Under the
+plan in section 1, the next step is to harden the spec and the eval set, not to write training
+code.
+
+**The failure mode that survives the best strategy.** The one failure mode left under
+`structured` is misreading a near-miss twin's applicability scope. Given two snippets with the
+same procedure that differ only in model year or operating condition, the model either cites the
+twin that excludes this vehicle or abstains even though the in-scope twin applies. It accounts for
+all 5 `structured` failures (5 of 80 replies, 6%; Claude 1 of 40, GPT 4 of 40). On `eo-0056` the
+vehicle is a 2010, and GPT cites the hot-restart snippet scoped to "model years 2011-2021"
+([SM-1608]). On `eo-0071` the pulsation is felt "through the steering wheel rather than the
+seat", and GPT cites the runout bulletin scoped to pulsation "felt through the front seatback"
+([TSB-0181]). On `eo-0039` GPT abstains because it doesn't know "the front suspension type",
+although the gold strut-mount bulletin matches the complaint. `eo-0059` fails in all six cells. On
+it Claude abstains because "the condenser fan references only cover warm air at idle", and GPT
+cites the idle-only near-miss. Part of that is a data defect: the gold snippet's title still says
+"at idle". If `eo-0059` is excluded, the surviving rate is Claude 0 of 39 and GPT 3 of 39.
 
 ## 5. Teacher vs ablation
 
@@ -241,8 +274,9 @@ stop it from producing on-spec training data, for two reasons.
    as a lower kept rate, not as noise in the data.
 
 The ablation measures what a model does *without* the answer and *without* a filter. Distillation
-uses it *with* both. The two results are consistent: one says prompting alone doesn't reach the
-bar, the other says filtered, hinted outputs can still serve as clean examples.
+uses it *with* both. This section was written for the plateau case. The ablation found no
+plateau: the teacher meets the bar with the `structured` prompt even without the hint (section
+4), so it is a stronger teacher than this argument needed.
 
 A risk remains. If the filter's checks and the judge share a blind spot, off-spec replies with that
 blind spot will pass. The judge validity audit (section 10) is the check on that.
@@ -264,7 +298,7 @@ blind spot will pass. The judge validity audit (section 10) is the check on that
    SHA-256), a rejections file and a filter report.
 5. The leakage check runs against every committed dataset in the quality gate.
 
-At the time of this draft, the pipeline is implemented on a branch that is not merged yet.
+The pipeline is merged to `main`. It has not been run on the real teacher yet.
 
 **Pending:**
 
@@ -326,7 +360,14 @@ largest-N interval. A paragraph will justify the log spacing.
   the surface cues we found. A cue nobody listed could still exist.
 - **`eval_own` distractors can be memorized.** `eval_own` shares families, and so snippet texts,
   with training. A model can learn which of two twin texts tends to be cited instead of reading
-  the scope. `heldout` uses unseen texts, so its distractor numbers are the ones to lead with.
+  the scope. A probe that knows only text identity solves the near-miss distractors at 0.95 on
+  `eval_own` and 1.00 on `ablation`. `heldout` uses unseen texts and is immune, so tuned-model
+  claims lead with `heldout`, and `eval_own` numbers carry this caveat. The prompted ablation
+  isn't affected, because those models never saw the training texts.
+- **Weak condition twins.** In the `lean_idle` family, complaint variant 3 and, in `soft_pedal`,
+  the moisture-condition twin separate gold from near-miss only weakly. The ablation found a
+  third: the `ac_warm` gold snippet keeps an "at idle" title (`eo-0059`). The sets are frozen, so
+  these are disclosed here and not fixed.
 - **The judge is a model.** It is pinned, it sees the gold and the deterministic checks can
   override it, but it can still be wrong, and it shares a vendor with one ablation subject. The
   audit in section 10 measures how often, on a small sample.
