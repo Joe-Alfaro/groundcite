@@ -1,7 +1,8 @@
 """Hugging Face Hub lookups over plain HTTPS (R10, R13, GOTCHA G16).
 
-Only two lookups are needed: a repo's ``adapter_config.json`` (to derive the base model) and the
-commit SHA a revision resolves to. ``HF_TOKEN`` is sent when set and never logged.
+Three lookups: a repo's ``adapter_config.json`` (to derive the base model), an adapter's
+``train_log.json`` (its train-time chat-template hash) and the commit SHA a revision resolves
+to. ``HF_TOKEN`` is sent when set and never logged.
 """
 
 from __future__ import annotations
@@ -53,6 +54,18 @@ def fetch_adapter_config(repo: str, revision: str | None = None) -> dict[str, An
     if not isinstance(config, dict):
         raise HubError(f"{repo}: adapter_config.json is not a JSON object")
     return config
+
+
+def fetch_train_log(repo: str, revision: str | None = None) -> dict[str, Any] | None:
+    """The ``train_log.json`` train/train_qlora.py pushed with an adapter, or None without one."""
+    rev = urllib.parse.quote(revision or "main", safe="")
+    body = _get(f"{HUB_URL}/{_quote(repo)}/resolve/{rev}/train_log.json")
+    if body is None:
+        return None
+    log = json.loads(body)
+    if not isinstance(log, dict):
+        raise HubError(f"{repo}: train_log.json is not a JSON object")
+    return log
 
 
 def resolve_revision(repo: str, revision: str | None = None) -> str:

@@ -11,7 +11,8 @@
 # `timeout 120` (or `gtimeout 120`) with CUDA hidden and the MPS fallback off. macOS has no
 # timeout command by default (`brew install coreutils` provides gtimeout); without one the script
 # stops before any stage. --kaggle trains the real Qwen/Qwen3-0.6B with --device cuda
-# (train/kaggle_train.ipynb runs it).
+# (train/kaggle_train.ipynb runs it). Kaggle has no uv, and `uv run` would build a fresh .venv
+# from uv.lock around Kaggle's torch, so --kaggle runs every stage with the notebook's `python`.
 #
 # eval.py loads models from the Hub, so the eval stage scores the mock compliant model; it proves
 # the harness end of the loop, not the adapter.
@@ -42,18 +43,20 @@ if [ "$MODE" = local ]; then
     export PYTORCH_ENABLE_MPS_FALLBACK=0
     BASE="$OUT/tiny_base"
     DEVICE=cpu
+    RUN=(uv run)
 else
     CAP=()
+    RUN=(python)
     BASE=Qwen/Qwen3-0.6B
     DEVICE=cuda
 fi
 
-# Run one stage, under the 120-second cap in local mode.
+# Run one stage's Python script, under the 120-second cap in local mode.
 stage() {
     if [ "${#CAP[@]}" -gt 0 ]; then
-        "${CAP[@]}" "$@"
+        "${CAP[@]}" "${RUN[@]}" "$@"
     else
-        "$@"
+        "${RUN[@]}" "$@"
     fi
 }
 
@@ -61,23 +64,23 @@ mkdir -p "$OUT"
 
 if [ "$MODE" = local ]; then
     echo "==> base: a tiny random Qwen3 with a small vocab"
-    stage uv run scripts/make_tiny_base.py --out "$BASE"
+    stage scripts/make_tiny_base.py --out "$BASE"
 fi
 
 echo "==> generate: mock teacher, 2 candidates for each of 32 training scenarios"
-stage uv run scripts/distill.py --scenarios data/scenarios/train_pool.jsonl \
+stage scripts/distill.py --scenarios data/scenarios/train_pool.jsonl \
     --teacher mock:compliant --k 2 --limit 32 --out "$OUT/distill"
 
 echo "==> filter: deterministic checks and the mock judge"
-stage uv run scripts/build_dataset.py --candidates "$OUT/distill/candidates.jsonl" --judge mock \
+stage scripts/build_dataset.py --candidates "$OUT/distill/candidates.jsonl" --judge mock \
     --out "$OUT/dataset"
 
 echo "==> train: peft LoRA, 20 steps on $BASE ($DEVICE, batch 1)"
-stage uv run train/train_qlora.py --dataset "$OUT/dataset/train.jsonl" --out "$OUT/adapter" \
+stage train/train_qlora.py --dataset "$OUT/dataset/train.jsonl" --out "$OUT/adapter" \
     --seed 0 --base "$BASE" --backend peft --device "$DEVICE" --batch-size 1 --max-steps 20
 
 echo "==> eval: mock model and mock judge on 32 own-eval scenarios"
-stage uv run eval.py --model mock:compliant --eval-set data/scenarios/eval_own.jsonl \
+stage eval.py --model mock:compliant --eval-set data/scenarios/eval_own.jsonl \
     --judge mock --no-base --limit 32 --allow-dirty --out "$OUT/eval"
 
 echo "smoke loop done: $OUT"

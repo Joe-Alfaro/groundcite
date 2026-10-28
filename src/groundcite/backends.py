@@ -74,6 +74,17 @@ class BackendError(RuntimeError):
         return self.status is not None and 400 <= self.status < 500 and not self.retryable
 
 
+class TemplateMismatchError(BackendError):
+    """An adapter's train-time chat template differs from the one eval loaded (GOTCHA G27).
+
+    Every reply would render with a template the adapter never saw, so the run stops instead of
+    recording per-row generation errors."""
+
+    @property
+    def stops_run(self) -> bool:
+        return True
+
+
 def _is_transient(exc: Exception) -> bool:
     """Connection and timeout errors (the SDKs raise these without an HTTP status)."""
     name = type(exc).__name__
@@ -306,6 +317,8 @@ class HFBackend:
             source, revision=source_rev, token=self._token
         )
         self.chat_template_sha256 = chat_template_sha256(self._tokenizer)
+        if adapter is not None:
+            self._check_train_template()
         model = transformers.AutoModelForCausalLM.from_pretrained(
             source, revision=source_rev, dtype=dtype, token=self._token
         )
@@ -315,6 +328,18 @@ class HFBackend:
                 model, self.repo, revision=self.revision, token=self._token
             )
         self._model = model.to(device).eval()
+
+    def _check_train_template(self) -> None:
+        """Refuse, before any weights load, an adapter trained with a different chat template.
+        An adapter without a pushed ``train_log.json`` (or without the hash) loads as before."""
+        log = hub.fetch_train_log(self.repo, self.revision)
+        recorded = log.get("chat_template_sha256") if log else None
+        if recorded and recorded != self.chat_template_sha256:
+            raise TemplateMismatchError(
+                f"{self.name}: chat template mismatch: the adapter was trained with sha256 "
+                f"{recorded} but eval loaded {self.chat_template_sha256}; align the tokenizer "
+                "and transformers versions with train_log.json"
+            )
 
     def generate(self, messages: Messages, system: str | None, params: Mapping[str, Any]) -> str:
         if self._model is None:

@@ -278,7 +278,11 @@ def _load_unsloth(config: Mapping[str, Any], seed: int) -> tuple[Any, dict[str, 
         dtype=torch.float16 if train["fp16"] else None,
         load_in_4bit=model_cfg["load_in_4bit"],
         revision=model_cfg["revision"],
+        # Without it, Unsloth swaps a known base for its pre-quantized 4-bit mirror and drops
+        # the revision (the mirror has no such commit); with it, it quantizes the pinned repo.
+        use_exact_model_name=True,
     )
+    loaded = loaded_base(model)
     model = FastLanguageModel.get_peft_model(
         model,
         r=lora["r"],
@@ -294,8 +298,19 @@ def _load_unsloth(config: Mapping[str, Any], seed: int) -> tuple[Any, dict[str, 
         "load_in_4bit": bool(model_cfg["load_in_4bit"]),
         "fp16": bool(train["fp16"]),
         "gradient_checkpointing": bool(train["gradient_checkpointing"]),
+        "loaded_base": loaded,
     }
     return model, runtime
+
+
+def loaded_base(model: Any) -> dict[str, Any]:
+    """The repo and commit the loaded weights came from, as transformers records them on the
+    model's config: a mirror swap shows up here, not as the configured base (D-089)."""
+    config = model.config
+    return {
+        "name": getattr(config, "_name_or_path", None),
+        "revision": getattr(config, "_commit_hash", None),
+    }
 
 
 def _load_peft(config: Mapping[str, Any], device: str) -> tuple[Any, dict[str, Any]]:
@@ -326,6 +341,7 @@ def _load_peft(config: Mapping[str, Any], device: str) -> tuple[Any, dict[str, A
             bnb_4bit_compute_dtype=torch.float16,
         )
     model = AutoModelForCausalLM.from_pretrained(model_cfg["base"], **kwargs)
+    loaded = loaded_base(model)
     if quantize:
         model = peft.prepare_model_for_kbit_training(
             model, use_gradient_checkpointing=checkpointing
@@ -350,6 +366,7 @@ def _load_peft(config: Mapping[str, Any], device: str) -> tuple[Any, dict[str, A
         "load_in_4bit": bool(quantize),
         "fp16": fp16,
         "gradient_checkpointing": checkpointing,
+        "loaded_base": loaded,
     }
     return model, runtime
 
@@ -454,7 +471,15 @@ def train(
 
     out.mkdir(parents=True, exist_ok=True)
     model.save_pretrained(str(out))
-    # Unsloth may load a pre-quantized mirror of the base; eval loads the configured base.
+    # Unsloth may load a pre-quantized mirror of the base; eval loads the configured base, and
+    # runtime.loaded_base in the log records what training really used.
+    loaded = runtime["loaded_base"]
+    if loaded["name"] != base or (revision is not None and loaded["revision"] != revision):
+        print(
+            f"warning: trained on {loaded['name']}@{loaded['revision']}, not the configured "
+            f"{base}@{revision}; see runtime.loaded_base in train_log.json",
+            file=sys.stderr,
+        )
     adapter_path = out / "adapter_config.json"
     adapter = json.loads(adapter_path.read_text(encoding="utf-8"))
     adapter["base_model_name_or_path"] = base

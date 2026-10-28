@@ -62,6 +62,10 @@ judges the stored replies with no generation or Hub calls and writes the same th
 one-command eval; for the same replies and judge, `results.json` is identical apart from its
 `run_id`. It refuses an eval set whose SHA-256 changed since generation.
 
+For a LoRA adapter, eval reads the `train_log.json` pushed with it and stops (exit 2, nothing
+generated) when its chat-template SHA-256 differs from the tokenizer eval loaded, since every reply
+would render with a template the adapter never saw. An adapter without that log loads as before.
+
 Add `--dry-run` to either command to print the planned calls without making any. What exists
 and what is still planned is tracked in [`docs/checklist.md`](docs/checklist.md).
 
@@ -73,7 +77,10 @@ commit, installs [`train/requirements-kaggle.txt`](train/requirements-kaggle.txt
 versions plus Unsloth, around Kaggle's own CUDA torch), reads `HF_TOKEN` from Kaggle Secrets,
 trains on one of the "GPU T4 x2" GPUs, pushes the adapter to the Hub and prints a one-line summary
 with the Hub commit SHA. Fill in its `# OWNER:` parameters first; it stops while they hold
-placeholders. GPU-hour budgets are in [`docs/checklist.md`](docs/checklist.md#r31-gpu-hour-budget).
+placeholders. Both notebooks pin `REPO_COMMIT`; `uv run scripts/repin_notebooks.py --commit <sha>`
+re-pins them to a full SHA reachable from `HEAD`, which must be pushed before a notebook can check
+it out. The install list keeps transformers at 5.17.0 for Unsloth and huggingface-hub below 2.0
+for that transformers. GPU-hour budgets are in [`docs/checklist.md`](docs/checklist.md#r31-gpu-hour-budget).
 
 One training run (one data-efficiency curve point) from a published subset file:
 
@@ -91,6 +98,9 @@ load the same weights and chat template. `--base`, `--max-steps`, `--epochs` and
   notebook installs. `--backend peft` trains the same LoRA on CUDA, MPS or CPU (a 4-bit base
   only on CUDA with bitsandbytes). `--device cpu` keeps a run on the CPU even where MPS or CUDA
   exists; `--device cuda` requires a GPU; `auto` (the default) picks CUDA when it is there.
+  Unsloth loads the pinned base itself (`use_exact_model_name`) instead of its pre-quantized
+  mirror, and `train_log.json` records the repo and commit the weights really came from as
+  `runtime.loaded_base`; the run warns if they differ from the configured base.
 - **Outputs.** `--out` gets the adapter, a model card and `train_log.json`: the resolved config
   and its SHA-256 (the same for v1 and v2), the dataset SHA-256, seed, steps, loss curve, p99
   token length, chat-template SHA-256, library versions and git SHA. `--hub-repo <org/name>` pushes them in one Hub
@@ -113,7 +123,8 @@ eval stage scores the mock model, not the smoke adapter.
   `timeout` by default (`brew install coreutils` provides `gtimeout`); without one the script
   stops before any stage.
 - **Kaggle.** `scripts/smoke_loop.sh --kaggle [OUT_DIR]` trains the real `Qwen/Qwen3-0.6B` with
-  `--device cuda`. The training notebook runs it when `SMOKE_ONLY = True`.
+  `--device cuda`. The training notebook runs it when `SMOKE_ONLY = True`. Kaggle has no `uv`,
+  so this mode runs every stage with the notebook's `python`.
 
 ## Quality gate
 

@@ -31,7 +31,13 @@ from pathlib import Path
 from typing import Any, TextIO
 
 from groundcite import versions
-from groundcite.backends import Backend, BackendError, Messages, get_backend
+from groundcite.backends import (
+    Backend,
+    BackendError,
+    Messages,
+    TemplateMismatchError,
+    get_backend,
+)
 from groundcite.checks import run_checks
 from groundcite.config import decoding_params
 from groundcite.evalset import Scenario
@@ -610,7 +616,10 @@ def pins_section(p: Mapping[str, Any]) -> list[str]:
 
 
 def stop_message(exc: BackendError) -> str:
-    """The stderr line for a run stopped by a non-retryable 4xx (the message is redacted)."""
+    """The stderr line for a run stopped by a non-retryable 4xx or a chat-template mismatch (the
+    message is redacted)."""
+    if isinstance(exc, TemplateMismatchError):
+        return f"error: run stopped: {exc}"
     return (
         f"error: run stopped by a non-retryable HTTP {exc.status}: {exc}. Check the API key, "
         "model access and request, then rerun"
