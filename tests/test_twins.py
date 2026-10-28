@@ -34,6 +34,7 @@ a ``requires`` value may also be a list of acceptable strings. heater_cold compl
 
 from __future__ import annotations
 
+import functools
 import json
 import re
 import statistics
@@ -382,13 +383,87 @@ SURFACE: dict[str, Callable[[Snippet], float]] = {
 }
 
 
+# Round 4 (kind-balance validation 3): twins sat at the catalog's year tails while gold ranges
+# spanned the middle, and duplicate titles located the pair. A probe with year-range values and a
+# duplicate-title feature scored 0.72 fit on train_pool, so the probe carries both, plus pair
+# features (a snippet with a near-identical partner) and their interaction with the year prior.
+YEAR_RANGE = re.compile(r"\b((?:19|20)\d\d)\s*[-\u2013]\s*((?:19|20)\d\d)\b")
+
+
+def _catalog_median_year() -> int:
+    years = [y for v in _toml()["vehicle"] for y in range(v["years"][0], v["years"][1] + 1)]
+    return int(statistics.median_low(years))
+
+
+CATALOG_MEDIAN_YEAR = _catalog_median_year()
+
+
+def year_range(snippet: Snippet) -> tuple[int, int] | None:
+    """The model-year range the snippet text states, or ``None`` (no year limit)."""
+    match = YEAR_RANGE.search(snippet["text"])
+    return (int(match.group(1)), int(match.group(2))) if match else None
+
+
+def contains_median_year(snippet: Snippet) -> bool:
+    """True when the stated range covers the catalog's median model year (no range covers it)."""
+    span = year_range(snippet)
+    return span is None or span[0] <= CATALOG_MEDIAN_YEAR <= span[1]
+
+
+@functools.cache
+def _near_identical(a: str, b: str) -> bool:
+    return _edit_distance(_tokens(a), _tokens(b)) <= MAX_TWIN_TOKEN_EDITS
+
+
+def pair_partners(row: Row, i: int) -> list[int]:
+    """Other snippets a reader would see as the same snippet: same title or near-identical text.
+    Label-free, so a model can compute it too."""
+    snippets = row["snippets"]
+    me = snippets[i]
+    return [
+        j
+        for j, other in enumerate(snippets)
+        if j != i
+        and (
+            (me.get("title") and other.get("title") == me["title"])
+            or _near_identical(me["text"], other["text"])
+        )
+    ]
+
+
+def _year_features(row: Row, i: int) -> list[float]:
+    snippet = row["snippets"][i]
+    span = year_range(snippet)
+    start, end = span if span else (CATALOG_MEDIAN_YEAR, CATALOG_MEDIAN_YEAR)
+    mid = (start + end) / 2
+    contains = float(contains_median_year(snippet))
+    titles = [s.get("title") for s in row["snippets"]]
+    duplicate_titles = float(titles.count(snippet["title"]) - 1) if snippet.get("title") else 0.0
+    in_pair = float(bool(pair_partners(row, i)))
+    return [
+        float(span is not None),
+        start,
+        end,
+        end - start,
+        mid,
+        abs(mid - CATALOG_MEDIAN_YEAR),
+        contains,
+        duplicate_titles,
+        in_pair,
+        in_pair * contains,
+        in_pair * abs(mid - CATALOG_MEDIAN_YEAR),
+    ]
+
+
 def _features(row: Row, schemes: Sequence[str]) -> list[list[float]]:
-    """Surface features plus position and a one-hot ID scheme, one vector per snippet."""
+    """Surface features, year-range and pair features, position and a one-hot ID scheme, one
+    vector per snippet."""
     snippets = row["snippets"]
     last = max(len(snippets) - 1, 1)
     vectors = []
     for i, snippet in enumerate(snippets):
         vector = [float(fn(snippet)) for fn in SURFACE.values()]
+        vector += _year_features(row, i)
         vector += [i / last, float(i == 0), float(i == len(snippets) - 1)]
         vector += [float(id_scheme(snippet["id"]) == scheme) for scheme in schemes]
         vectors.append(vector)
@@ -530,6 +605,28 @@ def test_probe_is_at_chance_without_a_cue() -> None:
         return "Applies to all engines. " + " ".join(["word"] * (8 + (seed * 7) % 5)) + "."
 
     assert probe_loso_accuracy(_synthetic_rows(cue)) <= 0.5
+
+
+def test_probe_finds_a_planted_year_prior_within_a_twin_pair() -> None:
+    """Round 4: gold is the pair member whose range covers the catalog median; a lone snippet
+    that also covers it is never gold, so only the pair interaction separates them."""
+    mid = CATALOG_MEDIAN_YEAR
+    rows = []
+    for k in range(30):
+        body = " ".join(["word"] * (8 + k % 5)) + "."
+        texts = [
+            (f"Pair {k}", f"Applies to model years {mid - 3}-{mid + 3}. {body}"),
+            (f"Pair {k}", f"Applies to model years {mid - 14}-{mid - 5}. {body}"),
+            (f"Lone {k}", f"Applies to model years {mid - 2}-{mid + 4}. Other {body}"),
+        ]
+        order = [(k + n) % 3 for n in range(3)]
+        snippets = [
+            {"id": f"SM {k}.{n}", "kind": "manual", "title": texts[t][0], "text": texts[t][1]}
+            for n, t in enumerate(order)
+        ]
+        gold = f"SM {k}.{order.index(0)}"
+        rows.append({"snippets": snippets, "gold": {"supporting_ids": [gold]}})
+    assert probe_loso_accuracy(rows) >= 0.9
 
 
 @pytest.mark.parametrize("name", SET_NAMES)
