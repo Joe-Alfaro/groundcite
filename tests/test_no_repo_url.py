@@ -6,7 +6,8 @@ code, data) names a repo URL or a git remote:
 
 - every ``http(s)://``, ``ssh://`` or ``git://`` URL in a tracked file points at an allowed,
   non-repo host (package indexes, the HF Hub, API endpoints, reserved example domains);
-- there is no scp-style git remote (``git@host:owner/repo``);
+- there is no scp-style git remote (a ``git`` user, ``@``, a host, ``:``, then an owner/repo
+  path);
 - the old GitHub owner path is gone. The HF Hub repo ``joe-alfaro/groundcite-qwen3-1.7b`` stays.
 
 The patterns are written so this file does not match itself.
