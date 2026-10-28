@@ -59,16 +59,26 @@ SELECTION_RULE = (
 # "note the idle speed" still pass; "supports the next step" only after "that", so "your reading
 # supports the next step" still passes. "labeled", "designated" and "instructions" count only
 # with a reference noun or "my", so "the labeled vacuum port" and "the service manual
-# instructions" still pass.
+# instructions" still pass. "gold", "hint" and "the note" count only in their reference senses
+# (D-061): "gold label/answer/ID", "the hint" but not "a hint of", "the note says" but not "the
+# note card" or "the note in the bulletin", so "gold-colored connector" and "any hint of a vacuum
+# hiss" pass. The paraphrases ("as instructed", "meant to use", "correct citation", "teacher",
+# "decoys", ...) come from validation 3.
 _HINT_WORDS = re.compile(
-    r"\b(?:gold(?: label)?|supporting[_ ]ids?|privileged|hints?|answer key|the note|"
+    r"\b(?:gold (?:labels?|answers?|citations?|ids?|snippets?|references?|mode)|"
+    r"supporting[_ ]ids?|privileged|hints?(?! of\b)|answer key|"
+    r"the note(?! (?:card|in|on|from|about|of|pad)\b)|teacher|"
     r"grading|graded|reference answer|i was told|i(?:['\u2019]ve| have) been told|correct mode|"
-    r"correct ids?|expected answer|near[- ]miss(?:es)?|already used up|"
+    r"correct (?:ids?|citations?|references?|snippets?|answers?)|expected answer|"
+    r"near[- ]miss(?:es)?|already used up|"
     r"that supports the next step|intended answer|my instructions|grader|"
     r"label(?:l)?ed (?:reference|snippet|answer|id|citation)s?|"
     r"designated (?:reference|snippet|answer|id|citation)s?|supporting reference|"
-    r"(?:reference|snippet|answer|id)s? i (?:was|were|have been|got) given)\b|"
-    + re.escape(HINT_HEADER),
+    r"(?:reference|snippet|answer|id)s? i (?:was|were|have been|got) given|"
+    r"i (?:was|were|have been|got) (?:given|handed)|guidance i|"
+    r"i(?:['\u2019]m| am| was) (?:meant|supposed) to|as instructed|my notes?|decoys?|"
+    r"(?:flagged|marked|tagged) as (?:relevant|applicable|correct|the right|the one)|"
+    r"the key (?:points to|says|shows|lists|marks))\b|" + re.escape(HINT_HEADER),
     re.IGNORECASE,
 )
 _GOLD_CHECKS = ("mode_matches_gold", "cited_id_supports")

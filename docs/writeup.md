@@ -135,19 +135,27 @@ Two controls address this:
 - **Shortcut audit.** A test suite measures, on distractor scenarios in every set, how well
   simple surface heuristics pick the gold: snippet kind, ID scheme, a correction line, an
   "applies to all" opener, year presence, longest or shortest snippet, and length terciles. Each
-  heuristic must stay at or below 0.60 accuracy (0.67 on the smaller held-out set), and each
-  binary feature's gold-rate gap must stay small. A planned extension trains a cross-validated
-  logistic-regression probe on all surface features together (lengths, counts of commas, digits
-  and units, sentences, kind, ID scheme, opener, position) and holds it to the same 0.60.
-  *At the time of this draft, the per-heuristic audit exists on a branch that is not merged yet,
-  and the probe is planned.*
+  heuristic must stay at or below 0.60 accuracy in every set, and each binary feature's
+  gold-rate gap must stay small. A ridge probe on all surface features together (lengths, counts
+  of commas, digits and units, sentences, kind, ID scheme, opener, position, the stated year
+  range and its distance from the catalog's median model year, and whether a snippet has a
+  near-identical partner) is held to the same 0.60. It is scored leave-one-scenario-out within
+  each set, and fit on the training pool and scored on each eval set.
 - **Twin near-misses.** Rather than tuning features one at a time, each near-miss is built as a
   twin of a real gold-capable snippet from the same family. Only the applicability scope changes
   (engine, model-year range, transmission, body or operating condition). The procedure text, its
   length, punctuation and numbers stay the same. Gold and near-miss then match on every surface
   feature by construction, and the only thing that separates them is the skill the spec is about.
-  Off-family snippets are drawn from other families' gold-capable snippets. *At the time of this
-  draft, twins are the adopted design and the library rebuild is in progress.*
+  Off-family snippets are drawn from other families' gold-capable snippets.
+
+Twins still left priors that needed a second pass. Year twins sat at the ends of the catalog's
+year span while the gold covered the middle, so "of two near-identical snippets, cite the one
+covering the median year" beat chance without reading the user's year. Now every year pair is
+split at the median with the gold on either side equally often. Two near-identical snippets
+almost always meant cite, so abstain scenarios now also carry a pair with both members out of
+scope. Condition twins kept the original title, which stated the very condition the edit
+removed, so titles now change with the scope. Transmission-scoped twins depended on a
+transmission the user never stated, so every vehicle description now states it.
 
 A related check guards gold integrity: no gold snippet may contradict any complaint variant of its
 family.
@@ -224,8 +232,9 @@ stop it from producing on-spec training data, for two reasons.
    conversation, the same one used at eval time, and the training target is the teacher's reply
    alone.
 2. **A hard filter.** The teacher writes k ≥ 2 candidates per scenario, and a candidate is kept
-   only if it passes every stage: no generation error, no wording that leaks the hint ("gold",
-   "hint", "supporting IDs" and similar), a clean ending, agreement with the gold mode and
+   only if it passes every stage: no generation error, no wording that leaks the hint ("gold label",
+   "the hint", "supporting IDs", "as instructed", "correct citation" and similar; "a hint of
+   coolant smell" and "the gold-colored connector" pass), a clean ending, agreement with the gold mode and
    supporting ID, every HARD check and the SOFT checks, a judge score of Spec-adherence 1 with
    Robustness ≥ 4, and no near-duplicate of a kept example. Even a teacher that is right only some of
    the time, filtered this way, gives a dataset with almost no off-spec targets. The cost shows up
@@ -315,6 +324,9 @@ largest-N interval. A paragraph will justify the log spacing.
   makes them an optimistic estimate for a truly third-party set.
 - **Shortcut controls are only as good as the features we thought of.** The audit and twins remove
   the surface cues we found. A cue nobody listed could still exist.
+- **`eval_own` distractors can be memorized.** `eval_own` shares families, and so snippet texts,
+  with training. A model can learn which of two twin texts tends to be cited instead of reading
+  the scope. `heldout` uses unseen texts, so its distractor numbers are the ones to lead with.
 - **The judge is a model.** It is pinned, it sees the gold and the deterministic checks can
   override it, but it can still be wrong, and it shares a vendor with one ablation subject. The
   audit in section 10 measures how often, on a small sample.

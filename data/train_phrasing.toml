@@ -8,15 +8,15 @@
 # sequencing words ("then", "next", "also check", "after that", "second") and repair words.
 
 vehicle_intro = [
-  "Got a {year} {body} here, {engine}, around {miles} miles on it.",
-  "This is my {year} {body}. It has the {engine} and about {miles} miles.",
-  "Mine is a {body} from {year}, {engine} under the hood, {miles} miles so far.",
-  "Shop ticket: {year} {body}, {engine}, odometer {miles}.",
-  "Our family's {year} {body} with the {engine}, just past {miles} miles.",
-  "Daily driver is a {year} {body} ({engine}) with {miles} miles.",
-  "I bought a used {year} {body} with the {engine}; it shows {miles} miles.",
-  "Hi. {year} {body}, {engine} engine, roughly {miles} on the odometer.",
-  "Fleet unit: {year} {body}, {engine}, {miles} miles logged.",
+  "Got a {year} {body} here, {engine}, {trans}, around {miles} miles on it.",
+  "This is my {year} {body}. It has the {engine}, the {trans} and about {miles} miles.",
+  "Mine is a {body} from {year}, {engine} under the hood, {trans}, {miles} miles so far.",
+  "Shop ticket: {year} {body}, {engine}, {trans}, odometer {miles}.",
+  "Our family's {year} {body} with the {engine} and the {trans}, just past {miles} miles.",
+  "Daily driver is a {year} {body} ({engine}, {trans}) with {miles} miles.",
+  "I bought a used {year} {body} with the {engine} and {trans}; it shows {miles} miles.",
+  "Hi. {year} {body}, {engine} engine, {trans}, roughly {miles} on the odometer.",
+  "Fleet unit: {year} {body}, {engine}, {trans}, {miles} miles logged.",
 ]
 
 question = [

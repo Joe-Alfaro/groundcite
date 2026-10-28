@@ -123,9 +123,9 @@ prompting strategies.
  "title": "Lean code at idle from cracked PCV hose", "text": "Applies to 2.0L I4 and 2.5L I4 engines, ...",
  "applies": {"engines": ["2.0L I4", "2.5L I4"], "years": [2012, 2020]},
  "requires": {"rough_idle": "cold"}, "step": "...", "results": ["..."]}
-{"id": "lean_idle.nm_pcv_elbow", ..., "text": "... worst on a fully warm engine ...",
+{"id": "lean_idle.nm_pcv_elbow", ..., "text": "... worst on a warm engine ...",
  "requires": {"rough_idle": "warm"}, "mismatch": "condition", "twin_of": "lean_idle.pcv_elbow",
- "scope_edits": [["worst on a cold engine", "worst on a fully warm engine"]]}
+ "scope_edits": [["worst on a cold engine", "worst on a warm engine"]]}
 ```
 - Library ids are internal. Scenarios carry only `id` (re-assigned), `kind`, `system`, `title`
   and `text`.
@@ -136,19 +136,32 @@ prompting strategies.
   complaint with an allowed value, so a gold snippet never contradicts the complaint.
 - Near-misses are **twins** (D-056): a chain snippet's text with only `scope_edits` applied
   (at most 10 word or number tokens: an engine list, a year range, a transmission, a body or one
-  condition phrase). Procedure, punctuation, numbers, opener and title stay the same, so gold and
-  near-miss match on every surface feature and only the scope separates them. A vehicle twin is
-  placed only where a scope field it changed excludes the scenario vehicle. A condition twin
-  `requires` a condition every complaint of its family contradicts. In a distractor scenario the
-  first near-miss is the gold's own twin. `tests/test_twins.py` checks the construction and holds
-  a ridge probe on surface features, and every single surface heuristic, to at most 0.60 accuracy
-  on distractors.
-- Vehicles are described generically (body style, engine, year range, mileage). No manufacturer
-  names appear.
+  condition phrase). Procedure, punctuation, numbers and opener stay the same, and every scope
+  edit keeps the character and word counts (all twins but one held-out transmission twin), so
+  gold and near-miss match on every surface feature and only the scope separates them. A
+  condition twin's title is edited with its scope, so it never states the condition the edit
+  removed. A vehicle twin is placed only where a scope field it changed excludes the scenario
+  vehicle. A condition twin `requires` a condition every complaint of its family contradicts. In
+  a distractor scenario the first near-miss is the gold's own twin.
+- **No prior picks the gold within a pair** (D-061). Every year twin pair uses the same two
+  ranges, 2010-2015 and 2016-2021, split at the catalog median model year (2016), with the gold
+  on the earlier side in half the pairs and on the later side in the other half. The generator
+  keeps two running balances per split (and separately for the ablation subset): which side of
+  the median the gold of a provided pair covers, steering the next gold choice toward the other
+  side, and whether the gold or its twin comes first in the snippet list. Abstain scenarios
+  often hold a twin pair with both members out of scope (a chain snippet whose `applies` fails
+  for the vehicle, plus its twin), so "two near-identical snippets" doesn't mean cite.
+  `tests/test_twins.py` and `tests/test_twin_priors.py` check the construction. They hold a
+  ridge probe on surface, year-range and pair features, and every single surface heuristic, to
+  at most 0.60 accuracy on distractors.
+- Vehicles are described generically (body style, engine, transmission, model year, mileage).
+  Every vehicle intro states the transmission, so a transmission-scoped snippet never rests on a
+  guess, and every applicability field and required condition of a gold or near-miss is stated
+  by the scenario. No manufacturer names appear.
 - IDs are opaque strings drawn from ≥3 visibly synthetic schemes (for example `TSB-0417`,
   `SM 6.2.1`, `B-19-045`) and are re-assigned per scenario, so a model can't memorize an
   ID→symptom map.
-- Snippet order is shuffled per scenario.
+- Snippet order is shuffled per scenario, apart from the gold-before-twin balance above.
 
 **Scenario / eval-set line** (`data/scenarios/*.jsonl`; documented for third parties in
 `docs/eval-set-format.md`):

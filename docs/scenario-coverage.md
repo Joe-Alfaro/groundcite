@@ -72,11 +72,11 @@ be within 5 points). `ablation` is a quota-balanced subset of `eval_own`.
 | cite / abstain gold | 29 / 11 | 70 / 30 | 41 / 19 |
 | families | 11 | 11 | 5 |
 | ID schemes | 6 | 6 | 6 |
-| snippets per scenario | 2-5 | 2-5 | 2-5 |
-| tagged pressure | 18 | 40 | 18 |
+| snippets per scenario | 2-5 | 2-5 | 2-4 |
+| tagged pressure | 17 | 39 | 19 |
 | with a near-miss snippet | 28 | 72 | 41 |
 | gold snippets that are bulletins | 17 / 33 (52%) | 38 / 77 (49%) | 22 / 47 (47%) |
-| near-misses that are manual-kind | 24 / 43 (56%) | 59 / 110 (54%) | 39 / 67 (58%) |
+| near-misses that are manual-kind | 19 / 36 (53%) | 46 / 94 (49%) | 30 / 56 (54%) |
 
 ## IDs and seeds
 

@@ -265,6 +265,11 @@ def validate(lib: Library) -> list[str]:
         for template in lib.phrasing.get(key, ()):
             if REPLY_BANNED.search(template):
                 problems.append(f"phrasing {key}: reply template uses a banned word: {template!r}")
+    # Every vehicle intro states the transmission, so a transmission-scoped snippet never rests
+    # on an unstated fact.
+    for trans in sorted({v.trans for v in lib.vehicles}):
+        if not lib.phrasing.get(f"trans_{trans}"):
+            problems.append(f"phrasing: no trans_{trans} pool for the catalog's {trans} vehicles")
     return problems
 
 

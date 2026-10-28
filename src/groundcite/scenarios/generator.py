@@ -14,7 +14,13 @@ Gold labels are correct by construction:
   the vehicle and year), and a condition twin requires a condition every complaint of its family
   contradicts. Where the gold has a twin, it is the first near-miss, so gold and near-miss match
   on every surface feature and only the scope separates them;
-- filler snippets come from unrelated systems, and "close" snippets are hand-curated per family.
+- filler snippets come from unrelated systems, and "close" snippets are hand-curated per family;
+- an abstain scenario often holds an out-of-scope twin pair: a chain snippet whose ``applies``
+  excludes the vehicle, plus its own twin, so a pair doesn't imply cite (D-061).
+
+Within a split, two running balances (kept apart for the ablation subset) steer the next scenario
+so that no prior picks the gold out of a gold-twin pair: which side of the catalog median year
+the gold's stated range lies on, and whether the gold or its twin comes first (D-061).
 
 Final user messages are kept pairwise below the R23 near-duplicate threshold across every set
 produced in one run, so the sets don't leak into each other.
@@ -24,9 +30,10 @@ from __future__ import annotations
 
 import itertools
 import random
+import statistics
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, TypeVar
 
 from groundcite.leakage import JACCARD_THRESHOLD, NgramIndex, text_hash
 from groundcite.scenarios.library import Family, Library, Snippet, Vehicle
@@ -70,6 +77,9 @@ ID_SCHEMES: dict[str, tuple[Callable[[random.Random], str], ...]] = {
 }
 ID_STYLES = ("bulletin", "manual")
 SNIPPET_KINDS = ("tsb", "manual")
+
+
+T = TypeVar("T")
 
 
 class GenerationError(RuntimeError):
@@ -128,12 +138,17 @@ class Mix:
     multi_symptom_both: float = 0.45
     multi_symptom_partial: float = 0.85
     multi_turn_cite: float = 0.65
+    # An abstain draft holds an out-of-scope twin pair (a chain snippet and its twin, neither
+    # applying) below this bound, so "two near-identical snippets" doesn't mean cite (D-061).
+    abstain_pair: float = 0.9
 
 
 EVAL_MIX = Mix()
 # Training needs a 20-30% abstain share (R30); the eval mix runs about 31%, so training scenarios
 # outside no_snippet abstain less often (expected share about 26%).
-TRAIN_MIX = Mix(pressure_abstain=0.15, multi_symptom_partial=0.90, multi_turn_cite=0.80)
+TRAIN_MIX = Mix(
+    pressure_abstain=0.15, multi_symptom_partial=0.90, multi_turn_cite=0.80, abstain_pair=0.7
+)
 
 
 class _Generator:
@@ -151,6 +166,17 @@ class _Generator:
         self.phrasing = dict(phrasing or {})
         self.seen = NgramIndex()
         self.seen_hashes: set[str] = set()
+        self.by_text = {s.text: s for s in lib.snippets.values()}
+        self.year_side = _year_sides(lib)
+        # Running sum of ``year_side`` over the informative twin pairs built so far, kept apart for
+        # ablation and other items so the ablation subset is balanced on its own (D-061).
+        self.year_balance: dict[bool, int] = {}
+        # The side the current scenario's gold should take: +1 or -1, or 0 for no preference.
+        self.want_side = 0
+        # Running (gold before its twin) minus (twin before the gold), kept the same way, so the
+        # order within a pair says nothing about which one is gold (D-061).
+        self.order_balance: dict[bool, int] = {}
+        self.gold_first = True
         # Final user messages of other sets: new finals must stay clear of them too (R23).
         for text in avoid:
             self.seen.add(text)
@@ -199,6 +225,8 @@ class _Generator:
         families = self.lib.pool(reserved=reserved)
         total = SET_SIZES[split] if size is None else size
         plan = self.plan(random.Random(base), families, total, ablation_total)
+        self.year_balance = {False: 0, True: 0}
+        self.order_balance = {False: 0, True: 0}
         rows = []
         for index, item in enumerate(plan, 1):
             seed = base + index
@@ -215,6 +243,9 @@ class _Generator:
 
     def build(self, item: _PlanItem, rng: random.Random, pool: list[Family]) -> dict[str, Any]:
         builder = getattr(self, f"_build_{item.category}")
+        balance = self.year_balance.get(item.ablation, 0)
+        self.want_side = -1 if balance > 0 else 1 if balance < 0 else 0
+        self.gold_first = self.order_balance.get(item.ablation, 0) <= 0
         for _ in range(MAX_ATTEMPTS):
             row: dict[str, Any] | None = builder(item, rng, pool)
             if row is None:
@@ -224,6 +255,7 @@ class _Generator:
                 continue
             self.seen.add(final)
             self.seen_hashes.add(text_hash(final))
+            self._count_year_pairs(row, item.ablation)
             ordered = {
                 "id": "",
                 "snippets": row["snippets"],
@@ -415,12 +447,44 @@ class _Generator:
         self, item: _PlanItem, rng: random.Random, pool: list[Family]
     ) -> _Draft | None:
         fam = item.family
+        pairs = self._out_of_scope_pairs(fam)
+        if pairs and rng.random() < self.mix.abstain_pair:
+            # A chain snippet and its own twin, both out of scope for the vehicle, plus at most
+            # one more near-miss. The chain snippet is neither gold nor a near-miss.
+            source, twin = rng.choice(pairs)
+            rest = [s for s in self._snips(fam.near_miss) if s != twin]
+            near = [twin, *self._sample(rng, rest, rng.randint(0, 1))]
+            close = self._sample(rng, self._snips(fam.close), rng.randint(0, 1))
+            others = [source, *near, *close]
+            if rng.random() < 0.3:
+                others += self._sample(rng, self._unrelated([fam], pool), 1)
+            return self._draft(rng, [fam], [], others[:MAX_SNIPPETS], near, must_fail=[source])
         near = self._near(rng, fam, item.near_kind, rng.randint(1, min(3, len(fam.near_miss))))
         close = self._sample(rng, self._snips(fam.close), rng.randint(0, 2))
         others = near + close
         if len(others) < 2 or rng.random() < 0.3:
             others += self._sample(rng, self._unrelated([fam], pool), 1)
         return self._draft(rng, [fam], [], others[:MAX_SNIPPETS], near)
+
+    def _out_of_scope_pairs(self, fam: Family) -> list[tuple[Snippet, Snippet]]:
+        """(chain snippet, its twin) pairs of ``fam`` that some catalog vehicle and year the
+        family fits puts both out of scope: the chain snippet's ``applies`` fails, and so does
+        a scope field a vehicle twin changed (a condition twin shares the chain snippet's
+        ``applies`` and is ruled out by its condition too)."""
+        pairs = []
+        for twin in self._snips(fam.near_miss):
+            source = self.lib.snippets.get(twin.twin_of or "")
+            if source is None:
+                continue
+            if any(
+                not source.applies.matches(vehicle, year)
+                and not (twin.mismatch == "vehicle" and twin.twin_scope.matches(vehicle, year))
+                for vehicle in self.lib.vehicles
+                if fam.fits(vehicle)
+                for year in range(vehicle.years[0], vehicle.years[1] + 1)
+            ):
+                pairs.append((source, twin))
+        return pairs
 
     def _draft(
         self,
@@ -430,10 +494,12 @@ class _Generator:
         others: list[Snippet],
         near: list[Snippet],
         also_apply: Sequence[Snippet] = (),
+        must_fail: Sequence[Snippet] = (),
     ) -> _Draft | None:
         """Pick a vehicle and year that every complaint's family fits and every supporting (and
         ``also_apply``) snippet applies to, where a scope field each vehicle-mismatch twin
-        changed excludes it. ``None`` if the combination is impossible."""
+        changed excludes it and no ``must_fail`` snippet applies. ``None`` if the combination
+        is impossible."""
         snippets = support + [s for s in others if s not in support]
         if not 2 <= len(snippets) <= MAX_SNIPPETS or len(set(snippets)) != len(snippets):
             return None
@@ -446,6 +512,7 @@ class _Generator:
             for year in range(vehicle.years[0], vehicle.years[1] + 1)
             if all(s.applies.matches(vehicle, year) for s in must)
             and not any(s.twin_scope.matches(vehicle, year) for s in must_not)
+            and not any(s.applies.matches(vehicle, year) for s in must_fail)
         ]
         if not options:
             return None
@@ -478,6 +545,12 @@ class _Generator:
     ) -> dict[str, Any]:
         order = draft.supporting + draft.others
         rng.shuffle(order)
+        for gold in draft.supporting:
+            twin = next((s for s in order if s.twin_of == gold.id), None)
+            if twin is not None:
+                i, j = order.index(gold), order.index(twin)
+                if (i < j) != self.gold_first:
+                    order[i], order[j] = twin, gold
         return {
             "snippets": [s.as_scenario_snippet(ids[s.id]) for s in order],
             "messages": messages,
@@ -518,6 +591,7 @@ class _Generator:
             year=str(draft.year),
             body=draft.vehicle.body,
             engine=rng.choice(draft.vehicle.names),
+            trans=rng.choice(self.phrases(f"trans_{draft.vehicle.trans}")),
             miles=f"{miles}k" if rng.random() < 0.5 else f"{miles},{rng.randint(0, 999):03d}",
         )
 
@@ -535,9 +609,35 @@ class _Generator:
         return self.lib.snippets[snippet_id]
 
     def _gold(self, rng: random.Random, fam: Family, kind: str) -> Snippet:
-        """A chain snippet of ``kind`` when the family has one, else any chain snippet."""
+        """A chain snippet of ``kind`` when the family has one, else any chain snippet, picked
+        by ``_by_side``."""
         chain = self._snips(fam.chain)
-        return rng.choice([s for s in chain if s.kind == kind] or chain)
+        of_kind = [s for s in chain if s.kind == kind] or chain
+        return rng.choice(self._by_side(of_kind, lambda s: s))
+
+    def _by_side(self, items: list[T], gold: Callable[[T], Snippet]) -> list[T]:
+        """The items whose ``gold`` snippet has year side ``want_side``, else those whose gold has
+        no year side, else all of them. With no wanted side, all of them."""
+        if not self.want_side:
+            return items
+        side = [i for i in items if self.year_side.get(gold(i).id, 0) == self.want_side]
+        neutral = [i for i in items if not self.year_side.get(gold(i).id, 0)]
+        return side or neutral or items
+
+    def _count_year_pairs(self, row: Mapping[str, Any], ablation: bool) -> None:
+        """Add the year side and the order of every gold whose twin the scenario provides."""
+        position = {s["text"]: i for i, s in enumerate(row["snippets"])}
+        by_id = {s["id"]: s["text"] for s in row["snippets"]}
+        for gold_id in row["gold"]["supporting_ids"]:
+            gold = self.by_text[by_id[gold_id]]
+            twins = [t for t in self.lib.snippets.values() if t.twin_of == gold.id]
+            here = [position[t.text] for t in twins if t.text in position]
+            if not here:
+                continue
+            side = self.year_side.get(gold.id, 0)
+            self.year_balance[ablation] = self.year_balance.get(ablation, 0) + side
+            first = 1 if position[gold.text] < here[0] else -1
+            self.order_balance[ablation] = self.order_balance.get(ablation, 0) + first
 
     def _near(
         self,
@@ -559,9 +659,23 @@ class _Generator:
     def _chain_walk(self, rng: random.Random, fam: Family, kind: str) -> list[str]:
         """Three chain snippet ids in ``chain_order``, preferring walks whose last step (the
         multi-turn gold) is of ``kind``."""
-        walks = [fam.order_chain(list(p)) for p in itertools.permutations(fam.chain, 3)]
-        preferred = [w for w in walks if self._snip(w[-1]).kind == kind]
-        return rng.choice(preferred or walks)
+        walks = [
+            walk
+            for p in itertools.permutations(fam.chain, 3)
+            if self._some_vehicle(fam, walk := fam.order_chain(list(p)))
+        ]
+        preferred = [w for w in walks if self._snip(w[-1]).kind == kind] or walks
+        return rng.choice(self._by_side(preferred, lambda w: self._snip(w[-1])))
+
+    def _some_vehicle(self, fam: Family, ids: Sequence[str]) -> bool:
+        """True when some catalog vehicle and year the family fits has every snippet apply."""
+        snippets = self._snips(ids)
+        return any(
+            all(s.applies.matches(vehicle, year) for s in snippets)
+            for vehicle in self.lib.vehicles
+            if fam.fits(vehicle)
+            for year in range(vehicle.years[0], vehicle.years[1] + 1)
+        )
 
     def _snips(self, ids: Sequence[str]) -> list[Snippet]:
         return [self.lib.snippets[i] for i in ids]
@@ -616,6 +730,30 @@ def generate_train(
     """
     gen = _Generator(lib, mix=TRAIN_MIX, phrasing=phrasing, avoid=avoid)
     return gen.build_split("train", master_seed, reserved=False, size=size)
+
+
+def catalog_median_year(lib: Library) -> int:
+    """The median of every catalog vehicle's model years (the lower one on a tie)."""
+    years = [y for v in lib.vehicles for y in range(v.years[0], v.years[1] + 1)]
+    return int(statistics.median_low(years))
+
+
+def _year_sides(lib: Library) -> dict[str, int]:
+    """For each chain snippet with a twin where exactly one of the two stated year ranges
+    covers the catalog median year: +1 when the chain snippet (the gold) covers it, -1 when the
+    twin does. A reader could otherwise learn "of a pair, cite the one covering the middle
+    years" without reading the user's year, so the generator keeps the two sides balanced."""
+    median = catalog_median_year(lib)
+
+    def covers(s: Snippet) -> bool:
+        return s.applies.years is None or s.applies.years[0] <= median <= s.applies.years[1]
+
+    sides = {}
+    for twin in lib.snippets.values():
+        gold = lib.snippets.get(twin.twin_of or "")
+        if gold is not None and covers(gold) != covers(twin):
+            sides[gold.id] = 1 if covers(gold) else -1
+    return sides
 
 
 def _alternating(rng: random.Random, values: tuple[str, str], count: int) -> list[str]:

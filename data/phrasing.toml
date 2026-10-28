@@ -1,19 +1,25 @@
 # Hand-written phrasing pools for scripts/gen_scenarios.py. The generator picks from these with
 # a seeded RNG so user turns vary in voice, order and pressure instead of following one template.
 #
-# Placeholders: {year} {body} {engine} {miles} {part} {step} {Step} {id} {result}
+# Placeholders: {year} {body} {engine} {trans} {miles} {part} {step} {Step} {id} {result}
 # Assistant turns are on-spec examples (one step, one citation, no repair wording), so they avoid
 # sequencing words ("then", "next", "also check", "after that", "second") and repair words.
 
 vehicle_intro = [
-  "I have a {year} {body} with the {engine}, about {miles} miles.",
-  "{year} {body}, {engine}, {miles} miles.",
-  "My {body} is a {year} with the {engine} and {miles} on the clock.",
-  "Working on a {year} {body} ({engine}, {miles} miles).",
-  "Customer vehicle: {year} {body}, {engine}, {miles} mi.",
-  "It's a {year} {body}, {engine}, roughly {miles} miles.",
-  "Vehicle is a {year} {body} with the {engine}. Odometer shows {miles}.",
+  "I have a {year} {body} with the {engine} and the {trans}, about {miles} miles.",
+  "{year} {body}, {engine}, {trans}, {miles} miles.",
+  "My {body} is a {year} with the {engine}, {trans}, and {miles} on the clock.",
+  "Working on a {year} {body} ({engine}, {trans}, {miles} miles).",
+  "Customer vehicle: {year} {body}, {engine}, {trans}, {miles} mi.",
+  "It's a {year} {body}, {engine} with the {trans}, roughly {miles} miles.",
+  "Vehicle is a {year} {body} with the {engine} and {trans}. Odometer shows {miles}.",
 ]
+
+# How a vehicle intro names each catalog transmission (D-061). Every intro states it, so a
+# transmission-scoped snippet never rests on a guess, and stating it says nothing about the gold.
+trans_automatic = ["automatic", "automatic transmission", "auto trans"]
+trans_CVT = ["CVT", "continuously variable transmission"]
+trans_manual = ["manual", "manual transmission", "stick shift"]
 
 question = [
   "What should I check first?",
