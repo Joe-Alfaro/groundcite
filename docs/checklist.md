@@ -42,7 +42,7 @@ Every row is filled in before each milestone.
 | R10 | README first lines name the env var and the hardware | `README.md`, `tests/test_eval_hardening.py` | done |
 | R11 | Raw judge transcripts for every run, row count = scenarios × systems | `src/groundcite/report.py`, `tests/test_eval_cli.py`; committed runs in `results/<run_id>/transcripts.jsonl` (planned) | in progress |
 | R13 | Pins in every `results.json`, dirty-tree refusal, one `rubric_sha256` | `src/groundcite/versions.py`, `uv.lock`, `tests/test_eval_cli.py`; `uv run scripts/check_rubric.py results/` (planned) | in progress |
-| R17 | Write-up draft | `docs/writeup.md` (planned) | not started |
+| R17 | Write-up draft | `docs/writeup.md` (results sections pending) | in progress |
 | R19 | Mock judge, full eval with network blocked | `src/groundcite/backends.py` (`mock:judge`), `tests/test_eval_cli.py` | done |
 | R20 | `--dry-run` on `eval.py`, `run_ablation.py`, `distill.py` | `eval.py`, `scripts/run_ablation.py` (`tests/test_eval_cli.py`, `tests/test_ablation.py`); `scripts/distill.py` (planned, on an unmerged branch) | in progress |
 | R21 | Deterministic checks with HARD/SOFT classes | `src/groundcite/checks.py`, `tests/test_checks.py`, `tests/test_checks_hard_soft.py`, `tests/test_checks_rubric.py` | done |
