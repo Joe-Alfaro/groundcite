@@ -80,7 +80,7 @@ Every row is filled in before each milestone.
 | R17 | Final write-up | `docs/writeup.md` (planned) | not started |
 | R18 | 3–5 minute demo video, linked from README | link in `README.md` (planned) | not started |
 | R18 | Live prompt from someone outside the project, run in one uncut take | video (planned) | owner-gated |
-| G12 | Ablation table flags the judge-family cell; Opus re-judge of the gpt-5.5-scored M1 and pilot transcripts (no second-family rescore) | flag in `src/groundcite/ablation.py`, `tests/test_ablation.py`; re-judge with `scripts/rejudge.py` (planned) | in progress |
+| G12 | Ablation table flags the judge-family cell; Opus re-judge of the gpt-5.5-scored M1 and pilot transcripts (no second-family rescore) | flag in `src/groundcite/ablation.py`, `tests/test_ablation.py`; re-judge with `scripts/rejudge.py`, `tests/test_rejudge.py` | in progress |
 | R30 | Tuned invented-ID rate ≤ base and ≤2% on own and held-out sets | `results/base_vs_tuned/`, `results/curve/` (planned) | not started |
 | — | Results tables: ablation; base vs tuned on own and held-out sets | `results/` (planned) and `docs/writeup.md` (planned) | not started |
 | — | Architecture document | `ARCHITECTURE.md` | done |

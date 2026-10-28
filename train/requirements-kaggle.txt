@@ -3,8 +3,8 @@
 # here. Every runtime dependency of the project except torch, at its uv.lock version, except
 # transformers: Unsloth 2026.10.10 supports transformers <= 5.17.0 (D-077), and huggingface-hub:
 # transformers 5.17.0 requires huggingface-hub>=1.5.0,<2.0, so the hub is the newest 1.x (D-089;
-# checked with `uv pip compile train/requirements-kaggle.txt --python-version 3.11
-# --python-platform x86_64-manylinux_2_28`). tokenizers and safetensors are pinned too, so
+# checked with `uv pip compile train/requirements-kaggle.txt --python-version 3.13
+# --python-platform x86_64-manylinux_2_28`; Kaggle's image is on Python 3.13). tokenizers and safetensors are pinned too, so
 # tokenization matches the local eval stack (GOTCHA G27).
 accelerate==1.15.0
 anthropic==2.3.0
