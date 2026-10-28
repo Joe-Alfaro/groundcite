@@ -49,6 +49,8 @@ from groundcite.prompts import render_messages
 from groundcite.runner import DEFAULT_CONCURRENCY, Retrying, build_backend, normalize_spec
 
 KEPT_RATE_RANGE = (0.20, 0.95)
+# R23/R30: the training set should be 20-30% abstain examples, inclusive.
+ABSTAIN_SHARE_RANGE = (0.20, 0.30)
 _STR_FIELDS = ("scenario_id", "teacher", "teacher_prompt_version", "teacher_prompt_sha256")
 
 
@@ -271,6 +273,7 @@ def manifest(
     n_cands, n_kept = len(outcomes), len(kept)
     kept_rate = n_kept / n_cands if n_cands else 0.0
     reasons = Counter(o.rejection.reason for o in outcomes if o.rejection is not None)
+    abstain_share = sum(r["gold"]["mode"] == "abstain" for r in rows) / n_kept if n_kept else 0.0
     return {
         "version": version,
         "count": n_kept,
@@ -278,8 +281,9 @@ def manifest(
         "id_scheme_mix": _sorted_counts(
             Counter(re.sub(r"[0-9]+", "#", str(s["id"])) for r in rows for s in r["snippets"])
         ),
-        "abstain_share": (
-            sum(r["gold"]["mode"] == "abstain" for r in rows) / n_kept if n_kept else 0.0
+        "abstain_share": abstain_share,
+        "abstain_share_in_range": (
+            ABSTAIN_SHARE_RANGE[0] <= abstain_share <= ABSTAIN_SHARE_RANGE[1]
         ),
         "source_seeds": sorted({r["seed"] for r in rows if "seed" in r}),
         "teacher_model": _one_value([str(r["teacher"]) for r in raws]),
@@ -314,6 +318,8 @@ def filter_report(m: Mapping[str, Any]) -> str:
         f"| Kept rate | {100 * m['kept_rate']:.1f}% |",
         f"| Kept rate within {100 * low:.0f}-{100 * high:.0f}% | {in_range} |",
         f"| Abstain share of kept | {100 * m['abstain_share']:.1f}% |",
+        f"| Abstain share within {100 * ABSTAIN_SHARE_RANGE[0]:.0f}-"
+        f"{100 * ABSTAIN_SHARE_RANGE[1]:.0f}% | {'yes' if m['abstain_share_in_range'] else 'NO'} |",
         f"| Teacher | `{m['teacher_model']}` (prompt {m['teacher_prompt_version']}) |",
         f"| Judge | `{m['judge_model']}` |",
         f"| Filter version | {m['filter_version']} |",
@@ -377,6 +383,13 @@ def run(args: argparse.Namespace) -> int:
     )
     for reason, count in m["rejections_by_reason"].items():
         print(f"  {reason}: {count}")
+    if not m["abstain_share_in_range"]:
+        low, high = ABSTAIN_SHARE_RANGE
+        print(
+            f"warning: kept abstain share {100 * m['abstain_share']:.1f}% is outside "
+            f"{100 * low:.0f}-{100 * high:.0f}%",
+            file=sys.stderr,
+        )
     return 0
 
 

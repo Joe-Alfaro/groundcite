@@ -54,11 +54,15 @@ SELECTION_RULE = (
     "Robustness wins, ties go to the lowest candidate_index; scenarios in candidates-file order"
 )
 # Words that only make sense if the reply saw the privileged inputs (the gold label, the supporting
-# IDs or the hint note). "the note" is matched only as a phrase, so "a service manual note" and
-# "note the idle speed" still pass.
+# IDs or the hint note), including the hint note's own wording ("near-miss", "already used up",
+# "supports the next step"). "the note" is matched only as a phrase, so "a service manual note" and
+# "note the idle speed" still pass; "supports the next step" only after "that", so "your reading
+# supports the next step" still passes.
 _HINT_WORDS = re.compile(
     r"\b(?:gold(?: label)?|supporting[_ ]ids?|privileged|hints?|answer key|the note|"
-    r"grading|graded|reference answer|i was told|correct mode)\b|" + re.escape(HINT_HEADER),
+    r"grading|graded|reference answer|i was told|i(?:['\u2019]ve| have) been told|correct mode|"
+    r"correct ids?|expected answer|near[- ]miss(?:es)?|already used up|"
+    r"that supports the next step)\b|" + re.escape(HINT_HEADER),
     re.IGNORECASE,
 )
 _GOLD_CHECKS = ("mode_matches_gold", "cited_id_supports")
