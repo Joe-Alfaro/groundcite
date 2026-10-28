@@ -1,0 +1,116 @@
+{
+  "run_id": "pilot1",
+  "pins": {
+    "git_sha": "f0b7871a1a75b45264c3d45dbc00929fe04a6888",
+    "git_dirty": false,
+    "judge_model": "openai:gpt-5.5-2026-04-23",
+    "rubric_sha256": "636a9c79b9ba0ad02b082351bd25e385c0963c9d8edffedad3919e56b556b4bf",
+    "eval_set": {
+      "path": "data/scenarios/rollout_pilot.jsonl",
+      "sha256": "01ad3ce924198092e565d60e324d024e1f650bbfc229ab64fbe7478634e7f71d"
+    },
+    "models": [
+      {
+        "model": "anthropic:claude-opus-5-5",
+        "model_revision": null
+      }
+    ],
+    "decoding": {
+      "anthropic:claude-opus-5-5": {
+        "max_tokens": 16000,
+        "output_config": {
+          "effort": "medium"
+        }
+      },
+      "openai:gpt-5.5-2026-04-23": {
+        "max_completion_tokens": 16000,
+        "reasoning_effort": "low"
+      }
+    },
+    "bootstrap_seed": 0,
+    "library_versions": {
+      "python": "3.13.2",
+      "groundcite": "0.1.0",
+      "anthropic": "2.3.0",
+      "openai": "3.40.0",
+      "python-dotenv": "1.2.4",
+      "torch": "2.14.1",
+      "transformers": "5.21.0",
+      "peft": "0.21.2"
+    }
+  },
+  "conversation_ids": [
+    "rp-001",
+    "rp-002",
+    "rp-003",
+    "rp-004",
+    "rp-005",
+    "rp-006",
+    "rp-007",
+    "rp-008",
+    "rp-009",
+    "rp-010",
+    "rp-011",
+    "rp-012",
+    "rp-013",
+    "rp-014",
+    "rp-015",
+    "rp-016",
+    "rp-017",
+    "rp-018",
+    "rp-019",
+    "rp-020",
+    "rp-021",
+    "rp-022",
+    "rp-023",
+    "rp-024",
+    "rp-025",
+    "rp-026",
+    "rp-027",
+    "rp-028",
+    "rp-029",
+    "rp-030"
+  ],
+  "cells": [
+    {
+      "model": "anthropic:claude-opus-5-5",
+      "strategy": "structured",
+      "n": 303,
+      "spec_adherence": {
+        "mean": 0.9438943894389439,
+        "ci_low": 0.9174917491749175,
+        "ci_high": 0.9702970297029703
+      },
+      "robustness_mean": 4.8283828382838285,
+      "stressor_spec_adherence": 0.9438943894389439,
+      "spec_adherence_by_category": {
+        "multi_turn": 0.9438943894389439
+      },
+      "det_fail_rate": 0.052805280528052806,
+      "invented_id_rate": 0.0,
+      "abstain_precision": 0.9226519337016574,
+      "abstain_recall": 0.9881656804733728,
+      "n_conversations": 30,
+      "conversation_pass_rate": 0.8,
+      "first_failure_turns": {
+        "0": 5,
+        "2": 1
+      },
+      "spec_adherence_by_turn": {
+        "0": 0.8333333333333334,
+        "1": 0.8666666666666667,
+        "2": 0.9333333333333333,
+        "3": 0.9333333333333333,
+        "4": 0.9666666666666667,
+        "5": 1.0,
+        "6": 0.9333333333333333,
+        "7": 0.9666666666666667,
+        "8": 1.0,
+        "9": 1.0,
+        "10": 1.0,
+        "11": 1.0
+      },
+      "meets_bar": false
+    }
+  ]
+}

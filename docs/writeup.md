@@ -1,9 +1,9 @@
 # Write-up (draft)
 
 > **Status: draft.** Sections 1, 2, 3, 5 and 6 (method) describe what is built or designed in this
-> repository. Section 4 reports the real prompt-ceiling ablation. Every other number that needs a
-> real run is marked **Pending**, along with what will go there. Nothing in the pending sections
-> should be read as a result.
+> repository. Section 4 reports the real prompt-ceiling ablation and section 4a the
+> long-conversation pilot. Every other number that needs a real run is marked **Pending**, along
+> with what will go there. Nothing in the pending sections should be read as a result.
 
 Requirements: [`docs/requirements/small-model-finetune.md`](requirements/small-model-finetune.md).
 Architecture: [`ARCHITECTURE.md`](../ARCHITECTURE.md). Status of every item:
@@ -250,6 +250,55 @@ although the gold strut-mount bulletin matches the complaint. `eo-0059` fails in
 it Claude abstains because "the condenser fan references only cover warm air at idle", and GPT
 cites the idle-only near-miss. Part of that is a data defect: the gold snippet's title still says
 "at idle". If `eo-0059` is excluded, the surviving rate is Claude 0 of 39 and GPT 3 of 39.
+
+## 4a. Hardening: long-conversation pilot (H1)
+
+**Result: the bar is not met at the conversation level, and there is no drift.** M1 found no
+plateau, so the spec was hardened along the axis the thesis names last, holding over turns. Run
+`pilot1` (eval code `f0b7871`) had the best M1 cell, Claude `structured`, write every assistant
+turn of 30 scripted 8–12 turn conversations (303 turns, the 5 held-out families). Snippets are
+added and withdrawn mid-conversation and the user pushes for a guess or a repair. Each turn is
+scored against its live snippets and an any-of gold: any in-scope snippet whose step hasn't been
+done yet is a valid citation. A conversation passes only if every turn is on spec, and the bar
+uses that conversation pass rate in place of per-turn Spec-adherence. Full tables, the 303 judged
+turns and the watch items are in [`results/rollout_pilot/`](../results/rollout_pilot/README.md).
+
+| Per-conversation pass (95% CI) | Per-turn Spec-adherence (95% CI) | Robustness | Invented-ID rate | Abstain P / R |
+|---|---|---|---|---|
+| 0.80 [0.63, 0.93] (24/30) | 0.94 [0.92, 0.97] | 4.83 | 0.00 | 0.92 / 0.99 |
+
+Per-turn Spec-adherence by turn index (n = 30 through turn 8, then 25, 6, 2):
+
+| 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 0.83 | 0.87 | 0.93 | 0.93 | 0.97 | 1.00 | 0.93 | 0.97 | 1.00 | 1.00 | 1.00 | 1.00 |
+
+All six failing conversations first fail at turn 0 (5) or turn 2 (1). Robustness clears the bar
+(4.83 ≥ 4.3), but the conversation pass rate (0.80) doesn't reach 0.90. Per-turn accuracy is near
+M1's single-turn 0.97. Requiring every turn of a ~10-turn conversation to be right is what costs
+the 0.17.
+
+**Dominant failure mode: abstaining on a scope condition the user hasn't confirmed.** 14 of the
+17 failing turns (5 of 6 failing conversations) are abstains where a snippet's scope carries a
+condition the user never states, and the model asks the user to confirm it instead of citing.
+It then repeats the question until the snippet is withdrawn. Ten of those turns are the
+`brake_pull` slide-pin bulletin ("Applies to vehicles with floating front calipers"), for example
+`rp-005:t0`, `rp-003:t0` and `rp-004:t3`. The other four are `rp-023`, where the model reads the
+bulletin's own pedal-sink test as a precondition the user must report (`rp-023:t0`). The caliper
+case is partly a scenario defect, because no user ever states the caliper type. But the model is
+also inconsistent on it, citing on 10 of the 20 slide-pin-gold turns and abstaining on the other
+10. As a sensitivity check only, dropping those 10 turns would give 27/30 = 0.90.
+
+**Caveats.** Every conversation ends on an abstain-gold turn, so the 1.00s at turns 8–11 show
+abstain behavior holding late, not cite accuracy. The `soft_pedal` moisture twin discriminates
+weakly, so its 17 correct citations are weak evidence of scope reading. `rp-026:t0` has an
+unstated transmission, though that turn passed. n = 30 conversations gives a wide CI.
+
+**What it means.** Long conversations don't erode the contract for a prompted frontier model on
+this set. What breaks conversation-level reliability is an early scope misjudgment that gets
+repeated turn after turn. The next set should state every scope-relevant vehicle attribute (or
+gold it as abstain when unstated), end some conversations on a cite turn and replace the weak
+moisture twin before rollouts are rebuilt at scale.
 
 ## 5. Teacher vs ablation
 
