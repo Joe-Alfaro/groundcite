@@ -4,10 +4,12 @@
 opener. Validation of the kind-balance fix found that snippet length and year presence still
 predict gold, so this module adds:
 
-1. trivial-heuristic accuracy on distractor scenarios, at most 0.60 (0.67 on the small held-out
-   set). Accuracy is the expected value with uniform tie-breaking: a scenario scores
-   |picked & gold| / |picked|, and a heuristic that picks nothing falls back to a random snippet.
-   Word overlap with the complaint is a legitimate cue, so it is reported but not gated;
+1. trivial-heuristic accuracy on distractor scenarios, at most 0.60 in every set, held-out
+   included (D-056 drops the old 0.67 held-out allowance). Accuracy is the expected value with
+   uniform tie-breaking: a scenario scores |picked & gold| / |picked|, and a heuristic that
+   picks nothing falls back to a random snippet. D-056 adds the cues validation 2 found: most
+   commas, digits, numbers and units, longest by words, and either opener. Word overlap with
+   the complaint is a legitimate cue, so it is reported but not gated;
 2. gold-rate gaps by length tercile and year presence, at most 0.15 (0.25 on heldout);
 3. at least one few-shot cite example whose gold is not the longest snippet;
 4. no multi-turn abstain scenario leaves a documented, unperformed check in a chain snippet it
@@ -39,6 +41,7 @@ from distill_data import (
     write_jsonl,
 )
 from test_kind_balance import (
+    APPLIES_TO_ALL,
     CORRECTION_LINE,
     HELDOUT_GOLD_RATE_GAP,
     MAX_GOLD_RATE_GAP,
@@ -52,9 +55,8 @@ from test_kind_balance import (
 
 from groundcite import backends
 
+# One limit for every set, held-out included (D-056).
 MAX_HEURISTIC_ACCURACY = 0.60
-# The held-out set has only 12 distractor scenarios, so one scenario moves accuracy by 0.08.
-HELDOUT_HEURISTIC_ACCURACY = 0.67
 # Accuracy is a mean of fractions; 12/20 must not fail on float rounding.
 EPS = 1e-9
 # Gold-rate groups smaller than this are too noisy to compare.
@@ -103,6 +105,38 @@ def _length(snippet: Snippet) -> float:
     return len(snippet["text"])
 
 
+NUMBER = re.compile(r"\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?")
+# A measurement unit right after a number ("35 psi", "12.4 V", "20-40 deg F", "2,000 rpm").
+UNIT = re.compile(
+    r"\d(?:[\d.,]*\d)?\s*(?:-\s*\d[\d.,]*\s*)?"
+    r"(?:psi|kpa|mv|v|volts?|ma|amps?|ohms?|deg|degrees|°|rpm|mph|mm|inch(?:es)?|"
+    r"ft[- ]?lbs?|lb[- ]?ft|in[- ]?lbs?|nm|n·m|hz|ms|%|percent|seconds?|minutes?|hours?|miles?)"
+    r"(?![a-z])",
+    re.IGNORECASE,
+)
+APPLIES_TO_VEHICLES_WITH = re.compile(r"^\s*Applies to vehicles with\b", re.IGNORECASE)
+
+
+def commas(snippet: Snippet) -> int:
+    return int(snippet["text"].count(","))
+
+
+def digits(snippet: Snippet) -> int:
+    return sum(ch.isdigit() for ch in snippet["text"])
+
+
+def numbers(snippet: Snippet) -> int:
+    return len(NUMBER.findall(snippet["text"]))
+
+
+def units(snippet: Snippet) -> int:
+    return len(UNIT.findall(snippet["text"]))
+
+
+def words(snippet: Snippet) -> int:
+    return len(snippet["text"].split())
+
+
 GATED_HEURISTICS: dict[str, Picker] = {
     "cite the longest snippet": lambda row: _extreme(row, _length, max),
     "cite the shortest snippet": lambda row: _extreme(row, _length, min),
@@ -115,6 +149,18 @@ GATED_HEURISTICS: dict[str, Picker] = {
     "cite a bulletin-kind snippet": lambda row: _where(row, lambda s: s["kind"] == "tsb"),
     "cite a snippet with no correction line": lambda row: _where(
         row, lambda s: not CORRECTION_LINE.search(s["text"])
+    ),
+    # D-056: the cues validation 2 found after the length fix.
+    "cite the snippet with the most commas": lambda row: _extreme(row, commas, max),
+    "cite the snippet with the most digits": lambda row: _extreme(row, digits, max),
+    "cite the snippet with the most numbers": lambda row: _extreme(row, numbers, max),
+    "cite the snippet with the most units": lambda row: _extreme(row, units, max),
+    "cite the longest snippet by words": lambda row: _extreme(row, words, max),
+    "cite an 'Applies to all' snippet": lambda row: _where(
+        row, lambda s: bool(APPLIES_TO_ALL.match(s["text"]))
+    ),
+    "cite an 'Applies to vehicles with' snippet": lambda row: _where(
+        row, lambda s: bool(APPLIES_TO_VEHICLES_WITH.match(s["text"]))
     ),
 }
 
@@ -133,16 +179,6 @@ def _heuristic_accuracy(rows: list[dict[str, Any]], pick: Picker) -> float:
     return total / len(rows)
 
 
-def _accuracy_limit(name: str) -> float:
-    if name == "heldout":
-        print(
-            f"heldout is small: heuristic accuracy limit loosened to {HELDOUT_HEURISTIC_ACCURACY} "
-            f"(default {MAX_HEURISTIC_ACCURACY})"
-        )
-        return HELDOUT_HEURISTIC_ACCURACY
-    return MAX_HEURISTIC_ACCURACY
-
-
 # --- (1) trivial heuristics on distractor scenarios --------------------------------------------
 
 
@@ -150,7 +186,7 @@ def _accuracy_limit(name: str) -> float:
 @pytest.mark.parametrize("name", SET_NAMES)
 def test_no_trivial_heuristic_solves_distractors(name: str, heuristic: str) -> None:
     rows = _distractor_rows(name)
-    limit = _accuracy_limit(name)
+    limit = MAX_HEURISTIC_ACCURACY
     accuracy = _heuristic_accuracy(rows, GATED_HEURISTICS[heuristic])
     print(f"{name}: {heuristic}: {accuracy:.2f} on {len(rows)} distractor scenarios")
     assert accuracy <= limit + EPS, (
@@ -180,6 +216,21 @@ def test_heuristic_accuracy_uses_uniform_tie_breaking() -> None:
     }
     assert _heuristic_accuracy([row], GATED_HEURISTICS["cite the longest snippet"]) == 0.5
     assert _heuristic_accuracy([row], lambda r: []) == pytest.approx(1 / 3)
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("A drop of 20-40 deg F is typical at 2,000 rpm.", (1, 3, 8, 2)),
+        ("Battery voltage should stay above 12.4 V, and the draw under 50 mA.", (1, 2, 5, 2)),
+        ("P0171 may set at idle, below 25 mph, on cylinder 4 in the cold.", (2, 3, 7, 1)),
+        ("Inspect the hose at the elbow.", (0, 0, 0, 0)),
+    ],
+)
+def test_surface_counters(text: str, expected: tuple[int, int, int, int]) -> None:
+    """(commas, numbers, digits, units): "P0171" and "cylinder 4 in" carry no unit."""
+    snippet = {"text": text}
+    assert (commas(snippet), numbers(snippet), digits(snippet), units(snippet)) == expected
 
 
 # --- (2) gold-rate gaps by length tercile and year presence ------------------------------------
