@@ -499,7 +499,9 @@ doesn't wait on them.
   switch is stated in the README, the write-up's limitations and the ablation README.
   - The deterministic checks still override the judge, and the R29 hand audit measures agreement.
   - The ablation table flags the cells that share the judge's family.
-  - A second-family judge (OpenAI) rescores 40 examples. Agreement ≥85% is the target.
+  - No second-family judge rescores a subset (`[cross_check]` is disabled). Judge validity rests
+    on the R29 hand audit and on the Opus re-judge of the M1 and H1 pilot transcripts that
+    gpt-5.5 scored, which gives a cross-family agreement number.
   - Numbers shown side by side come from the same judge: M1 and the H1 pilot are re-judged with
     the current judge (R11) before they are compared with new results.
 - **G31, G32 — Live demo.**

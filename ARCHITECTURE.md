@@ -108,8 +108,10 @@ prompting strategies.
     deterministic checks still override the judge, and the R29 hand audit measures agreement.
   - The judge is the same model as the Anthropic ablation subject. The ablation table flags every
     cell that shares the judge's family.
-  - A second-family judge (`[cross_check]`, OpenAI) rescores a 40-example subset, with a
-    target agreement of ≥85%. R29 also requires a hand audit of 20 replies.
+  - There is no second-family rescore: `[cross_check]` is disabled (no second-family key with
+    credits). Judge validity rests on two checks. The M1 and H1 pilot transcripts, scored by
+    OpenAI gpt-5.5, are re-judged by Claude Opus from the stored replies, which gives a
+    cross-family agreement number. R29 requires a hand audit of 20 replies.
   - `scripts/check_rubric.py` asserts one rubric hash across all committed runs and fails a run
     whose rows come from more than one judge.
   - Side-by-side numbers come from one judge. `scripts/rejudge.py RUN_DIR --judge <spec> --out
@@ -379,7 +381,7 @@ tests/                   # pytest; fixtures/ incl. hand-written third-party-styl
 | --- | --- |
 | **No plateau.** Frontier models plus `structured` pass ≥90%. | The scenario mix already weights `no_snippet`, `distractor`, `pressure`, `multi_symptom` and `multi_turn`, and P6 bans even conditional repairs. If R3 still shows no plateau, the spec gets hardened before training: longer multi-turn drift (6–10 turns), more near-miss snippets, and stronger pressure. The change is logged and reported. Nothing gets trained on an unproven edge. |
 | **T4 limits** (16 GB, ~30 h a week, notebook sessions) | 1.7B in 4-bit fits easily. The sweep is nested and small. 0.6B is the fallback point. Runs need the owner's Kaggle account. |
-| **Judge bias** (self-preference, leniency) | Deterministic checks override the judge and cap Robustness at 2. The judge shares the teacher's family (a stated self-preference risk). A second-family (OpenAI) judge rescores 40 examples, target agreement ≥85%. Side-by-side numbers use one judge (re-judged runs). The ablation table flags the cell that shares the judge's family. The rubric is fixed and versioned, and the judge snapshot is pinned. Spot-audit 20 transcripts by hand against P1–P8 and report the agreement rate. |
+| **Judge bias** (self-preference, leniency) | Deterministic checks override the judge and cap Robustness at 2. The judge shares the teacher's family (a stated self-preference risk). There is no second-family rescore (`[cross_check]` is disabled). The Opus re-judge of the gpt-5.5-scored M1 and pilot transcripts gives a cross-family agreement number. Side-by-side numbers use one judge (re-judged runs). The ablation table flags the cell that shares the judge's family. The rubric is fixed and versioned, and the judge snapshot is pinned. Spot-audit 20 transcripts by hand against P1–P8 and report the agreement rate. |
 | **No API keys yet** | Everything in M0 is key-free (mock backends, `--dry-run`, committed scenario sets). M1 and later stages wait for keys. |
 | **Heuristic checks** (`one_step`, `no_fix`) misfire | Versioned lexicons with fixtures. False positives are reviewed in the filter report. A check that disagrees with a hand label on more than 5% of a 50-item audit sample gets revised, with a version bump. |
 | **Synthetic snippets read as unrealistic** | A hand-written library across ~16 families in two styles (bulletin and manual). Never real text. |

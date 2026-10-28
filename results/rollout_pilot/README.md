@@ -27,6 +27,12 @@ went through once with no interruption, no resume, and no generation or judge er
 `scripts/check_rubric.py results/` reports `ok: 2 run(s), one rubric_sha256 636a9c79…b4bf`
 across M1 and this pilot.
 
+**Judge note.** This pilot (and M1) was scored by `openai:gpt-5.5-2026-04-23`. The project judge
+is now `anthropic:claude-opus-5-5`, so these numbers can't sit side by side with later
+(Opus-judged) results as they are. Any side-by-side comparison uses a copy re-judged by Claude
+Opus from the stored replies with `scripts/rejudge.py` (no new generations); the gpt-5.5 scores
+here stay as the historical cross-family reference.
+
 ## Results
 
 | Metric | Value |
