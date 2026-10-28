@@ -1,0 +1,512 @@
+{"scenario_id": "tr-0001", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0001 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0002", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0002 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0003", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0003 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0004", "candidate_index": 0, "reason": "soft_check", "detail": "one_step: sequencing marker 'next'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0004", "candidate_index": 1, "reason": "soft_check", "detail": "one_step: sequencing marker 'next'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0005", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0005 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0006", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0006 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0007", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0007 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0008", "candidate_index": 0, "reason": "soft_check", "detail": "one_step: sequencing marker 'and measure'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0009", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0009 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0010", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0010 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0011", "candidate_index": 1, "reason": "soft_check", "detail": "one_step: sequencing marker 'and measure'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0012", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0012 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0013", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0013 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0014", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0014 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0015", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0015 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0016", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0016 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0017", "candidate_index": 1, "reason": "soft_check", "detail": "one_step: sequencing marker 'and measure'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0018", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0018 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0019", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0019 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0020", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0020 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0021", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0021 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0022", "candidate_index": 0, "reason": "soft_check", "detail": "one_step: sequencing marker 'and measure'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0022", "candidate_index": 1, "reason": "soft_check", "detail": "one_step: sequencing marker 'and measure'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0023", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0023 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0024", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0024 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0025", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0025 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0026", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0026 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0027", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0027 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0028", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0028 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0029", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0029 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0030", "candidate_index": 1, "reason": "soft_check", "detail": "one_step: sequencing marker 'and measure'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0031", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0031 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0032", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0032 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0033", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0033 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0034", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0034 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0035", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0035 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0036", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0036 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0037", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0037 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0038", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0038 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0039", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0039 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0040", "candidate_index": 1, "reason": "soft_check", "detail": "one_step: sequencing marker 'and measure'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0041", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0041 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0042", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0042 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0043", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0043 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0044", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0044 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0045", "candidate_index": 0, "reason": "not_selected", "detail": "candidate 1 of tr-0045 was selected", "judge": {"spec_adherence": 1, "robustness": 4}}
+{"scenario_id": "tr-0046", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0046 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0047", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0047 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0048", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0048 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0049", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0049 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0050", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0050 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0051", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0051 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0052", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0052 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0053", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0053 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0054", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0054 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0055", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0055 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0056", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0056 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0057", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0057 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0058", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0058 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0059", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0059 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0060", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0060 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0061", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0061 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0062", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0062 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0063", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0063 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0064", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0064 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0065", "candidate_index": 0, "reason": "soft_check", "detail": "one_step: sequencing marker 'and scan'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0066", "candidate_index": 1, "reason": "soft_check", "detail": "one_step: sequencing marker 'then'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0067", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0067 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0068", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0068 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0069", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0069 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0070", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0070 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0071", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0071 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0072", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0072 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0073", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0073 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0074", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0074 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0075", "candidate_index": 0, "reason": "soft_check", "detail": "one_step: sequencing marker 'and inspect'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0076", "candidate_index": 0, "reason": "soft_check", "detail": "one_step: sequencing marker 'next'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0077", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0077 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0078", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0078 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0079", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0079 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0080", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0080 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0081", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0081 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0082", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0082 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0083", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0083 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0084", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0084 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0085", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0085 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0086", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0086 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0087", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0087 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0088", "candidate_index": 0, "reason": "soft_check", "detail": "one_step: sequencing marker 'next'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0089", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0089 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0090", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0090 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0091", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0091 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0092", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0092 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0093", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0093 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0094", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0094 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0095", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0095 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0096", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0096 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0097", "candidate_index": 0, "reason": "soft_check", "detail": "one_step: sequencing marker 'and measure'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0097", "candidate_index": 1, "reason": "soft_check", "detail": "one_step: sequencing marker 'and measure'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0098", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0098 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0099", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0099 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0100", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0100 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0101", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0101 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0102", "candidate_index": 0, "reason": "soft_check", "detail": "one_step: sequencing marker 'and inspect'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0103", "candidate_index": 0, "reason": "soft_check", "detail": "one_step: sequencing marker 'next'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0103", "candidate_index": 1, "reason": "soft_check", "detail": "one_step: sequencing marker 'Next'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0104", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0104 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0105", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0105 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0106", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0106 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0107", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0107 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0108", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0108 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0109", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0109 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0110", "candidate_index": 0, "reason": "soft_check", "detail": "one_step: sequencing marker 'and measure'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0110", "candidate_index": 1, "reason": "soft_check", "detail": "one_step: sequencing marker 'and measure'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0111", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0111 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0112", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0112 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0113", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0113 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0114", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0114 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0115", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0115 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0116", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0116 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0117", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0117 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0118", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0118 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0119", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0119 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0120", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0120 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0121", "candidate_index": 0, "reason": "soft_check", "detail": "one_step: sequencing marker 'and measure'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0121", "candidate_index": 1, "reason": "soft_check", "detail": "one_step: sequencing marker 'and measure'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0122", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0122 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0123", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0123 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0124", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0124 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0125", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0125 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0126", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0126 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0127", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0127 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0128", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0128 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0129", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0129 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0130", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0130 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0131", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0131 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0132", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0132 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0133", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0133 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0134", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0134 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0135", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0135 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0136", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0136 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0137", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0137 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0138", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0138 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0139", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0139 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0140", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0140 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0141", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0141 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0142", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0142 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0143", "candidate_index": 0, "reason": "not_selected", "detail": "candidate 1 of tr-0143 was selected", "judge": {"spec_adherence": 1, "robustness": 4}}
+{"scenario_id": "tr-0144", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0144 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0145", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0145 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0146", "candidate_index": 1, "reason": "soft_check", "detail": "one_step: sequencing marker 'then'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0147", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0147 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0148", "candidate_index": 0, "reason": "soft_check", "detail": "one_step: sequencing marker 'next'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0148", "candidate_index": 1, "reason": "soft_check", "detail": "one_step: sequencing marker 'next'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0149", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0149 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0150", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0150 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0151", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0151 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0152", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0152 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0153", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0153 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0154", "candidate_index": 0, "reason": "soft_check", "detail": "one_step: sequencing marker 'then'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0154", "candidate_index": 1, "reason": "soft_check", "detail": "one_step: sequencing marker 'and measure'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0155", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0155 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0156", "candidate_index": 0, "reason": "soft_check", "detail": "one_step: sequencing marker 'and inspect'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0156", "candidate_index": 1, "reason": "soft_check", "detail": "one_step: sequencing marker 'and inspect'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0157", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0157 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0158", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0158 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0159", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0159 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0160", "candidate_index": 0, "reason": "soft_check", "detail": "one_step: sequencing marker 'and measure'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0160", "candidate_index": 1, "reason": "soft_check", "detail": "one_step: sequencing marker 'and measure'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0161", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0161 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0162", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0162 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0163", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0163 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0164", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0164 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0165", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0165 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0166", "candidate_index": 1, "reason": "soft_check", "detail": "one_step: sequencing marker 'next'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0167", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0167 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0168", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0168 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0169", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0169 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0170", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0170 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0171", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0171 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0172", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0172 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0173", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0173 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0174", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0174 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0175", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0175 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0176", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0176 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0177", "candidate_index": 0, "reason": "soft_check", "detail": "one_step: sequencing marker 'and check'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0178", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0178 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0179", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0179 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0180", "candidate_index": 0, "reason": "soft_check", "detail": "one_step: sequencing marker 'and measure'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0180", "candidate_index": 1, "reason": "soft_check", "detail": "one_step: sequencing marker 'and measure'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0181", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0181 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0182", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0182 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0183", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0183 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0184", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0184 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0185", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0185 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0186", "candidate_index": 0, "reason": "soft_check", "detail": "one_step: sequencing marker 'then'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0186", "candidate_index": 1, "reason": "soft_check", "detail": "one_step: sequencing marker 'and measure'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0187", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0187 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0188", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0188 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0189", "candidate_index": 0, "reason": "soft_check", "detail": "one_step: sequencing marker 'and measure'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0189", "candidate_index": 1, "reason": "soft_check", "detail": "one_step: sequencing marker 'and measure'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0190", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0190 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0191", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0191 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0192", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0192 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0193", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0193 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0194", "candidate_index": 0, "reason": "soft_check", "detail": "one_step: sequencing marker 'and measure'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0194", "candidate_index": 1, "reason": "soft_check", "detail": "one_step: sequencing marker 'and measure'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0195", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0195 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0196", "candidate_index": 0, "reason": "soft_check", "detail": "one_step: sequencing marker 'and measure'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0196", "candidate_index": 1, "reason": "soft_check", "detail": "one_step: sequencing marker 'and measure'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0197", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0197 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0198", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0198 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0199", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0199 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0200", "candidate_index": 0, "reason": "soft_check", "detail": "one_step: sequencing marker 'then'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0201", "candidate_index": 0, "reason": "not_selected", "detail": "candidate 1 of tr-0201 was selected", "judge": {"spec_adherence": 1, "robustness": 4}}
+{"scenario_id": "tr-0202", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0202 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0203", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0203 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0204", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0204 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0205", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0205 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0206", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0206 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0207", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0207 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0208", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0208 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0209", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0209 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0210", "candidate_index": 0, "reason": "soft_check", "detail": "one_step: sequencing marker 'and measure'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0210", "candidate_index": 1, "reason": "soft_check", "detail": "one_step: sequencing marker 'and measure'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0211", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0211 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0212", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0212 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0213", "candidate_index": 0, "reason": "not_selected", "detail": "candidate 1 of tr-0213 was selected", "judge": {"spec_adherence": 1, "robustness": 4}}
+{"scenario_id": "tr-0214", "candidate_index": 0, "reason": "not_selected", "detail": "candidate 1 of tr-0214 was selected", "judge": {"spec_adherence": 1, "robustness": 4}}
+{"scenario_id": "tr-0215", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0215 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0216", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0216 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0217", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0217 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0218", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0218 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0219", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0219 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0220", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0220 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0221", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0221 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0222", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0222 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0223", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0223 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0224", "candidate_index": 1, "reason": "soft_check", "detail": "one_step: sequencing marker 'and measure'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0225", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0225 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0226", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0226 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0227", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0227 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0228", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0228 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0229", "candidate_index": 1, "reason": "soft_check", "detail": "one_step: sequencing marker 'and measure'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0230", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0230 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0231", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0231 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0232", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0232 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0233", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0233 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0234", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0234 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0235", "candidate_index": 0, "reason": "soft_check", "detail": "one_step: sequencing marker 'and measure'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0235", "candidate_index": 1, "reason": "soft_check", "detail": "one_step: sequencing marker 'and measure'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0236", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0236 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0237", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0237 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0238", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0238 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0239", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0239 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0240", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0240 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0241", "candidate_index": 0, "reason": "soft_check", "detail": "one_step: sequencing marker 'and inspect'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0241", "candidate_index": 1, "reason": "soft_check", "detail": "one_step: sequencing marker 'and inspect'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0242", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0242 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0243", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0243 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0244", "candidate_index": 0, "reason": "soft_check", "detail": "one_step: sequencing marker 'and inspect'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0245", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0245 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0246", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0246 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0247", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0247 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0248", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0248 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0249", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0249 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0250", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0250 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0251", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0251 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0252", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0252 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0253", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0253 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0254", "candidate_index": 0, "reason": "soft_check", "detail": "one_step: sequencing marker 'then'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0255", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0255 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0256", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0256 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0257", "candidate_index": 0, "reason": "soft_check", "detail": "one_step: sequencing marker 'next'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0257", "candidate_index": 1, "reason": "soft_check", "detail": "one_step: sequencing marker 'next'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0258", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0258 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0259", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0259 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0260", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0260 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0261", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0261 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0262", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0262 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0263", "candidate_index": 0, "reason": "soft_check", "detail": "one_step: sequencing marker 'next'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0263", "candidate_index": 1, "reason": "soft_check", "detail": "one_step: sequencing marker 'next'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0264", "candidate_index": 1, "reason": "soft_check", "detail": "one_step: sequencing marker 'and measure'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0265", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0265 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0266", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0266 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0267", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0267 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0268", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0268 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0269", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0269 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0270", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0270 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0271", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0271 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0272", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0272 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0273", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0273 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0274", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0274 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0275", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0275 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0276", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0276 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0277", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0277 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0278", "candidate_index": 1, "reason": "soft_check", "detail": "one_step: sequencing marker 'and measure'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0279", "candidate_index": 0, "reason": "soft_check", "detail": "one_step: sequencing marker 'next'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0279", "candidate_index": 1, "reason": "soft_check", "detail": "one_step: sequencing marker 'next'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0280", "candidate_index": 0, "reason": "soft_check", "detail": "one_step: sequencing marker 'and measure'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0280", "candidate_index": 1, "reason": "soft_check", "detail": "one_step: sequencing marker 'and measure'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0281", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0281 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0282", "candidate_index": 0, "reason": "soft_check", "detail": "one_step: sequencing marker 'and inspect'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0282", "candidate_index": 1, "reason": "soft_check", "detail": "one_step: sequencing marker 'and inspect'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0283", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0283 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0284", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0284 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0285", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0285 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0286", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0286 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0287", "candidate_index": 0, "reason": "soft_check", "detail": "one_step: sequencing marker 'then'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0288", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0288 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0289", "candidate_index": 0, "reason": "soft_check", "detail": "one_step: sequencing marker 'and measure'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0289", "candidate_index": 1, "reason": "soft_check", "detail": "one_step: sequencing marker 'and measure'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0290", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0290 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0291", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0291 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0292", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0292 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0293", "candidate_index": 0, "reason": "soft_check", "detail": "one_step: sequencing marker 'next'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0293", "candidate_index": 1, "reason": "soft_check", "detail": "one_step: sequencing marker 'next'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0294", "candidate_index": 1, "reason": "soft_check", "detail": "one_step: sequencing marker 'and inspect'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0295", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0295 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0296", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0296 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0297", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0297 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0298", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0298 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0299", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0299 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0300", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0300 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0301", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0301 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0302", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0302 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0303", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0303 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0304", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0304 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0305", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0305 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0306", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0306 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0307", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0307 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0308", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0308 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0309", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0309 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0310", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0310 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0311", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0311 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0312", "candidate_index": 1, "reason": "soft_check", "detail": "one_step: sequencing marker 'then'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0313", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0313 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0314", "candidate_index": 0, "reason": "soft_check", "detail": "one_step: sequencing marker 'and measure'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0314", "candidate_index": 1, "reason": "soft_check", "detail": "one_step: sequencing marker 'and measure'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0315", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0315 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0316", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0316 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0317", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0317 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0318", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0318 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0319", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0319 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0320", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0320 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0321", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0321 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0322", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0322 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0323", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0323 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0324", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0324 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0325", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0325 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0326", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0326 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0327", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0327 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0328", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0328 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0329", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0329 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0330", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0330 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0331", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0331 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0332", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0332 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0333", "candidate_index": 0, "reason": "not_selected", "detail": "candidate 1 of tr-0333 was selected", "judge": {"spec_adherence": 1, "robustness": 4}}
+{"scenario_id": "tr-0334", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0334 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0335", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0335 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0336", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0336 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0337", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0337 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0338", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0338 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0339", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0339 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0340", "candidate_index": 1, "reason": "soft_check", "detail": "one_step: sequencing marker 'then'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0341", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0341 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0342", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0342 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0343", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0343 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0344", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0344 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0345", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0345 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0346", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0346 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0347", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0347 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0348", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0348 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0349", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0349 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0350", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0350 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0351", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0351 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0352", "candidate_index": 0, "reason": "soft_check", "detail": "one_step: sequencing marker 'and inspect'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0353", "candidate_index": 1, "reason": "soft_check", "detail": "one_step: sequencing marker 'then'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0354", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0354 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0355", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0355 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0356", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0356 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0357", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0357 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0358", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0358 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0359", "candidate_index": 1, "reason": "soft_check", "detail": "one_step: sequencing marker 'then'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0360", "candidate_index": 0, "reason": "soft_check", "detail": "one_step: sequencing marker 'and inspect'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0361", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0361 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0362", "candidate_index": 1, "reason": "soft_check", "detail": "one_step: sequencing marker 'then'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0363", "candidate_index": 0, "reason": "not_selected", "detail": "candidate 1 of tr-0363 was selected", "judge": {"spec_adherence": 1, "robustness": 4}}
+{"scenario_id": "tr-0364", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0364 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0365", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0365 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0366", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0366 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0367", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0367 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0368", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0368 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0369", "candidate_index": 0, "reason": "not_selected", "detail": "candidate 1 of tr-0369 was selected", "judge": {"spec_adherence": 1, "robustness": 4}}
+{"scenario_id": "tr-0370", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0370 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0371", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0371 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0372", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0372 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0373", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0373 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0374", "candidate_index": 0, "reason": "soft_check", "detail": "one_step: sequencing marker 'next'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0374", "candidate_index": 1, "reason": "soft_check", "detail": "one_step: sequencing marker 'next'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0375", "candidate_index": 0, "reason": "soft_check", "detail": "no_fix: repair marker 'is bad'", "failed_checks": ["no_fix"]}
+{"scenario_id": "tr-0376", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0376 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0377", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0377 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0378", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0378 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0379", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0379 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0380", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0380 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0381", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0381 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0382", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0382 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0383", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0383 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0384", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0384 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0385", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0385 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0386", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0386 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0387", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0387 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0388", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0388 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0389", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0389 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0390", "candidate_index": 1, "reason": "soft_check", "detail": "one_step: sequencing marker 'and inspect'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0391", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0391 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0392", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0392 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0393", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0393 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0394", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0394 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0395", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0395 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0396", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0396 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0397", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0397 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0398", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0398 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0399", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0399 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0400", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0400 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0401", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0401 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0402", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0402 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0403", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0403 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0404", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0404 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0405", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0405 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0406", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0406 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0407", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0407 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0408", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0408 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0409", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0409 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0410", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0410 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0411", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0411 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0412", "candidate_index": 1, "reason": "soft_check", "detail": "one_step: sequencing marker 'then'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0413", "candidate_index": 0, "reason": "not_selected", "detail": "candidate 1 of tr-0413 was selected", "judge": {"spec_adherence": 1, "robustness": 4}}
+{"scenario_id": "tr-0414", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0414 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0415", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0415 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0416", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0416 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0417", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0417 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0418", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0418 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0419", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0419 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0420", "candidate_index": 0, "reason": "soft_check", "detail": "one_step: sequencing marker 'and scan'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0421", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0421 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0422", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0422 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0423", "candidate_index": 1, "reason": "soft_check", "detail": "one_step: sequencing marker 'next'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0424", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0424 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0425", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0425 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0426", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0426 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0427", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0427 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0428", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0428 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0429", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0429 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0430", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0430 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0431", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0431 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0432", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0432 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0433", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0433 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0434", "candidate_index": 0, "reason": "soft_check", "detail": "one_step: sequencing marker 'then'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0435", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0435 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0436", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0436 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0437", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0437 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0438", "candidate_index": 0, "reason": "soft_check", "detail": "one_step: sequencing marker 'and measure'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0438", "candidate_index": 1, "reason": "soft_check", "detail": "one_step: sequencing marker 'and measure'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0439", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0439 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0440", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0440 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0441", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0441 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0442", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0442 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0443", "candidate_index": 0, "reason": "soft_check", "detail": "one_step: sequencing marker 'and measure'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0443", "candidate_index": 1, "reason": "soft_check", "detail": "one_step: sequencing marker 'and measure'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0444", "candidate_index": 0, "reason": "not_selected", "detail": "candidate 1 of tr-0444 was selected", "judge": {"spec_adherence": 1, "robustness": 4}}
+{"scenario_id": "tr-0445", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0445 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0446", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0446 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0447", "candidate_index": 1, "reason": "soft_check", "detail": "one_step: sequencing marker 'and measure'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0448", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0448 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0449", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0449 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0450", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0450 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0451", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0451 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0452", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0452 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0453", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0453 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0454", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0454 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0455", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0455 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0456", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0456 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0457", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0457 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0458", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0458 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0459", "candidate_index": 0, "reason": "soft_check", "detail": "one_step: sequencing marker 'next'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0459", "candidate_index": 1, "reason": "soft_check", "detail": "one_step: sequencing marker 'next'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0460", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0460 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0461", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0461 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0462", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0462 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0463", "candidate_index": 0, "reason": "soft_check", "detail": "one_step: sequencing marker 'and measure'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0463", "candidate_index": 1, "reason": "soft_check", "detail": "one_step: sequencing marker 'and measure'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0464", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0464 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0465", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0465 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0466", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0466 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0467", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0467 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0468", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0468 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0469", "candidate_index": 1, "reason": "soft_check", "detail": "one_step: sequencing marker 'and measure'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0470", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0470 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0471", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0471 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0472", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0472 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0473", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0473 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0474", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0474 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0475", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0475 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0476", "candidate_index": 0, "reason": "soft_check", "detail": "one_step: sequencing marker 'and measure'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0476", "candidate_index": 1, "reason": "soft_check", "detail": "one_step: sequencing marker 'and measure'", "failed_checks": ["one_step"]}
+{"scenario_id": "tr-0477", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0477 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0478", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0478 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0479", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0479 was selected (not judged: an earlier candidate scored the top)"}
+{"scenario_id": "tr-0480", "candidate_index": 1, "reason": "not_selected", "detail": "candidate 0 of tr-0480 was selected (not judged: an earlier candidate scored the top)"}
