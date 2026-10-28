@@ -534,7 +534,7 @@ def test_manifest_records_the_screen_prompt_and_its_call_count(built: dict[str, 
 
     m = built["manifest"]
     assert m["hint_screen_version"] == hs.HINT_SCREEN_VERSION
-    assert m["hs.hint_screen_sha256"] == hs.hint_screen_sha256()
+    assert m["hint_screen_sha256"] == hs.hint_screen_sha256()
     regex = sum(_regex_caught(reply) for _, reply in built["leaks"])
     assert m["hint_screen_calls"] == len(built["leaks"]) - regex + len(built["normals"])
 
