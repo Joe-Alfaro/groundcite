@@ -18,7 +18,7 @@ Both ``train/kaggle_train.ipynb`` and ``train/kaggle_eval.ipynb``:
   notebook, ``EVAL_SET`` in the eval notebook) in the ``parameters`` cell. The data paths are
   marked with an ``# OWNER:`` comment on their line or in the comment block right above it.
   ``HUB_REPO`` is the committed real value ``joe-alfaro/groundcite-qwen3-1.7b`` (D-082);
-- read the code repo's clone URL from the Kaggle secret ``REPO_URL`` (D-083 GitLab, D-091): no
+- read the code repo's clone URL from the Kaggle secret ``REPO_URL`` (D-083, D-091): no
   tracked file holds a repo URL, so the parameters cell has no ``REPO_URL`` literal and no URL;
 - read ``REPO_URL`` and ``HF_TOKEN`` (both notebooks: the Hub repo is private) and
   ``SCRUB_TERMS`` (training) from Kaggle Secrets, and stop with a message naming the secret,
@@ -49,6 +49,7 @@ import shutil
 import socket
 import subprocess
 import tomllib
+import traceback
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -64,7 +65,7 @@ REQUIREMENTS = REPO_ROOT / "train" / "requirements-kaggle.txt"
 SECRET_SCAN = REPO_ROOT / "scripts" / "secret_scan.py"
 NOTEBOOKS = {"train": NOTEBOOK, "eval": EVAL_NOTEBOOK}
 # D-082: a committed real value, no longer an OWNER placeholder. REPO_URL is a Kaggle secret
-# (D-083 GitLab, D-091), never a tracked value.
+# (D-083, D-091), never a tracked value.
 REAL_VALUES = {"HUB_REPO": "joe-alfaro/groundcite-qwen3-1.7b"}
 OWNER_MARKED = {
     "train": ("DATASET", "KAGGLE_DATASET"),
@@ -181,7 +182,7 @@ def test_hub_repo_is_the_committed_real_value(notebook: dict[str, Any], name: st
 
 
 def test_the_parameters_cell_holds_no_repo_url(notebook: dict[str, Any]) -> None:
-    """D-083 (GitLab), D-091: the clone URL is the REPO_URL Kaggle secret, not a tracked value."""
+    """D-083, D-091: the clone URL is the REPO_URL Kaggle secret, not a tracked value."""
     params = source(parameters_cell(notebook))
     assert not re.search(r"^REPO_URL\s*(:[^=]*)?=", params, re.MULTILINE), (
         "REPO_URL comes from the Kaggle secret, not the parameters cell"
@@ -359,6 +360,44 @@ def test_the_repo_url_secret_is_never_printed(notebook: dict[str, Any]) -> None:
     for line in _code(notebook).splitlines():
         if re.search(r"\b(print|display|echo)\b", line):
             assert not re.search(r"REPO_URL|get_secret", line), line
+
+
+def _exception_chain(exc: BaseException | None) -> list[BaseException]:
+    chain: list[BaseException] = []
+    while exc is not None and exc not in chain:
+        chain.append(exc)
+        exc = exc.__cause__ or exc.__context__
+    return chain
+
+
+def test_a_failed_clone_never_prints_repo_url(
+    kind: str, notebook: dict[str, Any], capsys: pytest.CaptureFixture[str]
+) -> None:
+    """B4: a private repo's clone URL can carry a token. When the clone fails, the notebook stops,
+    and neither the cell output nor the saved traceback (the exception, its chain, its fields)
+    holds the URL or the token."""
+    token = "qqx-clone-secret-123"
+    secret_url = f"https://oauth2:{token}@example.invalid/someone/private-repo.git"
+    run = run_notebook(
+        notebook,
+        params=_filled(kind),
+        stop_at=lambda cmd: MODEL_RUN[kind] in cmd,
+        secrets={"REPO_URL": secret_url},
+        fail_at=lambda cmd: "git clone" in cmd or ("clone" in cmd.split()[:3] and "git" in cmd),
+    )
+    out = capsys.readouterr()
+    assert any("clone" in c for c in run.commands), "the notebook clones REPO_URL"
+    assert run.stopped_at is None, "a failed clone must stop the notebook before the model run"
+    assert run.error is not None, "a failed clone must raise, not carry on"
+    assert "clone" in str(run.error).lower(), f"say that the clone failed: {run.error!r}"
+    shown = [out.out, out.err]
+    for exc in _exception_chain(run.error):
+        shown += [str(exc), repr(exc), repr(exc.args), repr(vars(exc))]
+    shown += traceback.format_exception(run.error)
+    for text in shown:
+        assert secret_url not in text and token not in text, (
+            f"the failed clone shows REPO_URL: {text[:300]!r}"
+        )
 
 
 def test_cuda_visible_devices_is_0_for_the_model_run(kind: str, notebook: dict[str, Any]) -> None:

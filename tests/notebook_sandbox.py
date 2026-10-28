@@ -7,7 +7,9 @@ attached), ``torch`` reports one T4, and file
 system checks and directory changes are no-ops that succeed. Parameter values are set the way a
 user edits the parameters cell: each ``NAME = ...`` line in the tagged cell is rewritten. Execution
 stops at the first command that ``stop_at`` matches, which is recorded with the environment it
-would have run with.
+would have run with. A command that ``fail_at`` matches fails the way a failed ``git clone`` does:
+exit 128, git's ``fatal:`` line (which names the command's URL) on stderr, or in the captured
+stderr when the caller captures it, and ``CalledProcessError`` when the caller checks.
 """
 
 from __future__ import annotations
@@ -122,11 +124,34 @@ def _fake_secrets(overrides: Mapping[str, str | None] | None = None) -> types.Mo
     return module
 
 
+def _failure(cmd: Any, text: str, kwargs: Mapping[str, Any]) -> Any:
+    """A failed clone: git's fatal line goes where the caller sends stderr."""
+    url = next((p for p in shlex.split(text) if "://" in p), text)
+    message = f"fatal: repository '{url}' not found\n"
+    as_text = bool(kwargs.get("text") or kwargs.get("universal_newlines") or kwargs.get("encoding"))
+    captured = message if as_text else message.encode()
+    empty = "" if as_text else b""
+    stdout: Any = None
+    stderr: Any = None
+    if kwargs.get("capture_output") or kwargs.get("stderr") == subprocess.PIPE:
+        stderr = captured
+    elif kwargs.get("stderr") == subprocess.STDOUT and kwargs.get("stdout") == subprocess.PIPE:
+        stdout = captured
+    elif kwargs.get("stderr") != subprocess.DEVNULL:
+        sys.stderr.write(message)
+    if kwargs.get("capture_output") or kwargs.get("stdout") == subprocess.PIPE:
+        stdout = stdout if stdout is not None else empty
+    if kwargs.get("check"):
+        raise subprocess.CalledProcessError(128, cmd, output=stdout, stderr=stderr)
+    return subprocess.CompletedProcess(cmd, 128, stdout=stdout, stderr=stderr)
+
+
 @contextmanager
 def _faked(
     sandbox: Sandbox,
     stop_at: Callable[[str], bool],
     secrets: Mapping[str, str | None] | None = None,
+    fail_at: Callable[[str], bool] | None = None,
 ) -> Iterator[Callable[..., Any]]:
     def shell(cmd: Any, *args: Any, **kwargs: Any) -> Any:
         text = _command_text(cmd)
@@ -137,22 +162,26 @@ def _faked(
             env.update(kwargs.get("env") or {})
             sandbox.stop_env = env
             raise NotebookStopped(text)
+        if fail_at is not None and fail_at(text):
+            return _failure(cmd, text, kwargs)
         return subprocess.CompletedProcess(text, 0, stdout="", stderr="")
 
+    def check_call(cmd: Any, *args: Any, **kwargs: Any) -> int:
+        return int(shell(cmd, *args, **{**kwargs, "check": True}).returncode)
+
     def check_output(cmd: Any, *args: Any, **kwargs: Any) -> Any:
-        shell(cmd, *args, **kwargs)
+        shell(cmd, *args, **{"stdout": subprocess.PIPE, **kwargs, "check": True})
         return "" if kwargs.get("text") or kwargs.get("universal_newlines") else b""
 
     def system(cmd: str) -> int:
-        shell(cmd)
-        return 0
+        return int(shell(cmd).returncode)
 
     true = mock.Mock(return_value=True)
     with (
         mock.patch.dict(os.environ),
         mock.patch.object(subprocess, "run", shell),
         mock.patch.object(subprocess, "call", lambda *a, **k: shell(*a, **k).returncode),
-        mock.patch.object(subprocess, "check_call", lambda *a, **k: shell(*a, **k).returncode),
+        mock.patch.object(subprocess, "check_call", check_call),
         mock.patch.object(subprocess, "check_output", check_output),
         mock.patch.object(os, "system", system),
         mock.patch.object(os, "chdir", lambda *a, **k: None),
@@ -177,12 +206,13 @@ def run_notebook(
     params: Mapping[str, str],
     stop_at: Callable[[str], bool],
     secrets: Mapping[str, str | None] | None = None,
+    fail_at: Callable[[str], bool] | None = None,
 ) -> Sandbox:
     """Execute the code cells in order until ``stop_at`` matches a command or a cell raises."""
     tagged = parameters_cell(notebook)
     sandbox = Sandbox()
     namespace: dict[str, Any] = {"__name__": "__main__", "__builtins__": builtins}
-    with _faked(sandbox, stop_at, secrets) as shell:
+    with _faked(sandbox, stop_at, secrets, fail_at) as shell:
         namespace["__shell__"] = shell
         for cell in notebook["cells"]:
             if cell["cell_type"] != "code":

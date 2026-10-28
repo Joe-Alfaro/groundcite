@@ -43,3 +43,33 @@ def isolated_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
     env_file.write_text("", encoding="utf-8")
     monkeypatch.setenv("GROUNDCITE_ENV_FILE", str(env_file))
     return env_file
+
+
+# Release-gate tests (tests/test_release_gate.py) hold only after the notebooks are re-pinned to
+# a pushed commit, so a plain `pytest` (and scripts/check.sh) collects them but deselects them.
+# scripts/release_check.sh runs them with --release-gate.
+def pytest_addoption(parser: pytest.Parser) -> None:
+    parser.addoption(
+        "--release-gate",
+        action="store_true",
+        default=False,
+        help="run only the release_gate tests (deselected by default)",
+    )
+
+
+def pytest_configure(config: pytest.Config) -> None:
+    config.addinivalue_line(
+        "markers", "release_gate: holds only once the notebooks pin a pushed, current commit"
+    )
+
+
+def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
+    gate = bool(config.getoption("--release-gate"))
+    keep, drop = [], []
+    for item in items:
+        (keep if (item.get_closest_marker("release_gate") is not None) == gate else drop).append(
+            item
+        )
+    if drop:
+        config.hook.pytest_deselected(items=drop)
+        items[:] = keep

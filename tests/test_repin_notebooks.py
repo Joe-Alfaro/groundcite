@@ -1,9 +1,9 @@
 """The notebooks' REPO_COMMIT can be cloned, and one script re-pins it (B2, D-079, D-084).
 
 A Kaggle notebook clones the public repo and checks out ``REPO_COMMIT``, so that commit must end
-up on GitHub ``main``. Merges to ``main`` are fast-forward only, so a pin that is an ancestor of
-(or equal to) the branch HEAD reaches ``main`` with the merge. The push itself is the owner's
-step.
+up on the canonical host's ``main``. Merges to ``main`` are fast-forward only, so a pin that is an
+ancestor of (or equal to) the branch HEAD reaches ``main`` with the merge. The push itself is the
+owner's step.
 
     uv run scripts/repin_notebooks.py --commit SHA [--notebook PATH ...]
 
