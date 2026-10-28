@@ -154,6 +154,10 @@ marked **GOTCHA Gn**; `n` refers to the hunt's numbering.
 - An LLM judge scores every reply on **Spec-adherence** (0/1) and **Robustness** (1–5), each with
   written reasoning, against one versioned rubric. The judge input includes the complaint, every
   snippet with its ID, the reply and the gold label when one is present (GOTCHA G9).
+- The judge is `anthropic:claude-opus-5-5`, pinned in `config/models.toml` with fixed decoding
+  parameters. It replaced `openai:gpt-5.5-2026-04-23`, which scored the M1 ablation and the H1
+  pilot. The rubric and its hash did not change. The judge now shares a family with the teacher,
+  so self-preference is a stated risk (G12).
 - A deterministic behavioral check (R21) runs on every reply, and its pass/fail is reported in the
   table next to the judge score. Any HARD (structural) check failure forces Spec-adherence to 0
   (GOTCHA G11).
@@ -260,6 +264,11 @@ marked **GOTCHA Gn**; `n` refers to the hunt's numbering.
 - Every eval run, including each ablation cell, base, tuned and every curve checkpoint, writes
   per-example JSONL with non-empty `score` and `reasoning` plus the raw judge response. The row
   count equals scenarios × systems (GOTCHA G10). Committed result runs include their transcripts.
+- Every row records its `judge_model`, and one results table never mixes judges. A run scored by
+  an earlier judge is re-scored from its stored replies with `scripts/rejudge.py RUN_DIR --judge
+  <spec> --out NEW_DIR` (no generation calls) before it is shown side by side with new results.
+  The re-judged run records the new judge pins and a `rejudged_from` pointer to the source run.
+  `scripts/check_rubric.py` fails a run whose rows come from more than one judge.
 
 **R12 — Accept a third-party held-out set (M2d).** (GOTCHA G18)
 - `docs/eval-set-format.md` documents the format with a minimal example.
@@ -281,7 +290,8 @@ marked **GOTCHA Gn**; `n` refers to the hunt's numbering.
 - Every `results.json` records:
   - eval-code `git rev-parse HEAD`;
   - model id and resolved HF commit SHA;
-  - judge model id, pinned to a dated version and never an alias;
+  - judge model id, pinned to an exact model id (dated where the provider dates its snapshots)
+    and never a moving alias;
   - `rubric_sha256`;
   - eval-set SHA-256;
   - decoding parameters;
@@ -483,10 +493,15 @@ doesn't wait on them.
   command.
 - **G19 — Curve checkpoints.** Each curve checkpoint goes up as its own HF revision with a recorded
   SHA, so `run_curve.py` can be re-run on a third-party set.
-- **G12 — Judge bias.** The judge (OpenAI) differs in family from the teacher (Anthropic). It
-  shares a family with one ablation model; it is in fact the same model as the OpenAI subject.
+- **G12 — Judge bias.** The judge (Anthropic Claude Opus) is the same model as the teacher and as
+  the Anthropic ablation subject, so self-preference toward teacher-style replies is a risk for the
+  base-vs-tuned gap. The earlier judge (OpenAI gpt-5.5) differed in family from the teacher; the
+  switch is stated in the README, the write-up's limitations and the ablation README.
+  - The deterministic checks still override the judge, and the R29 hand audit measures agreement.
   - The ablation table flags the cells that share the judge's family.
-  - A second-family judge (Anthropic) rescores 40 examples. Agreement ≥85% is the target.
+  - A second-family judge (OpenAI) rescores 40 examples. Agreement ≥85% is the target.
+  - Numbers shown side by side come from the same judge: M1 and the H1 pilot are re-judged with
+    the current judge (R11) before they are compared with new results.
 - **G31, G32 — Live demo.**
   - Ask someone outside the project for the live demo prompt at least 24 hours before recording.
   - A public notebook link (Colab or Kaggle) runs the demo, with each reply in under 2 minutes,
