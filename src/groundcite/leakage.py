@@ -1,7 +1,8 @@
 """Train/eval overlap checks (R23).
 
-Rows come from JSONL files holding either scenario lines (``id``, ``messages``, ``snippets``,
-``family``, ``split``) or training chat records (``messages`` plus ``meta.scenario_id`` and
+Rows come from JSONL files holding scenario lines (``id``, ``messages``, ``snippets``,
+``family``, ``split``), rollout conversation scripts (``opener`` and ``turns`` instead of
+``messages``) or training chat records (``messages`` plus ``meta.scenario_id`` and
 ``meta.family``). Only the final user message is compared, because every multi-turn
 conversation in a family opens the same way by design.
 
@@ -129,8 +130,11 @@ def row_from_record(record: Mapping[str, Any], where: str) -> Row:
     if not isinstance(row_id, str) or not row_id:
         raise LeakageInputError(f"{where}: missing 'id' (or 'meta.scenario_id')")
     messages = record.get("messages")
+    snippets = record.get("snippets") or []
     if isinstance(messages, list):
         turns = [m for m in messages if isinstance(m, Mapping)]
+    elif isinstance(record.get("opener"), str) and isinstance(record.get("turns"), list):
+        turns, snippets = _conversation_script(record)
     elif isinstance(record.get("prompt"), str):
         turns = [{"role": "user", "content": record["prompt"]}]
     else:
@@ -138,7 +142,6 @@ def row_from_record(record: Mapping[str, Any], where: str) -> Row:
     user_turns = [str(m.get("content", "")) for m in turns if m.get("role") == "user"]
     if not user_turns:
         raise LeakageInputError(f"{where}: no user message")
-    snippets = record.get("snippets") or []
     family = record.get("family", meta.get("family"))
     return Row(
         id=row_id,
@@ -153,6 +156,22 @@ def row_from_record(record: Mapping[str, Any], where: str) -> Row:
         ),
         where=where,
     )
+
+
+def _conversation_script(record: Mapping[str, Any]) -> tuple[list[Mapping[str, Any]], list[Any]]:
+    """A rollout conversation script (docs/conversation-format.md) as user turns and snippets:
+    the opener, then each turn's own words (result, text, pressure); the initial snippets plus
+    every added one."""
+    turns: list[Mapping[str, Any]] = [{"role": "user", "content": str(record["opener"])}]
+    snippets = list(record.get("snippets_initial") or [])
+    for turn in record["turns"]:
+        if not isinstance(turn, Mapping):
+            continue
+        words = [turn.get(k) for k in ("reported_result", "text", "pressure")]
+        if any(isinstance(w, str) and w for w in words):
+            turns.append({"role": "user", "content": "\n\n".join(w for w in words if w)})
+        snippets += turn.get("add") or []
+    return turns, snippets
 
 
 def load_rows(path: Path) -> list[Row]:
