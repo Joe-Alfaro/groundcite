@@ -55,7 +55,7 @@ Every row is filled in before each milestone.
 | R28 | Greedy local decoding, rerun delta within ±0.03 stated in README | `config/models.toml`, `README.md`; measured rerun delta (planned) | in progress |
 | R29 | 20 hand-labeled replies, judge agrees on ≥18 | `scripts/judge_audit.py` (planned), `docs/writeup.md` (planned) | not started |
 | R30 | Invented-ID rate, abstain precision and recall; 20–30% abstain in training mix | `src/groundcite/report.py`, `tests/test_report.py`; manifest in `data/datasets/v1/` (planned) | in progress |
-| R31 | T4 config (`fp16=True`), `max_seq_length` logged, GPU-hour budget table | `train/train_qlora.py` (planned), budget table in this file (planned) | not started |
+| R31 | T4 config (`fp16=True`), `max_seq_length` logged, GPU-hour budget table | `train/config.toml`, `train/train_qlora.py`, `tests/test_train_qlora.py`, `tests/test_train_device.py`; [GPU-hour budget](#r31-gpu-hour-budget) below (Used filled in as runs happen) | in progress |
 | R32 | Milestone checklist | `docs/checklist.md` | in progress |
 
 ## Milestone 2 (Sun Nov 1, noon CT)
@@ -86,3 +86,20 @@ Every row is filled in before each milestone.
 | — | Architecture document | `ARCHITECTURE.md` | done |
 | — | Canonical spec | `SPEC.md` | done |
 | R32 | Milestone checklist, every row filled | `docs/checklist.md` | in progress |
+
+## R31 GPU-hour budget
+
+Weekly Kaggle GPU quota: 30 h (T4). Every model run happens on Kaggle (D-078), and the plan keeps
+at least 25% of the week free. Planned hours are estimates for one T4, including clone, install
+and model download; record the hours each session actually used.
+
+| Run | Planned (GPU h) | Used (GPU h) |
+| --- | --- | --- |
+| Smoke loop (`smoke_loop.sh --kaggle`, Qwen3-0.6B, 20 steps) | 0.5 | |
+| v1 training (`kaggle_train.ipynb`) | 1.0 | |
+| v2 training | 1.0 | |
+| Curve: 4 nested points (N/8 to N) | 2.5 | |
+| Eval generation (`kaggle_eval.ipynb`): base and tuned, own and held-out sets | 4.0 | |
+| Eval generation for the curve checkpoints | 3.0 | |
+| Reruns and failed sessions | 3.0 | |
+| Total | 15.0 | |

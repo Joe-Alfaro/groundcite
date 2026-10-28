@@ -2,17 +2,21 @@
 """QLoRA fine-tuning on a train.jsonl dataset (R5, R6, R7, R8, R9, R14, R27, R31).
 
     uv run train/train_qlora.py --dataset data/datasets/v1/train.jsonl --out runs/v1 --seed 0 \\
-        [--base Qwen/Qwen3-1.7B] [--max-steps N] [--epochs E] [--backend unsloth|peft] \\
-        [--hub-repo org/name] [--dry-run]
+        [--base Qwen/Qwen3-1.7B] [--max-steps N] [--epochs E] [--batch-size N] \\
+        [--backend unsloth|peft] [--device auto|cpu|cuda] [--hub-repo org/name] [--dry-run]
 
-Hyperparameters come from ``train/config.toml`` only; ``--base``, ``--max-steps`` and
-``--epochs`` override it and are part of the logged config hash. The dataset, output dir, seed and
-backend are not, so v1 and v2 runs share one config hash (R7).
+Hyperparameters come from ``train/config.toml`` only; ``--base``, ``--max-steps``, ``--epochs``
+and ``--batch-size`` override it and are part of the logged config hash. The dataset, output dir,
+seed, backend and device are not, so v1 and v2 runs share one config hash (R7). The configured base
+is loaded at its pinned Hub ``revision``; ``--base`` clears the pin (GOTCHA G27).
 
 Backends: ``unsloth`` (default) is the Kaggle T4 path: a 4-bit base, fp16, Unsloth's kernels. It
 needs a CUDA GPU and the ``unsloth`` package, which the Kaggle notebook installs; it is not a
 project dependency. ``peft`` trains the same LoRA through transformers and peft on CUDA, MPS or
 CPU (4-bit only on CUDA with bitsandbytes), for the smoke loop and small local runs.
+
+``--device cpu`` keeps the run on the CPU even where MPS or CUDA is available (the capped local
+check, D-078); ``cuda`` requires a CUDA GPU; ``auto`` (default) lets the Trainer choose.
 
 Every run renders its examples with the eval renderer (``render_chat_text``, thinking off) and
 trains on the final reply plus EOS only (R27). It writes the adapter, a model card (``README.md``)
@@ -42,19 +46,27 @@ from types import ModuleType
 from typing import Any
 
 from groundcite.keys import optional_key, redact
-from groundcite.prompts import render_chat_text
+from groundcite.prompts import chat_template_sha256, render_chat_text
 from groundcite.versions import git_dirty, git_sha, library_versions
 
 CONFIG_PATH = Path(__file__).resolve().parent / "config.toml"
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCRUB_CHECK = REPO_ROOT / "scripts" / "scrub_check.py"
 BACKENDS = ("unsloth", "peft")
+DEVICES = ("auto", "cpu", "cuda")
 IGNORE_INDEX = -100
 LOG_FILE = "train_log.json"
 CARD_FILE = "README.md"
 ADAPTER_FILES = ("adapter_config.json", "adapter_model.safetensors")
 # Recorded on top of groundcite.versions.LIBRARIES.
-TRAIN_LIBRARIES = ("accelerate", "huggingface-hub", "bitsandbytes", "unsloth", "unsloth_zoo")
+TRAIN_LIBRARIES = (
+    "tokenizers",
+    "accelerate",
+    "huggingface-hub",
+    "bitsandbytes",
+    "unsloth",
+    "unsloth_zoo",
+)
 
 
 class UsageError(RuntimeError):
@@ -84,7 +96,13 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--base", help="base model (default: config [model] base)")
     parser.add_argument("--max-steps", type=_positive_int, help="stop after N optimizer steps")
     parser.add_argument("--epochs", type=_positive_int, help="override num_train_epochs")
+    parser.add_argument(
+        "--batch-size", type=_positive_int, help="override per_device_train_batch_size"
+    )
     parser.add_argument("--backend", choices=BACKENDS, default="unsloth", help="training stack")
+    parser.add_argument(
+        "--device", choices=DEVICES, default="auto", help="cpu never uses MPS or CUDA"
+    )
     parser.add_argument("--hub-repo", help="push the adapter to this Hub repo (needs HF_TOKEN)")
     parser.add_argument("--dry-run", action="store_true", help="print the plan; write nothing")
     return parser
@@ -96,16 +114,24 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def resolve_config(
-    base: str | None = None, max_steps: int | None = None, epochs: int | None = None
+    base: str | None = None,
+    max_steps: int | None = None,
+    epochs: int | None = None,
+    batch_size: int | None = None,
 ) -> dict[str, Any]:
-    """``config.toml`` with the hyperparameter overrides applied."""
+    """``config.toml`` with the hyperparameter overrides applied. Another base drops the pinned
+    revision, which belongs to the configured base."""
     config = copy.deepcopy(tomllib.loads(CONFIG_PATH.read_text(encoding="utf-8")))
+    config["model"].setdefault("revision", None)
     if base is not None:
         config["model"]["base"] = base
+        config["model"]["revision"] = None
     if max_steps is not None:
         config["train"]["max_steps"] = max_steps
     if epochs is not None:
         config["train"]["num_train_epochs"] = epochs
+    if batch_size is not None:
+        config["train"]["per_device_train_batch_size"] = batch_size
     return config
 
 
@@ -207,11 +233,12 @@ def p99_tokens(tokenizer: Any, records: Sequence[Mapping[str, Any]]) -> int:
     return lengths[max(0, math.ceil(0.99 * len(lengths)) - 1)]
 
 
-def load_tokenizer(base: str, *, local_only: bool) -> Any:
-    """The base model's tokenizer: the same one eval loads, so the template matches (R27)."""
+def load_tokenizer(base: str, *, revision: str | None, local_only: bool) -> Any:
+    """The base model's tokenizer at its pinned revision: the same one eval loads, so the template
+    matches (R27, GOTCHA G27)."""
     from transformers import AutoTokenizer
 
-    return AutoTokenizer.from_pretrained(base, local_files_only=local_only)
+    return AutoTokenizer.from_pretrained(base, revision=revision, local_files_only=local_only)
 
 
 def _check_length(p99: int | None, max_seq_length: int) -> None:
@@ -250,6 +277,7 @@ def _load_unsloth(config: Mapping[str, Any], seed: int) -> tuple[Any, dict[str, 
         max_seq_length=train["max_seq_length"],
         dtype=torch.float16 if train["fp16"] else None,
         load_in_4bit=model_cfg["load_in_4bit"],
+        revision=model_cfg["revision"],
     )
     model = FastLanguageModel.get_peft_model(
         model,
@@ -270,18 +298,24 @@ def _load_unsloth(config: Mapping[str, Any], seed: int) -> tuple[Any, dict[str, 
     return model, runtime
 
 
-def _load_peft(config: Mapping[str, Any]) -> tuple[Any, dict[str, Any]]:
+def _load_peft(config: Mapping[str, Any], device: str) -> tuple[Any, dict[str, Any]]:
+    """The base plus a LoRA on ``device`` (``cuda``, ``mps`` or ``cpu``): fp16 on CUDA (4-bit
+    when bitsandbytes is installed), fp32 elsewhere."""
     import peft
     import torch
     from transformers import AutoModelForCausalLM
 
     model_cfg, lora, train = config["model"], config["lora"], config["train"]
-    cuda = torch.cuda.is_available()
+    cuda = device == "cuda"
     quantize = (
         cuda and model_cfg["load_in_4bit"] and importlib.util.find_spec("bitsandbytes") is not None
     )
-    checkpointing = cuda and bool(train["gradient_checkpointing"])
-    kwargs: dict[str, Any] = {"dtype": torch.float32}
+    fp16 = cuda and bool(train["fp16"])
+    checkpointing = bool(train["gradient_checkpointing"])
+    kwargs: dict[str, Any] = {
+        "revision": model_cfg["revision"],
+        "dtype": torch.float16 if fp16 else torch.float32,
+    }
     if quantize:
         from transformers import BitsAndBytesConfig
 
@@ -297,6 +331,7 @@ def _load_peft(config: Mapping[str, Any]) -> tuple[Any, dict[str, Any]]:
             model, use_gradient_checkpointing=checkpointing
         )
     elif checkpointing:
+        # The frozen embeddings give no grads; checkpointed LoRA layers need one on their input.
         model.enable_input_require_grads()
     lora_config = peft.LoraConfig(
         r=lora["r"],
@@ -305,21 +340,33 @@ def _load_peft(config: Mapping[str, Any]) -> tuple[Any, dict[str, Any]]:
         target_modules=list(lora["target_modules"]),
         bias="none",
         task_type="CAUSAL_LM",
+        revision=model_cfg["revision"],
     )
+    # peft keeps the trainable LoRA weights in fp32 on an fp16 base (autocast_adapter_dtype), as
+    # fp16 mixed precision needs.
     model = peft.get_peft_model(model, lora_config)
-    if cuda:
-        device = "cuda"
-    elif torch.backends.mps.is_available():
-        device = "mps"
-    else:
-        device = "cpu"
     runtime = {
         "device": device,
         "load_in_4bit": bool(quantize),
-        "fp16": bool(cuda and train["fp16"]),
+        "fp16": fp16,
         "gradient_checkpointing": checkpointing,
     }
     return model, runtime
+
+
+def resolve_device(requested: str, backend: str) -> str:
+    """The device a run trains on. ``cpu`` wins over any GPU; ``cuda`` needs one (exit 2)."""
+    import torch
+
+    if requested == "cpu":
+        if backend == "unsloth":
+            raise UsageError("the unsloth backend needs a CUDA GPU; use --backend peft on cpu")
+        return "cpu"
+    if torch.cuda.is_available():
+        return "cuda"
+    if requested == "cuda":
+        raise UsageError("--device cuda: no CUDA GPU is available; use --device cpu")
+    return "mps" if torch.backends.mps.is_available() else "cpu"
 
 
 def _collate(pad_id: int) -> Any:
@@ -348,32 +395,35 @@ def train(
     backend: str,
     seed: int,
     out: Path,
+    device: str = "auto",
 ) -> dict[str, Any]:
     """Train, save the adapter into ``out`` and return the run facts for the log."""
+    resolved = resolve_device(device, backend)
     if backend == "unsloth":
         _import_unsloth()
-    from transformers import Trainer, TrainingArguments, set_seed
+    import transformers
 
     train_cfg = config["train"]
-    base = config["model"]["base"]
-    tokenizer = load_tokenizer(base, local_only=False)
+    base, revision = config["model"]["base"], config["model"]["revision"]
+    tokenizer = load_tokenizer(base, revision=revision, local_only=False)
     p99 = p99_tokens(tokenizer, records)
     _check_length(p99, train_cfg["max_seq_length"])
     examples = [build_example(tokenizer, r) for r in records]
     kept = [e for e in examples if len(e["input_ids"]) <= train_cfg["max_seq_length"]]
 
-    set_seed(seed)
+    transformers.set_seed(seed)
     if backend == "unsloth":
         model, runtime = _load_unsloth(config, seed)
     else:
-        model, runtime = _load_peft(config)
+        model, runtime = _load_peft(config, resolved)
     pad_id = (
         tokenizer.pad_token_id if tokenizer.pad_token_id is not None else tokenizer.eos_token_id
     )
 
     with tempfile.TemporaryDirectory(prefix="train_qlora-") as scratch:
-        args = TrainingArguments(
+        args = transformers.TrainingArguments(
             output_dir=scratch,
+            use_cpu=runtime["device"] == "cpu",
             per_device_train_batch_size=train_cfg["per_device_train_batch_size"],
             gradient_accumulation_steps=train_cfg["gradient_accumulation_steps"],
             num_train_epochs=train_cfg["num_train_epochs"],
@@ -389,6 +439,7 @@ def train(
             bf16=False,
             # Unsloth sets up its own checkpointing in get_peft_model.
             gradient_checkpointing=backend == "peft" and runtime["gradient_checkpointing"],
+            gradient_checkpointing_kwargs={"use_reentrant": False},
             seed=seed,
             data_seed=seed,
             save_strategy="no",
@@ -396,7 +447,7 @@ def train(
             remove_unused_columns=False,
             dataloader_pin_memory=runtime["device"] == "cuda",
         )
-        trainer = Trainer(
+        trainer = transformers.Trainer(
             model=model, args=args, train_dataset=kept, data_collator=_collate(pad_id)
         )
         trainer.train()
@@ -407,6 +458,7 @@ def train(
     adapter_path = out / "adapter_config.json"
     adapter = json.loads(adapter_path.read_text(encoding="utf-8"))
     adapter["base_model_name_or_path"] = base
+    adapter["revision"] = revision
     adapter_path.write_text(json.dumps(adapter, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
     curve = [
@@ -421,6 +473,7 @@ def train(
         "trained_examples": len(kept),
         "dropped_too_long": len(examples) - len(kept),
         "runtime": runtime,
+        "chat_template_sha256": chat_template_sha256(tokenizer),
     }
 
 
@@ -570,7 +623,7 @@ class PushRefused(RuntimeError):
 
 
 def _plan(args: argparse.Namespace) -> tuple[dict[str, Any], list[dict[str, Any]]]:
-    config = resolve_config(args.base, args.max_steps, args.epochs)
+    config = resolve_config(args.base, args.max_steps, args.epochs, args.batch_size)
     records = read_dataset(args.dataset)
     plan = {
         "config": config,
@@ -578,6 +631,7 @@ def _plan(args: argparse.Namespace) -> tuple[dict[str, Any], list[dict[str, Any]
         "dataset_sha256": sha256_file(args.dataset),
         "seed": args.seed,
         "backend": args.backend,
+        "device": args.device,
         "max_seq_length": config["train"]["max_seq_length"],
         "dataset": dataset_stats(records),
     }
@@ -586,7 +640,10 @@ def _plan(args: argparse.Namespace) -> tuple[dict[str, Any], list[dict[str, Any]
 
 def dry_run(plan: dict[str, Any], records: Sequence[Mapping[str, Any]]) -> int:
     try:
-        tokenizer = load_tokenizer(plan["config"]["model"]["base"], local_only=True)
+        model_cfg = plan["config"]["model"]
+        tokenizer = load_tokenizer(
+            model_cfg["base"], revision=model_cfg["revision"], local_only=True
+        )
     except Exception:  # not in the local cache: no download on a dry run
         tokenizer = None
     plan["p99_tokens"] = None if tokenizer is None else p99_tokens(tokenizer, records)
@@ -600,6 +657,7 @@ def run(args: argparse.Namespace) -> int:
     if args.dry_run:
         return dry_run(plan, records)
 
+    resolve_device(args.device, args.backend)  # an unusable --device fails before any work
     token, terms = None, None
     if args.hub_repo:
         token = optional_key("HF_TOKEN")
@@ -607,7 +665,7 @@ def run(args: argparse.Namespace) -> int:
             raise UsageError("--hub-repo needs HF_TOKEN (environment or .env); nothing trained")
         terms = _load_scrub_terms()
 
-    facts = train(plan["config"], records, args.backend, args.seed, args.out)
+    facts = train(plan["config"], records, args.backend, args.seed, args.out, args.device)
     sha, dirty = _git_state()
     log = {
         **plan,

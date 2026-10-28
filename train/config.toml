@@ -1,10 +1,14 @@
 # The one versioned QLoRA training config (R7, R8, R31). Frozen for v1, v2 and every curve point:
 # a bad result is fixed with data, never by editing this file. train_log.json records the
-# resolved config (this file plus any --base/--max-steps/--epochs override) and its SHA-256.
+# resolved config (this file plus any --base/--max-steps/--epochs/--batch-size override) and its
+# SHA-256.
 version = 1
 
 [model]
 base = "Qwen/Qwen3-1.7B"
+# The base's Hub commit (GOTCHA G27): training and eval load the same weights and chat template.
+# --base clears it.
+revision = "70d244cc86ccca08cf5af4e1e306ecf908b1ad5e"
 # QLoRA: the frozen base is loaded in 4-bit NF4 on the GPU backend. The peft backend on CPU/MPS
 # has no bitsandbytes and trains the same LoRA on a full-precision base (logged as runtime).
 load_in_4bit = true

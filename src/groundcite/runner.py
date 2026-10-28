@@ -131,6 +131,21 @@ class Retrying:
             restore(requested, recorded)
 
 
+class RecordedBackend:
+    """A model whose replies were generated elsewhere (``eval.py --judge-from``): it carries the
+    recorded decoding params and chat-template hash for the pins, and never generates."""
+
+    def __init__(
+        self, name: str, decoding: Mapping[str, Any] | None, chat_template_sha256: str | None
+    ) -> None:
+        self.name = name
+        self.effective_params = dict(decoding) if isinstance(decoding, Mapping) else None
+        self.chat_template_sha256 = chat_template_sha256
+
+    def generate(self, messages: Messages, system: str | None, params: Mapping[str, Any]) -> str:
+        raise RuntimeError(f"{self.name}: replies come from generations.jsonl; nothing generates")
+
+
 def build_backend(spec: str, *, revision: str | None = None) -> Retrying:
     """Build (and key-check) one backend. ``revision`` pins an ``hf:`` model to a commit."""
     build_spec = spec
@@ -279,6 +294,22 @@ def _generation_failure(judge: str, error: str) -> JudgeResult:
     )
 
 
+def generate_one(
+    system: System, scenario: Scenario, backend: Retrying, gen_params: Mapping[str, Any]
+) -> tuple[str, str | None, dict[str, Any] | None]:
+    """``(reply, generation_error, decoding)`` for one cell. A refusal, empty reply or transient
+    error that survives the retries is kept as a generation error; a run-stopping one raises."""
+    prompt_system, messages = render_messages(scenario, system.strategy)
+    try:
+        reply = backend.generate(messages, prompt_system, gen_params)
+    except BackendError as exc:
+        if exc.stops_run:
+            raise
+        return "", str(exc), None
+    # What actually ran, so pins survive a resume that makes no calls (R13, R28).
+    return reply, None, backend.effective_params(gen_params)
+
+
 def _one(
     *,
     run_id: str,
@@ -290,15 +321,12 @@ def _one(
     gen_params: Mapping[str, Any],
     judge_params: Mapping[str, Any],
     prompt_hash: str,
+    generated: tuple[str, str | None, dict[str, Any] | None] | None = None,
 ) -> dict[str, Any]:
-    prompt_system, messages = render_messages(scenario, system.strategy)
-    error: str | None = None
-    try:
-        reply = backend.generate(messages, prompt_system, gen_params)
-    except BackendError as exc:
-        if exc.stops_run:
-            raise
-        reply, error = "", str(exc)
+    """Generate (or take the ``generated`` reply), check and judge one cell."""
+    if generated is None:
+        generated = generate_one(system, scenario, backend, gen_params)
+    reply, error, decoding = generated
     checks = run_checks(reply, scenario)
     if error is None:
         result = judge_reply(scenario, reply, checks, judge, params=judge_params)
@@ -316,8 +344,7 @@ def _one(
     )
     row["prompt_sha256"] = prompt_hash
     row["generation_error"] = error
-    # What actually ran, so pins survive a resume that makes no calls (R13, R28).
-    row["decoding"] = backend.effective_params(gen_params) if error is None else None
+    row["decoding"] = decoding
     row["judge"]["decoding"] = judge.effective_params(judge_params)
     return row
 
@@ -333,9 +360,13 @@ def run_grid(
     transcripts: Path,
     concurrency: int = DEFAULT_CONCURRENCY,
     progress: TextIO | None = None,
+    generated: Mapping[tuple[str, str, str], tuple[str, str | None, dict[str, Any] | None]]
+    | None = None,
 ) -> list[dict[str, Any]]:
     """Run every (system, scenario) not already in ``transcripts`` and return all grid rows in
-    system-then-scenario order. New rows are appended as they finish.
+    system-then-scenario order. New rows are appended as they finish. ``generated`` maps
+    ``(model, strategy, scenario_id)`` to stored ``generate_one`` results (``eval.py
+    --judge-from``): those cells are judged without calling the model.
 
     The first exception stops the run: tasks not yet started are skipped, in-flight ones finish
     and are saved, and the exception is re-raised."""
@@ -386,6 +417,9 @@ def run_grid(
                     gen_params=gen_params[system.model],
                     judge_params=judge_params,
                     prompt_hash=hashes[system.strategy],
+                    generated=None
+                    if generated is None
+                    else generated[(system.model, system.strategy, scenario.id)],
                 )
             except BaseException:
                 stop.set()
@@ -401,6 +435,50 @@ def run_grid(
                 future.result()  # re-raises the stopping error; finished rows are on disk
 
     return [done[key(system, scenario)] for system in systems for scenario in scenarios]
+
+
+def generate_grid(
+    *,
+    systems: Sequence[System],
+    scenarios: Sequence[Scenario],
+    backends: Mapping[str, Retrying],
+    revisions: Mapping[str, str | None],
+    concurrency: int = DEFAULT_CONCURRENCY,
+    progress: TextIO | None = None,
+) -> list[dict[str, Any]]:
+    """Generate every (system, scenario) with no judging (``eval.py --generate-only``) and return
+    the ``generations.jsonl`` rows in system-then-scenario order."""
+    gen_params = {s.model: decoding_params(s.model) for s in systems}
+    total = len(systems) * len(scenarios)
+    print(f"generating {total} replies", file=progress or sys.stderr)
+    cells = [(system, scenario) for system in systems for scenario in scenarios]
+    stop = threading.Event()
+
+    def task(system: System, scenario: Scenario) -> dict[str, Any] | None:
+        if stop.is_set():
+            return None
+        try:
+            reply, error, decoding = generate_one(
+                system, scenario, backends[system.model], gen_params[system.model]
+            )
+        except BaseException:
+            stop.set()
+            raise
+        return {
+            "model": system.model,
+            "model_revision": revisions.get(system.model),
+            "strategy": system.strategy,
+            "scenario_id": scenario.id,
+            "prompt_sha256": prompt_sha256(system.strategy),
+            "reply": reply,
+            "generation_error": error,
+            "decoding": decoding,
+        }
+
+    with ThreadPoolExecutor(max_workers=max(1, concurrency)) as pool:
+        futures = [pool.submit(task, system, scenario) for system, scenario in cells]
+        rows = [future.result() for future in futures]
+    return [row for row in rows if row is not None]
 
 
 # ---------------------------------------------------------------------------------------------
@@ -419,7 +497,7 @@ def pins(
 ) -> dict[str, Any]:
     """The R13 pins for results.json."""
     models = list(dict.fromkeys(s.model for s in systems))
-    decoding = {m: backends[m].effective_params(decoding_params(m)) for m in models}
+    decoding = model_decoding(models, backends)
     decoding[judge.name] = judge.effective_params(decoding_params(judge.name))
     return {
         "git_sha": versions.git_sha(),
@@ -427,11 +505,37 @@ def pins(
         "judge_model": judge.name,
         "rubric_sha256": rubric_sha256(),
         "eval_set": {"path": display_path(eval_set), "sha256": sha256_file(eval_set)},
-        "models": [{"model": m, "model_revision": revisions.get(m)} for m in models],
+        "models": model_pins(models, backends, revisions),
         "decoding": decoding,
         "bootstrap_seed": BOOTSTRAP_SEED,
         "library_versions": versions.library_versions(),
     }
+
+
+def model_pins(
+    models: Sequence[str], backends: Mapping[str, Retrying], revisions: Mapping[str, str | None]
+) -> list[dict[str, Any]]:
+    """Each model's resolved revision and chat-template hash (R13, GOTCHA G27)."""
+    return [
+        {
+            "model": m,
+            "model_revision": revisions.get(m),
+            "chat_template_sha256": chat_template_of(backends[m]),
+        }
+        for m in models
+    ]
+
+
+def model_decoding(models: Sequence[str], backends: Mapping[str, Retrying]) -> dict[str, Any]:
+    """The decoding params each model actually ran with."""
+    return {m: backends[m].effective_params(decoding_params(m)) for m in models}
+
+
+def chat_template_of(backend: Retrying) -> str | None:
+    """The chat-template SHA-256 a local model generated with (GOTCHA G27); None for API and mock
+    models, and for an ``hf:`` model that never loaded."""
+    value = getattr(backend.inner, "chat_template_sha256", None)
+    return value if isinstance(value, str) else None
 
 
 def fmt(value: float | None, digits: int = 2) -> str:
@@ -494,7 +598,10 @@ def pins_section(p: Mapping[str, Any]) -> list[str]:
         f"- Eval set: `{p['eval_set']['path']}` (sha256 `{p['eval_set']['sha256']}`)",
     ]
     for m in p["models"]:
-        lines.append(f"- Model `{m['model']}` revision `{m['model_revision']}`")
+        line = f"- Model `{m['model']}` revision `{m['model_revision']}`"
+        if m.get("chat_template_sha256"):
+            line += f", chat template sha256 `{m['chat_template_sha256']}`"
+        lines.append(line)
     for spec, params in p["decoding"].items():
         lines.append(f"- Decoding `{spec}`: `{json.dumps(params, sort_keys=True)}`")
     libs = ", ".join(f"{k} {v}" for k, v in p["library_versions"].items())

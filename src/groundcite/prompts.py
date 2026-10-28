@@ -205,3 +205,13 @@ def render_chat_text(
         chat, tokenize=False, add_generation_prompt=reply is None, **CHAT_TEMPLATE_KWARGS
     )
     return str(text)
+
+
+def chat_template_sha256(tokenizer: Any) -> str | None:
+    """SHA-256 of the tokenizer's chat-template text (UTF-8), or None when it has no string
+    template. Training records it and eval pins it, so a template drift between the two shows
+    (GOTCHA G27)."""
+    template = getattr(tokenizer, "chat_template", None)
+    if not isinstance(template, str):
+        return None
+    return hashlib.sha256(template.encode("utf-8")).hexdigest()

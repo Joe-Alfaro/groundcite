@@ -21,7 +21,7 @@ from typing import Any, Protocol
 from groundcite import hub
 from groundcite.judge import CHECK_LINE_RE
 from groundcite.keys import get_key, optional_key, redact
-from groundcite.prompts import render_chat_text
+from groundcite.prompts import chat_template_sha256, render_chat_text
 from groundcite.spec import parse_cited_ids
 
 log = logging.getLogger(__name__)
@@ -256,9 +256,9 @@ class HFBackend:
 
     A repo with an ``adapter_config.json`` is a LoRA adapter: its base model is loaded and the
     adapter goes on top through peft. Otherwise the repo is a full (or merged) model. The prompt
-    is rendered by ``render_chat_text`` and that exact string is tokenized. Runs on MPS when
-    available, else CUDA, else CPU. Nothing is imported or downloaded until the first
-    ``generate`` call.
+    is rendered by ``render_chat_text`` and that exact string is tokenized. Runs on MPS (bf16)
+    when available, else CUDA (fp16), else CPU (fp32). Nothing is imported or downloaded until the
+    first ``generate`` call.
     """
 
     def __init__(self, spec: str, transport: Transport | None = None) -> None:
@@ -270,6 +270,8 @@ class HFBackend:
         self._token = optional_key("HF_TOKEN")
         self._model: Any = None
         self._tokenizer: Any = None
+        # sha256 of the chat template the prompts render with, once loaded (R13, GOTCHA G27).
+        self.chat_template_sha256: str | None = None
         # The generate() arguments the last call ran with (R13).
         self.effective_params: dict[str, Any] | None = None
 
@@ -287,7 +289,8 @@ class HFBackend:
         if torch.backends.mps.is_available():
             device, dtype = "mps", torch.bfloat16
         elif torch.cuda.is_available():
-            device, dtype = "cuda", torch.bfloat16
+            # The Kaggle T4 (sm_75) has no bf16 (GOTCHA G28).
+            device, dtype = "cuda", torch.float16
         else:
             device, dtype = "cpu", torch.float32
         adapter = hub.fetch_adapter_config(self.repo, self.revision)
@@ -302,6 +305,7 @@ class HFBackend:
         self._tokenizer = transformers.AutoTokenizer.from_pretrained(
             source, revision=source_rev, token=self._token
         )
+        self.chat_template_sha256 = chat_template_sha256(self._tokenizer)
         model = transformers.AutoModelForCausalLM.from_pretrained(
             source, revision=source_rev, dtype=dtype, token=self._token
         )

@@ -40,6 +40,28 @@ Where results land:
 - `eval.py` writes `results/<run_id>/results.md`, `results.json` and `transcripts.jsonl`.
 - `scripts/run_ablation.py` writes the same three files under `results/ablation/<run_id>/`.
 
+### Split eval: generate on a GPU, judge anywhere
+
+Generation and judging can run on different machines. On a Kaggle T4,
+[`train/kaggle_eval.ipynb`](train/kaggle_eval.ipynb) runs
+
+```sh
+uv run eval.py --model <hf-repo-id> --eval-set <path> --generate-only --out <dir>
+```
+
+which generates every row the one-command eval would (base zero-shot, base with the best ablation
+prompt, tuned) with no judge and no API key, and writes `generations.jsonl` and
+`generation_pins.json` (eval set hash, model revisions, chat-template hash, decoding, library
+versions). Then, anywhere with the judge key:
+
+```sh
+uv run eval.py --judge-from <dir>/<run_id>/generations.jsonl
+```
+
+judges the stored replies with no generation or Hub calls and writes the same three files as the
+one-command eval; for the same replies and judge, `results.json` is identical apart from its
+`run_id`. It refuses an eval set whose SHA-256 changed since generation.
+
 Add `--dry-run` to either command to print the planned calls without making any. What exists
 and what is still planned is tracked in [`docs/checklist.md`](docs/checklist.md).
 
@@ -47,8 +69,11 @@ and what is still planned is tracked in [`docs/checklist.md`](docs/checklist.md)
 
 QLoRA training of Qwen3-1.7B runs on a free Kaggle T4 through
 [`train/kaggle_train.ipynb`](train/kaggle_train.ipynb). The notebook clones this repo at a pinned
-commit, installs the locked dependencies plus Unsloth, reads `HF_TOKEN` from Kaggle Secrets,
-trains, pushes the adapter to the Hub and prints a one-line summary with the Hub commit SHA.
+commit, installs [`train/requirements-kaggle.txt`](train/requirements-kaggle.txt) (the locked
+versions plus Unsloth, around Kaggle's own CUDA torch), reads `HF_TOKEN` from Kaggle Secrets,
+trains on one of the "GPU T4 x2" GPUs, pushes the adapter to the Hub and prints a one-line summary
+with the Hub commit SHA. Fill in its `# OWNER:` parameters first; it stops while they hold
+placeholders. GPU-hour budgets are in [`docs/checklist.md`](docs/checklist.md#r31-gpu-hour-budget).
 
 One training run (one data-efficiency curve point) from a published subset file:
 
@@ -59,13 +84,16 @@ uv run train/train_qlora.py --dataset data/datasets/<v>/subsets/n<N>.jsonl --see
 - **Config.** Hyperparameters live only in [`train/config.toml`](train/config.toml) and are
   frozen for v1, v2 and every curve point: LoRA r=16, alpha=32, dropout 0.05 on all attention
   and MLP projections; lr 2e-4 cosine, 5% warmup; effective batch 8; 3 epochs; max_seq_length
-  2048; fp16 (the T4 has no bf16). `--base`, `--max-steps` and `--epochs` override it.
+  2048; fp16 (the T4 has no bf16). The base is pinned to a Hub `revision`, so training and eval
+load the same weights and chat template. `--base`, `--max-steps`, `--epochs` and
+`--batch-size` override it.
 - **Backends.** `--backend unsloth` (the default) needs a CUDA GPU and Unsloth, which only the
   notebook installs. `--backend peft` trains the same LoRA on CUDA, MPS or CPU (a 4-bit base
-  only on CUDA with bitsandbytes).
+  only on CUDA with bitsandbytes). `--device cpu` keeps a run on the CPU even where MPS or CUDA
+  exists; `--device cuda` requires a GPU; `auto` (the default) picks CUDA when it is there.
 - **Outputs.** `--out` gets the adapter, a model card and `train_log.json`: the resolved config
   and its SHA-256 (the same for v1 and v2), the dataset SHA-256, seed, steps, loss curve, p99
-  token length, library versions and git SHA. `--hub-repo <org/name>` pushes them in one Hub
+  token length, chat-template SHA-256, library versions and git SHA. `--hub-repo <org/name>` pushes them in one Hub
   commit after the scrub check and logs the commit SHA. `--dry-run` prints the plan and writes
   nothing.
 
@@ -75,10 +103,17 @@ final reply and EOS only.
 ## Smoke loop
 
 `scripts/smoke_loop.sh [OUT_DIR]` runs the whole loop on a smoke batch: generate (mock teacher,
-32 training scenarios) → filter (mock judge) → train (peft, 20 steps) → eval (mock model and
-judge, 32 own-eval scenarios). It needs no keys. Set `SMOKE_BASE` to train a different base
-(default `Qwen/Qwen3-0.6B`). `eval.py` loads models from the Hub, so the eval stage scores the
-mock model, not the smoke adapter.
+32 training scenarios) → filter (mock judge) → train (peft, 20 steps, batch 1) → eval (mock model
+and judge, 32 own-eval scenarios). It needs no keys. `eval.py` loads models from the Hub, so the
+eval stage scores the mock model, not the smoke adapter.
+
+- **Local (default).** A CPU-only check: it builds a tiny random small-vocab Qwen3
+  (`scripts/make_tiny_base.py`) and trains on it with `--device cpu`. Every stage runs under
+  `timeout 120` (or `gtimeout 120`) with CUDA hidden and the MPS fallback off. macOS has no
+  `timeout` by default (`brew install coreutils` provides `gtimeout`); without one the script
+  stops before any stage.
+- **Kaggle.** `scripts/smoke_loop.sh --kaggle [OUT_DIR]` trains the real `Qwen/Qwen3-0.6B` with
+  `--device cuda`. The training notebook runs it when `SMOKE_ONLY = True`.
 
 ## Quality gate
 

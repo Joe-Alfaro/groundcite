@@ -1,0 +1,16 @@
+# The Kaggle install list for train/kaggle_train.ipynb and train/kaggle_eval.ipynb (D-079).
+# Kaggle's preinstalled CUDA torch stays: no torch, torchvision, torchaudio, triton or nvidia-*
+# here. Every runtime dependency of the project except torch, at its uv.lock version, except
+# transformers: Unsloth 2026.10.10 supports transformers <= 5.17.0 (D-077). tokenizers and
+# safetensors are pinned too, so tokenization matches the local eval stack (GOTCHA G27).
+accelerate==1.15.0
+anthropic==2.3.0
+huggingface-hub==2.3.0
+openai==3.40.0
+peft==0.21.2
+python-dotenv==1.2.4
+safetensors==0.8.0
+tokenizers==0.23.3
+transformers==5.17.0
+unsloth==2026.10.10
+unsloth-zoo==2026.10.10
