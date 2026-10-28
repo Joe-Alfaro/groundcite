@@ -392,8 +392,9 @@ largest-N interval. A paragraph will justify the log spacing.
 
 - **Hand audit:** 20 replies labeled by hand against P1–P8. The target is agreement with the judge
   on at least 18. The section will list the disagreements and what caused them.
-- **Second-family rescore:** a judge from the other vendor rescores 40 examples. The target is at
-  least 85% agreement.
+- **Cross-family agreement:** no second-family judge is available for new runs, so there is no
+  second-family rescore. Instead, the M1 and pilot transcripts (543 replies) scored by gpt-5.5 are
+  re-judged by Claude Opus, and the section reports how often the two judges agree.
 - **Rerun delta:** re-running the eval on the same pins should reproduce Spec-adherence within
   ±0.03. The observed delta goes here.
 
@@ -420,6 +421,12 @@ largest-N interval. A paragraph will justify the log spacing.
 - **The judge is a model.** It is pinned, it sees the gold and the deterministic checks can
   override it, but it can still be wrong, and it shares a vendor with one ablation subject. The
   audit in section 10 measures how often, on a small sample.
+- **The judge shares the teacher's family.** The judge is Claude Opus (`claude-opus-5-5`), the
+  same model family as the teacher that wrote the training replies, so self-preference bias is a
+  risk: it may favor replies in its own style, which the tuned model learned to imitate. The
+  ablation and the long-conversation pilot were first scored by `gpt-5.5`; every comparison
+  with them uses runs re-judged by Claude Opus from the stored replies, and the gpt-5.5 vs Opus
+  agreement on those replies is the only cross-family check available.
 - **Lexical checks are approximate.** `one_step` and `no_fix` use word lists. They can flag a
   correct reply or miss a disguised repair, which is why they are SOFT.
 - **API decoding is not fully deterministic.** Local models decode greedily, but the pinned API

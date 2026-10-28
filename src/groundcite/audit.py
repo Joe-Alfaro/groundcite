@@ -141,6 +141,39 @@ def rubric_groups(results_dir: Path) -> dict[str, list[str]]:
     return dict(sorted(groups.items()))
 
 
+def run_judges(run_dir: Path, label: str) -> set[str]:
+    """``pins.judge_model`` from results.json (when pinned) plus every transcript row's
+    ``judge_model``. A row without one is an error: its judge can't be checked (D-080)."""
+    judges: set[str] = set()
+    results_path = run_dir / RESULTS
+    if results_path.exists():
+        results = read_json(results_path, label)
+        pins = results.get("pins") if isinstance(results, dict) else None
+        judge = pins.get("judge_model") if isinstance(pins, dict) else None
+        if isinstance(judge, str):
+            judges.add(judge)
+    transcripts_path = run_dir / TRANSCRIPTS
+    if transcripts_path.exists():
+        for i, row in enumerate(read_jsonl(transcripts_path, label), start=1):
+            judge = row.get("judge_model")
+            if not isinstance(judge, str):
+                raise AuditError(f"{label}: {TRANSCRIPTS} row {i} has no judge_model")
+            judges.add(judge)
+    return judges
+
+
+def mixed_judge_runs(results_dir: Path) -> dict[str, list[str]]:
+    """The runs (relative to ``results_dir``) scored by more than one judge, each with its judges.
+    Different runs may use different judges; one run's table may not mix them (D-080)."""
+    mixed: dict[str, list[str]] = {}
+    for run_dir in find_runs(results_dir):
+        label = run_dir.relative_to(results_dir).as_posix()
+        judges = run_judges(run_dir, label)
+        if len(judges) > 1:
+            mixed[label] = sorted(judges)
+    return mixed
+
+
 # ---------------------------------------------------------------------------------------------
 # Judge hand audit (R29)
 # ---------------------------------------------------------------------------------------------

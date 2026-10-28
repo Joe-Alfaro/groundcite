@@ -625,7 +625,7 @@ def push_to_hub(
                 f"scrub check failed on the files to push ({', '.join(hits)}); nothing uploaded"
             )
         api = huggingface_hub.HfApi(token=token)
-        api.create_repo(repo_id=repo, repo_type="model", exist_ok=True)
+        api.create_repo(repo_id=repo, repo_type="model", private=True, exist_ok=True)
         commit = api.upload_folder(
             repo_id=repo,
             repo_type="model",

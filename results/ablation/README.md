@@ -21,6 +21,13 @@ API calls: 240 generations and 240 judge calls, plus 5 first attempts rejected f
 `temperature` parameter and retried without it (485 requests). No generation or judge errors.
 `scripts/check_rubric.py results/` reports one rubric hash across all runs.
 
+**Judge note.** M1 (run `m1`) and the H1 long-conversation pilot were scored by
+`openai:gpt-5.5-2026-04-23`. The project judge is now `anthropic:claude-opus-5-5`, so these
+numbers can't sit side by side with later (Opus-judged) results as they are. Any side-by-side
+comparison uses copies re-judged by Claude Opus from the stored replies with
+`scripts/rejudge.py` (no new generations); the gpt-5.5 scores here stay as the historical
+cross-family reference.
+
 ## Results
 
 Spec-adherence is the mean of the 0/1 verdict with a 95% bootstrap CI. Robustness is the mean

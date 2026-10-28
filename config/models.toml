@@ -2,14 +2,19 @@
 # log entry: every result records the ids and the effective decoding parameters it ran with.
 
 [judge]
-# A dated snapshot, never an alias. OpenAI so the judge differs in family from the teacher.
-model = "openai:gpt-5.5-2026-04-23"
+# D-080: Claude Opus replaced OpenAI gpt-5.5 (M1 and the H1 pilot were scored by gpt-5.5; compare
+# them only through re-judged runs, scripts/rejudge.py). A complete pinned id, never a -latest
+# alias (Anthropic dates no snapshot of it). It shares the teacher's family: a self-preference
+# risk the R29 hand-label audit checks.
+model = "anthropic:claude-opus-5-5"
 
 [teacher]
 model = "anthropic:claude-opus-5-5"
 
 [cross_check]
-# Rescores a subset to measure judge agreement (R29).
+# DISABLED (D-086): no second-family judge has credits, and nothing reads this table. The value
+# stays only because the D-019 config test pins it; judge validity rests on the R29 hand-label
+# audit and the M1/pilot gpt-5.5 vs Opus re-judge agreement.
 model = "anthropic:claude-opus-5-5"
 
 [eval]
