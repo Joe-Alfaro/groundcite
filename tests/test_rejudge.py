@@ -13,7 +13,9 @@ Hub calls. NEW_DIR is the new run directory itself (its name is the new ``run_id
   generation_error, decoding and prompt hash, in the source order, and carries the new
   ``judge_model`` and ``run_id``; a row whose generation failed stays a scored failure without
   a judge call;
-- ``results.json`` has the source run's top-level keys, ``pins.judge_model`` = the new judge,
+- ``results.json`` has the source run's top-level keys, its cells (``cells``/``rows``) sorted by
+  ``(model, strategy)`` whatever the order of the source transcript rows (which is completion
+  order), so the output is deterministic; ``pins.judge_model`` = the new judge,
   the new judge's decoding in ``pins.decoding``, the source eval-set and model pins, the current
   rubric hash, and ``rejudged_from`` = {``run_id``, ``judge_model``} of the source run;
 - per-conversation runs keep conversation-aware aggregation (``n_conversations``,
@@ -32,6 +34,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import random
 import re
 import shutil
 import threading
@@ -287,17 +290,58 @@ def test_results_md_names_the_new_judge_and_the_source(source: Path, tmp_path: P
     assert old["run_id"] in md and "mock:judge" in md, "say what was re-judged and by whom"
 
 
+def _by_cell(cells: list[dict[str, Any]]) -> dict[tuple[str, str], dict[str, Any]]:
+    keyed = {(c["model"], c["strategy"]): c for c in cells}
+    assert len(keyed) == len(cells), "one cell per (model, strategy)"
+    return keyed
+
+
 def test_same_judge_rejudge_reproduces_the_source_aggregates(
     source: Path, tmp_path: Path, kind: str
 ) -> None:
     """With the source's own (deterministic) judge, every cell comes back identical, including
-    the per-conversation metrics of a rollout run."""
+    the per-conversation metrics of a rollout run. Cells are compared by (model, strategy): the
+    source run lists them in its own order."""
     new = tmp_path / "rj-same"
     assert rejudge(str(source), "--judge", "mock", "--out", str(new)) == 0
-    assert _cells(read_results(new)) == _cells(read_results(source))
+    assert _by_cell(_cells(read_results(new))) == _by_cell(_cells(read_results(source)))
     if kind == "rollout":
         for cell in _cells(read_results(new)):
             assert CONVERSATION_KEYS <= set(cell)
+
+
+def _shuffled(rows: list[dict[str, Any]]) -> list[list[dict[str, Any]]]:
+    """The source rows as written, reversed, and in several seeded random orders."""
+    orders = [list(rows), rows[::-1]]
+    for seed in range(4):
+        order = list(rows)
+        random.Random(seed).shuffle(order)
+        orders.append(order)
+    return orders
+
+
+def test_rejudge_output_does_not_depend_on_the_source_row_order(
+    source: Path, tmp_path: Path
+) -> None:
+    """The source transcripts are in completion order, which varies run to run. Re-judging the
+    same rows in any order gives the same cells, sorted by (model, strategy), the same deltas
+    and plateau verdict, and the same results.md."""
+    rows = read_rows(source)
+    seen: list[tuple[Any, ...]] = []
+    for i, order in enumerate(_shuffled(rows)):
+        (source / "transcripts.jsonl").write_text(
+            "".join(json.dumps(r) + "\n" for r in order), encoding="utf-8"
+        )
+        new = tmp_path / f"rj-order-{i}"
+        assert rejudge(str(source), "--judge", "mock", "--out", str(new)) == 0
+        results = read_results(new)
+        cells = _cells(results)
+        keys = [(c["model"], c["strategy"]) for c in cells]
+        assert keys == sorted(keys), f"cells must be sorted by (model, strategy): {keys}"
+        md = (new / "results.md").read_text(encoding="utf-8").replace(new.name, "<run_id>")
+        seen.append((cells, results.get("deltas"), results.get("plateau"), md))
+    for other in seen[1:]:
+        assert other == seen[0], "the re-judged output changed with the source row order"
 
 
 def test_rollout_rejudge_stays_conversation_aware(

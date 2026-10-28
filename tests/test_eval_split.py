@@ -35,6 +35,7 @@ import json
 import shutil
 import subprocess
 import sys
+import tomllib
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
@@ -49,6 +50,10 @@ from groundcite.prompts import prompt_sha256
 REPO_ROOT = Path(__file__).resolve().parents[1]
 ABLATION = REPO_ROOT / "data" / "scenarios" / "ablation.jsonl"
 BASE_REPO = "Qwen/Qwen3-1.7B"
+# adapter_config.json below names no revision: the base rows load train/config.toml's pin (G27).
+BASE_REV = tomllib.loads((REPO_ROOT / "train" / "config.toml").read_text(encoding="utf-8"))[
+    "model"
+]["revision"]
 TUNED = "hf:org/groundcite-tuned@rev1"
 TEMPLATE_SHA = "ab" * 32
 GEN_FIELDS = {
@@ -231,7 +236,7 @@ def test_generations_cover_every_system_and_scenario(
     _patch_hub(monkeypatch)
     rows = _jsonl(_generate(tmp_path / "gen"))
     best = load_models_config()["eval"]["best_strategy"]
-    base = f"hf:{BASE_REPO}"
+    base = f"hf:{BASE_REPO}@{BASE_REV}"
     systems = list(dict.fromkeys((r["model"], r["strategy"]) for r in rows))
     assert systems == [(base, "zero_shot"), (base, best), (TUNED, "zero_shot")]
     assert len(rows) == 3 * 3
@@ -241,7 +246,7 @@ def test_generations_cover_every_system_and_scenario(
         assert isinstance(row["reply"], str) and row["reply"]
         assert row["generation_error"] is None
         repo = BASE_REPO if row["model"] == base else "org/groundcite-tuned"
-        rev = None if row["model"] == base else "rev1"
+        rev = BASE_REV if row["model"] == base else "rev1"
         assert row["model_revision"] == fake_sha(repo, rev)
 
 

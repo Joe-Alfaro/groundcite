@@ -12,6 +12,7 @@ import json
 import re
 import subprocess
 import sys
+import tomllib
 from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import Any
@@ -603,6 +604,10 @@ def test_single_mock_model_gets_no_automatic_base_rows(env: Path, tmp_path: Path
 
 BASE_REPO = "Qwen/Qwen3-1.7B"
 TUNED = "hf:org/groundcite-tuned@rev1"
+# The base's pinned Hub commit (GOTCHA G27): the base rows load these weights, never `main`.
+TRAIN_CONFIG = tomllib.loads((REPO_ROOT / "train" / "config.toml").read_text(encoding="utf-8"))
+CONFIG_REV = TRAIN_CONFIG["model"]["revision"]
+ADAPTER_REV = "a" * 40
 
 
 def fake_sha(repo: str, revision: str | None) -> str:
@@ -676,15 +681,93 @@ def test_one_hf_model_gets_three_rows_with_the_base_from_adapter_config(
     run = run_dir(out)
     results = read_results(run)
     best = load_models_config()["eval"]["best_strategy"]
-    base = f"hf:{BASE_REPO}"
+    base = f"hf:{BASE_REPO}@{CONFIG_REV}"
     assert cells(results) == [(base, "zero_shot"), (base, best), (TUNED, "zero_shot")]
     assert len(read_transcripts(run)) == 3 * 3
 
     revisions = {m["model"]: m["model_revision"] for m in results["pins"]["models"]}
     assert revisions[TUNED] == fake_sha("org/groundcite-tuned", "rev1")
-    assert revisions[base] == fake_sha(BASE_REPO, None)
+    assert revisions[base] == fake_sha(BASE_REPO, CONFIG_REV)
     for row in read_transcripts(run):
         assert row["model_revision"] == revisions[row["model"]]
+
+
+class RecordingHF(FakeHF):
+    """FakeHF that records the spec each loader was built with."""
+
+    built: list[str] = []
+
+    def __init__(self, spec: str, transport: Any = None) -> None:
+        super().__init__(spec, transport)
+        RecordingHF.built.append(spec)
+
+
+def _patch_pinning(
+    monkeypatch: pytest.MonkeyPatch, adapter: dict[str, Any]
+) -> list[tuple[str, str | None]]:
+    from groundcite import hub
+
+    resolved: list[tuple[str, str | None]] = []
+
+    def resolve(repo: str, revision: str | None = None) -> str:
+        """Like the Hub: a full commit SHA resolves to itself, anything else to a fake SHA."""
+        resolved.append((repo, revision))
+        if revision is not None and re.fullmatch(r"[0-9a-f]{40}", revision):
+            return revision
+        return fake_sha(repo, revision)
+
+    _patch_hub(monkeypatch, lambda repo, revision: dict(adapter))
+    monkeypatch.setattr(hub, "resolve_revision", resolve)
+    monkeypatch.setattr(RecordingHF, "built", [])
+    monkeypatch.setitem(backends.BACKENDS, "hf:", RecordingHF)
+    return resolved
+
+
+def _base_loads(resolved: list[tuple[str, str | None]]) -> tuple[set[str], set[str | None]]:
+    from groundcite.runner import split_hf
+
+    base_specs = {s for s in RecordingHF.built if split_hf(s)[0] == BASE_REPO}
+    revisions = {rev for repo, rev in resolved if repo == BASE_REPO}
+    return base_specs, revisions
+
+
+@pytest.mark.parametrize("generate_only", [False, True], ids=["one-command", "generate-only"])
+def test_base_rows_load_the_revision_pinned_in_train_config(
+    env: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, generate_only: bool
+) -> None:
+    """adapter_config.json names the base without a revision: the base rows load the base at
+    train/config.toml's [model] revision, the commit training used, not whatever `main` is."""
+    from groundcite.runner import split_hf
+
+    resolved = _patch_pinning(monkeypatch, {"base_model_name_or_path": BASE_REPO})
+    out = tmp_path / "results"
+    argv = _hf_argv(out)
+    if generate_only:
+        argv = [a for a in argv if a not in {"--judge", "mock"}] + ["--generate-only"]
+    assert run_cli(argv) == 0
+    specs, revisions = _base_loads(resolved)
+    assert specs, "the base rows were never loaded"
+    assert {split_hf(s)[1] for s in specs} == {CONFIG_REV}, f"base loaded unpinned: {specs}"
+    assert revisions == {CONFIG_REV}, f"the base revision resolved as {revisions}, not the pin"
+
+
+def test_base_rows_load_the_revision_recorded_in_adapter_config(
+    env: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """adapter_config.json's ``revision`` (written by train_qlora.py) is the base commit the
+    adapter was trained on, and wins over train/config.toml."""
+    from groundcite.runner import split_hf
+
+    adapter = {"base_model_name_or_path": BASE_REPO, "revision": ADAPTER_REV}
+    resolved = _patch_pinning(monkeypatch, adapter)
+    out = tmp_path / "results"
+    assert run_cli(_hf_argv(out)) == 0
+    specs, revisions = _base_loads(resolved)
+    assert {split_hf(s)[1] for s in specs} == {ADAPTER_REV}, specs
+    assert revisions == {ADAPTER_REV}
+    models = {m["model"]: m for m in read_results(run_dir(out))["pins"]["models"]}
+    base = f"hf:{BASE_REPO}@{ADAPTER_REV}"
+    assert models[base]["model_revision"] == ADAPTER_REV
 
 
 def test_base_flag_overrides_adapter_config(

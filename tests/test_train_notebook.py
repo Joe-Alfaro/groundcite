@@ -1,10 +1,11 @@
 """The Kaggle training notebook (D-003, R6, R9, R24) and the R5 smoke loop.
 
 ``train/kaggle_train.ipynb`` is committed without outputs. A code cell tagged ``parameters``
-pins ``REPO_URL`` and ``REPO_COMMIT`` (a full 40-hex SHA); the notebook clones the repo, checks
-out that commit, installs ``train/requirements-kaggle.txt`` around Kaggle's torch
-(tests/test_kaggle_notebooks.py), reads ``HF_TOKEN`` from Kaggle Secrets into the environment
-without printing it, and runs ``train/train_qlora.py``.
+pins ``REPO_COMMIT`` (a full 40-hex SHA); the notebook reads the clone URL from the ``REPO_URL``
+Kaggle secret (no tracked repo URL, D-091), clones the repo, checks out that commit, installs
+``train/requirements-kaggle.txt`` around Kaggle's torch (tests/test_kaggle_notebooks.py), reads
+``HF_TOKEN`` from Kaggle Secrets into the environment without printing it, and runs
+``train/train_qlora.py``.
 
 ``scripts/smoke_loop.sh`` (R5) runs generate (mock teacher) -> filter (mock judge) -> train
 (peft, <=20 steps) -> eval (mock judge) on a smoke batch of <=32 examples, and the README
@@ -64,7 +65,7 @@ def test_parameter_cell_pins_the_repo_commit(notebook: dict[str, Any]) -> None:
     ]
     assert len(tagged) == 1, "exactly one code cell tagged 'parameters'"
     params = _source(tagged[0])
-    assert re.search(r"^REPO_URL\s*=\s*['\"].+['\"]", params, re.MULTILINE)
+    assert not re.search(r"^REPO_URL\s*=", params, re.MULTILINE), "REPO_URL is a Kaggle secret"
     commit = re.search(r"^REPO_COMMIT\s*=\s*['\"]([0-9a-f]{40})['\"]", params, re.MULTILINE)
     assert commit, "REPO_COMMIT must be a full 40-hex commit SHA"
 

@@ -6,18 +6,25 @@ Both ``train/kaggle_train.ipynb`` and ``train/kaggle_eval.ipynb``:
   the explicit pinned list ``train/requirements-kaggle.txt`` (``name==version`` lines; no torch,
   torchvision, torchaudio, triton or nvidia-* packages; every runtime dependency of the project
   except torch; versions equal to uv.lock except transformers, which Unsloth caps, and
-  huggingface-hub, which that transformers caps; the list resolves on Kaggle's platform). Neither
-  notebook runs ``uv export`` or ``uv sync``, and no pip command names torch, triton or nvidia-*;
+  huggingface-hub, which that transformers caps; the list resolves on Kaggle's platform, Python
+  3.13). Neither notebook runs ``uv export`` or ``uv sync``, and no pip command names torch,
+  triton or nvidia-*. The list is installed with a constraints file (``-c``) that the notebook
+  writes to a temp file (``tempfile``, outside the clone and ``/kaggle/working``) before the
+  install: one ``name==version`` line for each of torch, torchvision, torchaudio and triton that
+  is installed, at its preinstalled version (``importlib.metadata.version``), so a transitive
+  requirement (xformers via Unsloth) can never make pip replace Kaggle's torch;
 - set ``CUDA_VISIBLE_DEVICES=0`` before the model run (Kaggle's accelerator is "GPU T4 x2");
-- keep ``REPO_URL``, ``HUB_REPO`` and the data path (``DATASET`` and ``KAGGLE_DATASET`` in the
-  training notebook, ``EVAL_SET`` in the eval notebook) in the ``parameters`` cell. The data paths
-  are marked with an ``# OWNER:`` comment on their line or in the comment block right above it.
-  ``REPO_URL`` and ``HUB_REPO`` are committed real values (D-081, D-082): the public GitHub repo
-  ``https://github.com/Joe-Alfaro/groundcite`` and the Hub repo
-  ``joe-alfaro/groundcite-qwen3-1.7b``, so the committed notebook runs unedited;
-- read ``HF_TOKEN`` (both notebooks: the Hub repo is private) and ``SCRUB_TERMS`` (training) from
-  Kaggle Secrets, and stop with a message naming the secret, before any shell command, when one
-  is not attached or is empty.
+- keep ``HUB_REPO`` and the data path (``DATASET`` and ``KAGGLE_DATASET`` in the training
+  notebook, ``EVAL_SET`` in the eval notebook) in the ``parameters`` cell. The data paths are
+  marked with an ``# OWNER:`` comment on their line or in the comment block right above it.
+  ``HUB_REPO`` is the committed real value ``joe-alfaro/groundcite-qwen3-1.7b`` (D-082);
+- read the code repo's clone URL from the Kaggle secret ``REPO_URL`` (D-083 GitLab, D-091): no
+  tracked file holds a repo URL, so the parameters cell has no ``REPO_URL`` literal and no URL;
+- read ``REPO_URL`` and ``HF_TOKEN`` (both notebooks: the Hub repo is private) and
+  ``SCRUB_TERMS`` (training) from Kaggle Secrets, and stop with a message naming the secret,
+  before any shell command, when one is not attached or is empty. ``SCRUB_TERMS`` may span
+  several lines (one term per line); it is written to a temp file whose path goes to the
+  training run as ``SCRUB_TERMS_PATH``.
 
 The training notebook's Hub push creates the repo private (``create_repo(..., private=True)`` in
 ``train/train_qlora.py``) and nothing in the notebooks or the training code makes it public.
@@ -56,19 +63,22 @@ EVAL_NOTEBOOK = REPO_ROOT / "train" / "kaggle_eval.ipynb"
 REQUIREMENTS = REPO_ROOT / "train" / "requirements-kaggle.txt"
 SECRET_SCAN = REPO_ROOT / "scripts" / "secret_scan.py"
 NOTEBOOKS = {"train": NOTEBOOK, "eval": EVAL_NOTEBOOK}
-# D-081/D-082: committed real values, no longer OWNER placeholders.
-REAL_VALUES = {
-    "REPO_URL": "https://github.com/Joe-Alfaro/groundcite",
-    "HUB_REPO": "joe-alfaro/groundcite-qwen3-1.7b",
-}
+# D-082: a committed real value, no longer an OWNER placeholder. REPO_URL is a Kaggle secret
+# (D-083 GitLab, D-091), never a tracked value.
+REAL_VALUES = {"HUB_REPO": "joe-alfaro/groundcite-qwen3-1.7b"}
 OWNER_MARKED = {
     "train": ("DATASET", "KAGGLE_DATASET"),
     "eval": ("EVAL_SET",),
 }
 # The Kaggle secrets each notebook needs.
-REQUIRED_SECRETS = {"train": ("HF_TOKEN", "SCRUB_TERMS"), "eval": ("HF_TOKEN",)}
+REQUIRED_SECRETS = {
+    "train": ("HF_TOKEN", "SCRUB_TERMS", "REPO_URL"),
+    "eval": ("HF_TOKEN", "REPO_URL"),
+}
 TRAIN_SCRIPT = REPO_ROOT / "train" / "train_qlora.py"
-FILLED = {"REPO_URL": "https://example.com/someone/repo.git", "HUB_REPO": "someone/gc-test"}
+FILLED = {"HUB_REPO": "someone/gc-test"}
+# A stand-in clone URL for the REPO_URL secret (a reserved, never-resolving domain).
+FAKE_REPO_URL = "https://example.invalid/someone/repo.git"
 # What each notebook's model run looks like.
 MODEL_RUN = {"train": "train/train_qlora.py", "eval": "eval.py"}
 FORBIDDEN = re.compile(r"^(torch|torchvision|torchaudio|triton|nvidia-.*)$")
@@ -111,7 +121,10 @@ def _filled(kind: str, **extra: str) -> dict[str, str]:
 
 def _run_to_model(notebook: dict[str, Any], kind: str, **extra: str) -> Any:
     run = run_notebook(
-        notebook, params=_filled(kind, **extra), stop_at=lambda cmd: MODEL_RUN[kind] in cmd
+        notebook,
+        params=_filled(kind, **extra),
+        stop_at=lambda cmd: MODEL_RUN[kind] in cmd,
+        secrets={"REPO_URL": FAKE_REPO_URL},
     )
     assert run.error is None, f"the filled-in notebook failed: {run.error!r}"
     assert run.stopped_at is not None, f"the notebook never runs {MODEL_RUN[kind]}"
@@ -158,10 +171,8 @@ def test_owner_settings_are_marked_in_the_parameters_cell(
 
 
 @pytest.mark.parametrize("name", sorted(REAL_VALUES))
-def test_repo_url_and_hub_repo_are_the_committed_real_values(
-    notebook: dict[str, Any], name: str
-) -> None:
-    """D-081/D-082 replace the D-079 OWNER placeholders for these two."""
+def test_hub_repo_is_the_committed_real_value(notebook: dict[str, Any], name: str) -> None:
+    """D-082 replaces the D-079 OWNER placeholder for the Hub repo."""
     params = source(parameters_cell(notebook))
     match = re.search(rf"^{name}\s*=\s*['\"]([^'\"]*)['\"]", params, re.MULTILINE)
     assert match, f"{name} is not set in the parameters cell"
@@ -169,14 +180,38 @@ def test_repo_url_and_hub_repo_are_the_committed_real_values(
     assert "OWNER" not in match.group(1)
 
 
+def test_the_parameters_cell_holds_no_repo_url(notebook: dict[str, Any]) -> None:
+    """D-083 (GitLab), D-091: the clone URL is the REPO_URL Kaggle secret, not a tracked value."""
+    params = source(parameters_cell(notebook))
+    assert not re.search(r"^REPO_URL\s*(:[^=]*)?=", params, re.MULTILINE), (
+        "REPO_URL comes from the Kaggle secret, not the parameters cell"
+    )
+    assert "://" not in params, "no URL in the parameters cell"
+
+
 def test_the_committed_notebook_reaches_the_model_run_unedited(
     kind: str, notebook: dict[str, Any]
 ) -> None:
-    run = run_notebook(notebook, params={}, stop_at=lambda cmd: MODEL_RUN[kind] in cmd)
+    run = run_notebook(
+        notebook,
+        params={},
+        stop_at=lambda cmd: MODEL_RUN[kind] in cmd,
+        secrets={"REPO_URL": FAKE_REPO_URL},
+    )
     assert run.error is None, f"the committed notebook failed: {run.error!r}"
     assert run.stopped_at is not None, f"the notebook never runs {MODEL_RUN[kind]}"
-    assert any("git clone" in c and REAL_VALUES["REPO_URL"] in c for c in run.commands)
+    assert any("git clone" in c and FAKE_REPO_URL in c for c in run.commands), (
+        "clone the URL from the REPO_URL secret"
+    )
     assert REAL_VALUES["HUB_REPO"] in run.stopped_at
+
+
+def test_the_markdown_lists_repo_url_with_the_secrets(notebook: dict[str, Any]) -> None:
+    text = "\n".join(source(c) for c in notebook["cells"] if c["cell_type"] == "markdown")
+    bullets = re.split(r"\n(?=- )", text)
+    assert any("Secrets" in b and "`REPO_URL`" in b for b in bullets), (
+        "the 'Before running' notes tell the owner to add the REPO_URL secret"
+    )
 
 
 # ---------------------------------------------------------------------------------------------
@@ -220,6 +255,35 @@ def test_the_secret_values_reach_the_model_run(kind: str, notebook: dict[str, An
     assert run.stop_env.get("HF_TOKEN") == "hf-test-value"
     if kind == "train":
         assert run.stop_env.get("SCRUB_TERMS_PATH"), "the push's scrub check gets the terms"
+
+
+@pytest.mark.parametrize("newline", ["\n", "\r\n"], ids=["lf", "crlf"])
+def test_a_multi_line_scrub_terms_secret_reaches_the_push_as_every_term(
+    newline: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Each line of the SCRUB_TERMS secret is one term: the notebook writes the secret to a temp
+    file and the training run reads that file through SCRUB_TERMS_PATH."""
+    from train_data import load_train_module
+
+    secret = newline.join(["zzqalphaterm", "zzq beta term"]) + newline
+    run = run_notebook(
+        _load(NOTEBOOK),
+        params=_filled("train"),
+        stop_at=lambda cmd: MODEL_RUN["train"] in cmd,
+        secrets={"SCRUB_TERMS": secret, "REPO_URL": FAKE_REPO_URL},
+    )
+    assert run.error is None, f"the filled-in notebook failed: {run.error!r}"
+    path = Path(run.stop_env.get("SCRUB_TERMS_PATH", ""))
+    try:
+        assert path.is_absolute() and path.is_file(), "SCRUB_TERMS_PATH names the written file"
+        assert not str(path).startswith("/kaggle/working"), "never saved as notebook output"
+        assert not str(path).startswith("/tmp/repo"), "outside the clone"
+        monkeypatch.setenv("SCRUB_TERMS_PATH", str(path))
+        terms = load_train_module()._load_scrub_terms()
+        assert terms == ["zzqalphaterm", "zzq beta term"], "one term per secret line"
+    finally:
+        if path.is_absolute() and path.is_file():
+            path.unlink()
 
 
 # ---------------------------------------------------------------------------------------------
@@ -288,7 +352,13 @@ def test_nothing_makes_the_hub_repo_public() -> None:
 
 def test_the_filled_notebook_reaches_the_model_run(kind: str, notebook: dict[str, Any]) -> None:
     run = _run_to_model(notebook, kind)
-    assert any("git clone" in c and FILLED["REPO_URL"] in c for c in run.commands)
+    assert any("git clone" in c and FAKE_REPO_URL in c for c in run.commands)
+
+
+def test_the_repo_url_secret_is_never_printed(notebook: dict[str, Any]) -> None:
+    for line in _code(notebook).splitlines():
+        if re.search(r"\b(print|display|echo)\b", line):
+            assert not re.search(r"REPO_URL|get_secret", line), line
 
 
 def test_cuda_visible_devices_is_0_for_the_model_run(kind: str, notebook: dict[str, Any]) -> None:
@@ -346,6 +416,75 @@ def test_install_uses_no_deps_for_the_repo_and_the_pinned_list(
         if "--no-deps" in a and any(w in {"-e", "--editable", "."} or "/" in w for w in a)
     ]
     assert repo_installs, "install the project itself with --no-deps"
+
+
+# Kaggle's preinstalled CUDA stack, faked in the sandbox (torchaudio is absent on purpose).
+PREINSTALLED = {"torch": "2.0.0+cu121", "torchvision": "0.15.0+cu121", "triton": "2.0.0"}
+TORCH_STACK = ("torch", "torchvision", "torchaudio", "triton")
+
+
+def _fake_installed(monkeypatch: pytest.MonkeyPatch) -> None:
+    import importlib.metadata as metadata
+
+    real = metadata.version
+
+    def version(name: str) -> str:
+        if _norm(name) in PREINSTALLED:
+            return PREINSTALLED[_norm(name)]
+        if _norm(name) in TORCH_STACK:
+            raise metadata.PackageNotFoundError(name)
+        return real(name)
+
+    monkeypatch.setattr(metadata, "version", version)
+
+
+def _option(args: list[str], short: str, long: str) -> str | None:
+    for i, word in enumerate(args):
+        if word in {short, long} and i + 1 < len(args):
+            return args[i + 1]
+        if word.startswith(long + "="):
+            return word.split("=", 1)[1]
+        if word.startswith(short) and len(word) > len(short) and not word.startswith("--"):
+            return word[len(short) :]
+    return None
+
+
+def _constraints_install(kind: str, monkeypatch: pytest.MonkeyPatch) -> tuple[Any, list[str]]:
+    _fake_installed(monkeypatch)
+    run = _run_to_model(_load(NOTEBOOKS[kind]), kind)
+    installs = [a for a in _pip_installs(run.commands) if "requirements-kaggle.txt" in " ".join(a)]
+    assert installs, "install train/requirements-kaggle.txt"
+    return run, installs[0]
+
+
+def test_the_pinned_list_installs_under_a_torch_constraints_file(
+    kind: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """``pip install -r requirements-kaggle.txt -c <constraints>``, where the constraints file
+    pins Kaggle's preinstalled torch stack at the versions that are installed."""
+    _, args = _constraints_install(kind, monkeypatch)
+    path = _option(args, "-c", "--constraint")
+    assert path, f"pass a constraints file (-c) with the pinned list: {args}"
+    constraints = Path(path)
+    try:
+        assert constraints.is_absolute() and constraints.is_file(), (
+            "write the constraints file (a temp file) before the install"
+        )
+        assert not path.startswith(("/kaggle/working", "/tmp/repo")), "a temp file, not output"
+        pins = {}
+        for line in constraints.read_text(encoding="utf-8").splitlines():
+            line = line.split("#", 1)[0].strip()
+            if line:
+                match = re.fullmatch(r"([A-Za-z0-9][A-Za-z0-9._-]*)==(\S+)", line)
+                assert match, f"not a name==version constraint: {line!r}"
+                pins[_norm(match.group(1))] = match.group(2)
+        assert pins.get("torch") == PREINSTALLED["torch"], "pin Kaggle's own torch"
+        for name, version in PREINSTALLED.items():
+            assert pins.get(name) == version, f"pin the preinstalled {name}=={version}: {pins}"
+        assert "torchaudio" not in pins, "only pin what is installed"
+    finally:
+        if constraints.is_absolute() and constraints.is_file():
+            constraints.unlink()
 
 
 def _requirements() -> dict[str, str]:
@@ -413,6 +552,10 @@ def test_pins_satisfy_the_known_declared_ranges(package: str, version: str) -> N
         )
 
 
+# Kaggle's image is on Python 3.13 (Colab base image, 2026-09).
+KAGGLE_PYTHON = "3.13"
+
+
 def _compile(*extra: str) -> subprocess.CompletedProcess[str]:
     uv = shutil.which("uv")
     assert uv is not None
@@ -423,9 +566,10 @@ def _compile(*extra: str) -> subprocess.CompletedProcess[str]:
             "compile",
             str(REQUIREMENTS),
             "--python-version",
-            "3.11",
+            KAGGLE_PYTHON,
             "--python-platform",
             "x86_64-manylinux_2_28",
+            "--no-build",
             "--no-header",
             "--quiet",
             "-o",
@@ -449,10 +593,11 @@ def _pypi_reachable() -> bool:
 
 
 def test_requirements_list_resolves_on_kaggles_platform() -> None:
-    """A full resolve of every pin and its transitive ranges, for Kaggle's Python and platform.
+    """A full resolve of every pin and its transitive ranges, for Kaggle's Python (3.13) and
+    platform.
 
-    Uses uv's cache offline first; falls back to PyPI when the cache lacks metadata, and skips
-    only when neither works."""
+    Uses uv's cache offline first; falls back to PyPI (package metadata only: ``--no-build``, no
+    install) when the cache lacks metadata, and skips only when neither works."""
     if shutil.which("uv") is None:
         pytest.skip("uv is not installed")
     done = _compile("--offline")
@@ -538,3 +683,13 @@ def test_readme_documents_the_split_eval() -> None:
     readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
     assert "kaggle_eval.ipynb" in readme
     assert "--generate-only" in readme and "--judge-from" in readme
+
+
+def test_readme_documents_the_repo_url_secret() -> None:
+    """The owner adds the clone URL as the REPO_URL Kaggle secret (D-091); the README says so
+    without naming the URL."""
+    readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
+    paragraphs = re.split(r"\n\s*\n", readme)
+    assert any("REPO_URL" in p and re.search(r"secret", p, re.IGNORECASE) for p in paragraphs), (
+        "document the REPO_URL Kaggle secret next to HF_TOKEN"
+    )
