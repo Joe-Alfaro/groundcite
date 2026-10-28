@@ -141,6 +141,14 @@ def render_coverage(
         "such as a `Repair:` line or an `Applies to all` opener appears on gold and non-gold",
         "snippets alike (checked by `tests/test_kind_balance.py`).",
         "",
+        "Every near-miss is a twin of a chain snippet in its family: the same text with only its",
+        "applicability scope changed (an engine list, a year range, a transmission, a body or one",
+        "operating condition). Gold and near-miss therefore match on length, punctuation, numbers",
+        "and opener, and in distractor scenarios the first near-miss is the gold's own twin. No",
+        "single surface heuristic and no ridge probe on surface features picks the gold on more",
+        "than 60% of distractor scenarios (checked by `tests/test_shortcuts.py` and",
+        "`tests/test_twins.py`).",
+        "",
         f"Master seed {master_seed}. Scenario seeds are `master * 1000000 + offset + index`, with",
         "disjoint offsets per split: "
         + ", ".join(f"`{split}` {offset}" for split, offset in SPLIT_OFFSETS.items())

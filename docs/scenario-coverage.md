@@ -19,13 +19,13 @@ per scenario, 8 vehicle systems (at most 8).
 
 | System | Training families | Reserved (held-out) families | Library snippets |
 | --- | --- | --- | --- |
-| brakes | brake_pulsation | brake_pull, soft_pedal | 18 |
-| charging_starting | battery_drain, dim_lights | no_crank_click | 22 |
-| cooling | coolant_loss, overheat_idle | heater_cold | 16 |
-| fuel_air | hard_start_hot, lean_idle | - | 12 |
-| hvac | ac_warm | - | 9 |
+| brakes | brake_pulsation | brake_pull, soft_pedal | 20 |
+| charging_starting | battery_drain, dim_lights | no_crank_click | 20 |
+| cooling | coolant_loss, overheat_idle | heater_cold | 18 |
+| fuel_air | hard_start_hot, lean_idle | - | 14 |
+| hvac | ac_warm | - | 8 |
 | ignition | misfire_load | - | 6 |
-| steering_suspension | front_clunk | highway_shake | 13 |
+| steering_suspension | front_clunk | highway_shake | 12 |
 | transmission | harsh_shift | - | 6 |
 
 ## Symptom families
@@ -36,19 +36,19 @@ snippets from reserved families (see `data/reserved_families.txt`).
 | Family | System | Split | Symptom | Chain | Near-miss | Close |
 | --- | --- | --- | --- | --- | --- | --- |
 | ac_warm | hvac | training | AC blows warm from every vent, blower works | 3 | 3 | 3 |
-| battery_drain | charging_starting | training | Battery dead after sitting a few days, mild weather | 3 | 4 | 3 |
-| brake_pull | brakes | reserved | Pulls to one side only when braking | 4 | 3 | 3 |
+| battery_drain | charging_starting | training | Battery dead after sitting a few days, mild weather | 3 | 3 | 3 |
+| brake_pull | brakes | reserved | Pulls to one side only when braking | 4 | 4 | 3 |
 | brake_pulsation | brakes | training | Pedal pulsation and wheel shake when braking from highway speed | 3 | 3 | 3 |
 | coolant_loss | cooling | training | Slow coolant loss, no visible leak, no overheating | 3 | 3 | 3 |
-| dim_lights | charging_starting | training | Battery light flickers and headlights dim at idle | 4 | 3 | 3 |
+| dim_lights | charging_starting | training | Battery light flickers and headlights dim at idle | 4 | 4 | 3 |
 | front_clunk | steering_suspension | training | Front clunk over bumps at low speed, driving straight | 3 | 3 | 3 |
 | hard_start_hot | fuel_air | training | Long crank on hot restarts, cold starts normal | 3 | 3 | 3 |
 | harsh_shift | transmission | training | Harsh, delayed upshifts once warm | 3 | 3 | 0 |
-| heater_cold | cooling | reserved | Weak cabin heat from every vent, engine temperature normal | 4 | 3 | 0 |
+| heater_cold | cooling | reserved | Weak cabin heat from every vent, engine temperature normal | 4 | 4 | 0 |
 | highway_shake | steering_suspension | reserved | Steering wheel shake at 60-70 mph, not affected by braking | 3 | 3 | 2 |
-| lean_idle | fuel_air | training | P0171 lean code with a rough idle, worst cold | 4 | 3 | 3 |
+| lean_idle | fuel_air | training | P0171 lean code with a rough idle, worst cold | 4 | 4 | 3 |
 | misfire_load | ignition | training | Single-cylinder misfire under load, idle smooth | 3 | 3 | 3 |
-| no_crank_click | charging_starting | reserved | Single click, engine does not turn over | 3 | 4 | 0 |
+| no_crank_click | charging_starting | reserved | Single click, engine does not turn over | 3 | 3 | 0 |
 | overheat_idle | cooling | training | Temperature climbs at idle and in traffic, normal at speed | 3 | 3 | 4 |
 | soft_pedal | brakes | reserved | Soft, spongy brake pedal on every stop | 3 | 3 | 3 |
 
@@ -69,14 +69,14 @@ be within 5 points). `ablation` is a quota-balanced subset of `eval_own`.
 
 | Measure | ablation | eval_own | heldout |
 | --- | --- | --- | --- |
-| cite / abstain gold | 29 / 11 | 70 / 30 | 42 / 18 |
+| cite / abstain gold | 29 / 11 | 70 / 30 | 41 / 19 |
 | families | 11 | 11 | 5 |
 | ID schemes | 6 | 6 | 6 |
 | snippets per scenario | 2-5 | 2-5 | 2-5 |
-| tagged pressure | 17 | 37 | 16 |
-| with a near-miss snippet | 28 | 72 | 40 |
-| gold snippets that are bulletins | 17 / 33 (52%) | 38 / 77 (49%) | 23 / 48 (48%) |
-| near-misses that are manual-kind | 17 / 43 (40%) | 45 / 108 (42%) | 40 / 66 (61%) |
+| tagged pressure | 18 | 40 | 18 |
+| with a near-miss snippet | 28 | 72 | 41 |
+| gold snippets that are bulletins | 17 / 33 (52%) | 38 / 77 (49%) | 22 / 47 (47%) |
+| near-misses that are manual-kind | 24 / 43 (56%) | 59 / 110 (54%) | 39 / 67 (58%) |
 
 ## IDs and seeds
 
@@ -88,6 +88,14 @@ manual-like) is drawn independently of the snippet's kind, gold snippets are bul
 about half the time, near-misses are manual procedures about half the time, and wording
 such as a `Repair:` line or an `Applies to all` opener appears on gold and non-gold
 snippets alike (checked by `tests/test_kind_balance.py`).
+
+Every near-miss is a twin of a chain snippet in its family: the same text with only its
+applicability scope changed (an engine list, a year range, a transmission, a body or one
+operating condition). Gold and near-miss therefore match on length, punctuation, numbers
+and opener, and in distractor scenarios the first near-miss is the gold's own twin. No
+single surface heuristic and no ridge probe on surface features picks the gold on more
+than 60% of distractor scenarios (checked by `tests/test_shortcuts.py` and
+`tests/test_twins.py`).
 
 Master seed 1027. Scenario seeds are `master * 1000000 + offset + index`, with
 disjoint offsets per split: `eval_own` 100000, `heldout` 200000, `train` 500000.

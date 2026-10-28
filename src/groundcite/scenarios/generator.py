@@ -9,8 +9,11 @@ Gold labels are correct by construction:
 
 - a cite scenario contains chain snippets that apply to the stated vehicle, and every one of
   them is listed in ``gold.supporting_ids``;
-- near-miss snippets either don't apply to the stated vehicle (checked structurally against
-  the snippet's ``applies``) or describe a condition the family's complaints contradict;
+- near-miss snippets are twins of chain snippets (D-056): the same text with only the scope
+  changed. A vehicle twin is ruled out by a scope field it changed (checked structurally against
+  the vehicle and year), and a condition twin requires a condition every complaint of its family
+  contradicts. Where the gold has a twin, it is the first near-miss, so gold and near-miss match
+  on every surface feature and only the scope separates them;
 - filler snippets come from unrelated systems, and "close" snippets are hand-curated per family.
 
 Final user messages are kept pairwise below the R23 near-duplicate threshold across every set
@@ -249,7 +252,7 @@ class _Generator:
     ) -> dict[str, Any] | None:
         fam = item.family
         support = [self._gold(rng, fam, item.gold_kind)]
-        near = self._near(rng, fam, item.near_kind, rng.randint(1, 2))
+        near = self._near(rng, fam, item.near_kind, rng.randint(1, 2), twin_of=support[0])
         extra = self._sample(
             rng, self._snips(fam.close) + self._unrelated([fam], pool), rng.randint(0, 1)
         )
@@ -278,7 +281,7 @@ class _Generator:
                 draft.tags.add("no_snippet")
         else:
             support = [self._gold(rng, fam, item.gold_kind)]
-            near = self._near(rng, fam, item.near_kind, rng.choice((0, 1)))
+            near = self._near(rng, fam, item.near_kind, rng.choice((0, 1)), twin_of=support[0])
             others = self._sample(rng, self._unrelated([fam], pool), rng.randint(1, 2))
             draft = self._draft(rng, [fam], support, near + others, near)
             if draft is not None and near:
@@ -358,7 +361,9 @@ class _Generator:
         picked = self._chain_walk(rng, fam, item.gold_kind)
         first, second, third = (self._snip(i) for i in picked)
         cite = rng.random() < self.mix.multi_turn_cite
-        near = self._near(rng, fam, item.near_kind, 1 if not cite else rng.choice((0, 1)))
+        near = self._near(
+            rng, fam, item.near_kind, 1 if not cite else rng.choice((0, 1)), twin_of=third
+        )
         others = self._sample(
             rng, self._snips(fam.close) + self._unrelated([fam], pool), rng.choice((0, 1))
         )
@@ -426,9 +431,9 @@ class _Generator:
         near: list[Snippet],
         also_apply: Sequence[Snippet] = (),
     ) -> _Draft | None:
-        """Pick a vehicle and year that every complaint's family fits, every supporting (and
-        ``also_apply``) snippet applies to and no vehicle-mismatch snippet does. ``None`` if the
-        combination is impossible."""
+        """Pick a vehicle and year that every complaint's family fits and every supporting (and
+        ``also_apply``) snippet applies to, where a scope field each vehicle-mismatch twin
+        changed excludes it. ``None`` if the combination is impossible."""
         snippets = support + [s for s in others if s not in support]
         if not 2 <= len(snippets) <= MAX_SNIPPETS or len(set(snippets)) != len(snippets):
             return None
@@ -440,7 +445,7 @@ class _Generator:
             if all(f.fits(vehicle) for f in families)
             for year in range(vehicle.years[0], vehicle.years[1] + 1)
             if all(s.applies.matches(vehicle, year) for s in must)
-            and not any(s.applies.matches(vehicle, year) for s in must_not)
+            and not any(s.twin_scope.matches(vehicle, year) for s in must_not)
         ]
         if not options:
             return None
@@ -534,12 +539,21 @@ class _Generator:
         chain = self._snips(fam.chain)
         return rng.choice([s for s in chain if s.kind == kind] or chain)
 
-    def _near(self, rng: random.Random, fam: Family, kind: str, k: int) -> list[Snippet]:
-        """``k`` near-misses; the first is of ``kind`` when the family has one."""
+    def _near(
+        self,
+        rng: random.Random,
+        fam: Family,
+        kind: str,
+        k: int,
+        twin_of: Snippet | None = None,
+    ) -> list[Snippet]:
+        """``k`` near-misses. The first is the twin of ``twin_of`` when ``fam`` has one, else
+        one of ``kind`` when the family has one."""
         if k <= 0:
             return []
         snippets = self._snips(fam.near_miss)
-        first = rng.choice([s for s in snippets if s.kind == kind] or snippets)
+        twins = [s for s in snippets if twin_of is not None and s.twin_of == twin_of.id]
+        first = rng.choice(twins or [s for s in snippets if s.kind == kind] or snippets)
         return [first, *self._sample(rng, [s for s in snippets if s != first], k - 1)]
 
     def _chain_walk(self, rng: random.Random, fam: Family, kind: str) -> list[str]:

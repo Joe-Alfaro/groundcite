@@ -57,12 +57,18 @@ SELECTION_RULE = (
 # IDs or the hint note), including the hint note's own wording ("near-miss", "already used up",
 # "supports the next step"). "the note" is matched only as a phrase, so "a service manual note" and
 # "note the idle speed" still pass; "supports the next step" only after "that", so "your reading
-# supports the next step" still passes.
+# supports the next step" still passes. "labeled", "designated" and "instructions" count only
+# with a reference noun or "my", so "the labeled vacuum port" and "the service manual
+# instructions" still pass.
 _HINT_WORDS = re.compile(
     r"\b(?:gold(?: label)?|supporting[_ ]ids?|privileged|hints?|answer key|the note|"
     r"grading|graded|reference answer|i was told|i(?:['\u2019]ve| have) been told|correct mode|"
     r"correct ids?|expected answer|near[- ]miss(?:es)?|already used up|"
-    r"that supports the next step)\b|" + re.escape(HINT_HEADER),
+    r"that supports the next step|intended answer|my instructions|grader|"
+    r"label(?:l)?ed (?:reference|snippet|answer|id|citation)s?|"
+    r"designated (?:reference|snippet|answer|id|citation)s?|supporting reference|"
+    r"(?:reference|snippet|answer|id)s? i (?:was|were|have been|got) given)\b|"
+    + re.escape(HINT_HEADER),
     re.IGNORECASE,
 )
 _GOLD_CHECKS = ("mode_matches_gold", "cited_id_supports")

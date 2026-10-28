@@ -17,7 +17,7 @@ import json
 import re
 import tomllib
 from collections.abc import Iterable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any
 
@@ -27,6 +27,10 @@ DATA_DIR = REPO_ROOT / "data"
 KINDS = ("tsb", "manual")
 MISMATCH_KINDS = ("vehicle", "condition")
 MAX_SYSTEMS = 8
+# A near-miss twin changes only its scope: an engine list, a year range, a transmission, a body
+# or one condition phrase (D-056).
+MAX_TWIN_TOKEN_EDITS = 10
+SCOPE_TOKEN = re.compile(r"\d+(?:\.\d+)?|[a-z]+")
 
 # Words an on-spec reply must not contain: the R21 sequencing and repair markers, plus the
 # wider deterministic-check lexicon (D-021). Steps and assistant templates are spliced into
@@ -68,6 +72,7 @@ class Applies:
     trans: tuple[str, ...] | None = None
 
     def matches(self, vehicle: Vehicle, year: int) -> bool:
+        """True when no set field excludes ``vehicle`` in ``year``."""
         if self.engines is not None and vehicle.engine not in self.engines:
             return False
         if self.years is not None and not self.years[0] <= year <= self.years[1]:
@@ -75,6 +80,23 @@ class Applies:
         if self.bodies is not None and vehicle.body not in self.bodies:
             return False
         return self.trans is None or vehicle.trans in self.trans
+
+    def changed_from(self, other: Applies) -> Applies:
+        """Only the fields that differ from ``other`` (the rest don't constrain)."""
+        return Applies(
+            engines=self.engines if self.engines != other.engines else None,
+            years=self.years if self.years != other.years else None,
+            bodies=self.bodies if self.bodies != other.bodies else None,
+            trans=self.trans if self.trans != other.trans else None,
+        )
+
+
+# A ``requires`` value: one allowed string or a list of them.
+Requirement = str | tuple[str, ...]
+
+
+def allowed(value: Requirement) -> tuple[str, ...]:
+    return (value,) if isinstance(value, str) else value
 
 
 @dataclass(frozen=True)
@@ -89,6 +111,14 @@ class Snippet:
     mismatch: str | None
     step: str | None
     results: tuple[str, ...]
+    # Operating conditions the text states, as structured facts the complaint must match.
+    requires: Mapping[str, Requirement] = field(default_factory=dict, hash=False, compare=False)
+    # Near-misses are twins of a gold-capable snippet: its text with only ``scope_edits`` applied.
+    twin_of: str | None = None
+    scope_edits: tuple[tuple[str, str], ...] = ()
+    # The applicability fields the twin changed. A vehicle twin is ruled out for a vehicle only
+    # when one of these excludes it, so the scope change is what makes it a near-miss.
+    twin_scope: Applies = Applies()
 
     def as_scenario_snippet(self, snippet_id: str) -> dict[str, str]:
         """The snippet as it appears in a scenario: re-assigned ID, no generator metadata."""
@@ -111,6 +141,8 @@ class Family:
     close: tuple[str, ...]
     suspects: tuple[str, ...]
     complaints: tuple[str, ...]
+    # One table of stated facts per complaint (same order), matched against ``requires``.
+    complaint_facts: tuple[Mapping[str, str], ...] = ()
     # Ordered stages of chain snippet ids. Steps in one stage are independent; a later-stage
     # step only makes sense once earlier stages are done, and its reported result makes every
     # earlier-stage step moot.
@@ -128,6 +160,16 @@ class Family:
     def order_chain(self, picked: list[str]) -> list[str]:
         """``picked`` sorted by ``chain_order`` stage; ties keep their picked order."""
         return sorted(picked, key=self.stage)
+
+    def contradicts(self, requires: Mapping[str, Requirement], complaint: int) -> list[str]:
+        """Required keys that ``complaint`` states with a value ``requires`` doesn't allow."""
+        facts = self.complaint_facts[complaint]
+        return [k for k, v in requires.items() if k in facts and facts[k] not in allowed(v)]
+
+    def unmet(self, requires: Mapping[str, Requirement], complaint: int) -> list[str]:
+        """Required keys ``complaint`` doesn't state with an allowed value (unstated counts)."""
+        facts = self.complaint_facts[complaint]
+        return [k for k, v in requires.items() if facts.get(k) not in allowed(v)]
 
 
 @dataclass(frozen=True)
@@ -168,7 +210,9 @@ def load_reserved(path: Path) -> frozenset[str]:
 def load_library(data_dir: Path = DATA_DIR) -> Library:
     """Load and validate the library under ``data_dir``. Raises ``LibraryError``."""
     problems: list[str] = []
-    snippets = _load_snippets(sorted((data_dir / "snippets").glob("*.jsonl")), problems)
+    snippets = _with_twin_scopes(
+        _load_snippets(sorted((data_dir / "snippets").glob("*.jsonl")), problems)
+    )
     families_doc = tomllib.loads((data_dir / "families.toml").read_text(encoding="utf-8"))
     phrasing_doc = tomllib.loads((data_dir / "phrasing.toml").read_text(encoding="utf-8"))
     library = Library(
@@ -206,6 +250,7 @@ def validate(lib: Library) -> list[str]:
     problems: list[str] = []
     for snippet in lib.snippets.values():
         problems.extend(_validate_snippet(snippet))
+        problems.extend(_validate_twin(lib, snippet))
     if len(lib.systems()) > MAX_SYSTEMS:
         problems.append(f"{len(lib.systems())} systems, at most {MAX_SYSTEMS}: {lib.systems()}")
     unknown_reserved = lib.reserved - set(lib.families)
@@ -292,7 +337,71 @@ def _validate_family(lib: Library, family: Family) -> list[str]:
         extra = set(PLACEHOLDER.findall(complaint)) - COMPLAINT_PLACEHOLDERS
         if extra:
             problems.append(f"{name}: complaint has unknown placeholders {sorted(extra)}")
+    if len(family.complaint_facts) != len(family.complaints) or not all(family.complaint_facts):
+        problems.append(f"{name}: needs one non-empty complaint_facts table per complaint")
+        return problems
+    # Gold integrity: a chain snippet's conditions hold for every complaint, and a condition
+    # near-miss's conditions fail for every complaint.
+    for i in range(len(family.complaints)):
+        for snippet_id in family.chain:
+            snippet = lib.snippets.get(snippet_id)
+            if snippet is not None and (unmet := family.unmet(snippet.requires, i)):
+                problems.append(f"{name}: complaint {i} doesn't state {unmet} for {snippet_id}")
+        for snippet_id in family.near_miss:
+            snippet = lib.snippets.get(snippet_id)
+            if (
+                snippet is not None
+                and snippet.mismatch == "condition"
+                and not family.contradicts(snippet.requires, i)
+            ):
+                problems.append(f"{name}: complaint {i} doesn't contradict near-miss {snippet_id}")
     return problems
+
+
+def _validate_twin(lib: Library, s: Snippet) -> list[str]:
+    """A near-miss is its twin's text with only the declared scope edits applied (D-056)."""
+    if s.mismatch is None:
+        return []
+    twin = lib.snippets.get(s.twin_of or "")
+    if twin is None or twin.step is None or twin.family != s.family:
+        return [f"{s.id}: twin_of {s.twin_of!r} is not a chain snippet of {s.family}"]
+    problems = []
+    text = twin.text
+    for old, new in s.scope_edits:
+        if old == new or text.count(old) != 1:
+            problems.append(f"{s.id}: scope edit {old!r} -> {new!r} doesn't apply exactly once")
+            return problems
+        text = text.replace(old, new)
+    if text != s.text:
+        problems.append(f"{s.id}: text is not {twin.id} with its scope edits applied")
+    a, b = SCOPE_TOKEN.findall(twin.text.lower()), SCOPE_TOKEN.findall(s.text.lower())
+    if not 0 < _edit_distance(a, b) <= MAX_TWIN_TOKEN_EDITS:
+        problems.append(f"{s.id}: more than {MAX_TWIN_TOKEN_EDITS} token edits from {twin.id}")
+    if s.mismatch == "vehicle" and s.twin_scope == Applies():
+        problems.append(f"{s.id}: a vehicle twin must change engines, years, bodies or trans")
+    if s.mismatch == "condition" and dict(s.requires) == dict(twin.requires):
+        problems.append(f"{s.id}: a condition twin must change a required condition")
+    return problems
+
+
+def _edit_distance(a: list[str], b: list[str]) -> int:
+    previous = list(range(len(b) + 1))
+    for i, x in enumerate(a, 1):
+        current = [i]
+        for j, y in enumerate(b, 1):
+            current.append(min(previous[j] + 1, current[j - 1] + 1, previous[j - 1] + (x != y)))
+        previous = current
+    return previous[-1]
+
+
+def _with_twin_scopes(snippets: dict[str, Snippet]) -> dict[str, Snippet]:
+    out = {}
+    for snippet_id, s in snippets.items():
+        twin = snippets.get(s.twin_of or "")
+        if twin is not None:
+            s = replace(s, twin_scope=s.applies.changed_from(twin.applies))
+        out[snippet_id] = s
+    return out
 
 
 def _load_snippets(paths: Iterable[Path], problems: list[str]) -> dict[str, Snippet]:
@@ -332,6 +441,12 @@ def _snippet(raw: dict[str, Any]) -> Snippet:
         mismatch=raw.get("mismatch"),
         step=raw.get("step"),
         results=tuple(raw.get("results", ())),
+        requires={
+            str(k): v if isinstance(v, str) else tuple(v)
+            for k, v in (raw.get("requires") or {}).items()
+        },
+        twin_of=raw.get("twin_of"),
+        scope_edits=tuple((str(old), str(new)) for old, new in raw.get("scope_edits") or ()),
     )
 
 
@@ -359,6 +474,7 @@ def _family(raw: dict[str, Any]) -> Family:
         close=tuple(raw["close"]),
         suspects=tuple(raw["suspects"]),
         complaints=tuple(raw["complaints"]),
+        complaint_facts=tuple(dict(facts) for facts in raw.get("complaint_facts", ())),
         chain_order=tuple(tuple(str(i) for i in stage) for stage in raw.get("chain_order", ())),
         trans=_opt_tuple(raw.get("trans")),
     )

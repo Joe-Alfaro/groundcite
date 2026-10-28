@@ -119,9 +119,30 @@ prompting strategies.
 
 **Snippet** (`data/snippets/*.jsonl`):
 ```json
-{"id": "TSB-0417", "kind": "tsb", "system": "intake", "applies_to": "2.0L I4, 2013-2016 compact sedan",
- "title": "Lean codes at idle from cracked PCV hose", "text": "...", "family": "lean_idle"}
+{"id": "lean_idle.pcv_elbow", "kind": "tsb", "system": "fuel_air", "family": "lean_idle",
+ "title": "Lean code at idle from cracked PCV hose", "text": "Applies to 2.0L I4 and 2.5L I4 engines, ...",
+ "applies": {"engines": ["2.0L I4", "2.5L I4"], "years": [2012, 2020]},
+ "requires": {"rough_idle": "cold"}, "step": "...", "results": ["..."]}
+{"id": "lean_idle.nm_pcv_elbow", ..., "text": "... worst on a fully warm engine ...",
+ "requires": {"rough_idle": "warm"}, "mismatch": "condition", "twin_of": "lean_idle.pcv_elbow",
+ "scope_edits": [["worst on a cold engine", "worst on a fully warm engine"]]}
 ```
+- Library ids are internal. Scenarios carry only `id` (re-assigned), `kind`, `system`, `title`
+  and `text`.
+- Chain snippets (`step`, `results`) are gold-capable. Each states its scope explicitly: a
+  structured `applies` (engines, years, bodies, transmissions, all spelled out in the text) and a
+  `requires` table of operating conditions. Every complaint of the family lists its facts in
+  `complaint_facts` (`data/families.toml`), and each required condition must be stated by every
+  complaint with an allowed value, so a gold snippet never contradicts the complaint.
+- Near-misses are **twins** (D-056): a chain snippet's text with only `scope_edits` applied
+  (at most 10 word or number tokens: an engine list, a year range, a transmission, a body or one
+  condition phrase). Procedure, punctuation, numbers, opener and title stay the same, so gold and
+  near-miss match on every surface feature and only the scope separates them. A vehicle twin is
+  placed only where a scope field it changed excludes the scenario vehicle. A condition twin
+  `requires` a condition every complaint of its family contradicts. In a distractor scenario the
+  first near-miss is the gold's own twin. `tests/test_twins.py` checks the construction and holds
+  a ridge probe on surface features, and every single surface heuristic, to at most 0.60 accuracy
+  on distractors.
 - Vehicles are described generically (body style, engine, year range, mileage). No manufacturer
   names appear.
 - IDs are opaque strings drawn from ≥3 visibly synthetic schemes (for example `TSB-0417`,
