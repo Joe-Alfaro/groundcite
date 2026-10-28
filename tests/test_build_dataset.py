@@ -56,6 +56,8 @@ def env(isolated_env: Path, no_network: None) -> Path:
 def judge(monkeypatch: pytest.MonkeyPatch) -> type[ScriptedJudge]:
     monkeypatch.setattr(ScriptedJudge, "verdicts", {})
     monkeypatch.setattr(ScriptedJudge, "calls", 0)
+    monkeypatch.setattr(ScriptedJudge, "leaks", ())
+    monkeypatch.setattr(ScriptedJudge, "leak_calls", 0)
     seen: list[str] = []
     original = ScriptedJudge.generate
 

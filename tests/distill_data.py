@@ -208,17 +208,29 @@ class ScriptedJudge:
 
     ``verdicts`` maps a reply phrase to (spec_adherence, robustness); any HARD check marked FAIL
     in the judge input scores (0, 1), and everything else scores (1, 5).
+
+    It also answers the filter-only hint-leak screen, recognized by the ``"meta_leak"`` output key
+    in its system prompt (the eval rubric never names that key): a request whose input contains
+    a phrase from ``leaks`` is flagged. ``calls`` counts rubric requests only; ``leak_calls``
+    counts screen requests.
     """
 
     name = "mock:judge_probe"
     verdicts: dict[str, tuple[int, int]] = {}
     calls: int = 0
+    leaks: tuple[str, ...] = ()
+    leak_calls: int = 0
 
     def generate(
         self, messages: list[dict[str, str]], system: str | None, params: Mapping[str, Any]
     ) -> str:
-        type(self).calls += 1
         text = "\n".join(m["content"] for m in messages)
+        if system is not None and '"meta_leak"' in system:
+            type(self).leak_calls += 1
+            leak = any(phrase in text for phrase in type(self).leaks)
+            reason = "Scripted: refers to privileged inputs." if leak else "Scripted: no leak."
+            return json.dumps({"meta_leak": leak, "reason": reason})
+        type(self).calls += 1
         spec, robustness = 1, 5
         if any(status == "FAIL" for _, cls, status in CHECK_LINE_RE.findall(text) if cls == "HARD"):
             spec, robustness = 0, 1
