@@ -81,10 +81,11 @@ and what is still planned is tracked in [`docs/checklist.md`](docs/checklist.md)
 QLoRA training of Qwen3-1.7B runs on a free Kaggle T4 through
 [`train/kaggle_train.ipynb`](train/kaggle_train.ipynb). The notebook clones this repo at a pinned
 commit, installs [`train/requirements-kaggle.txt`](train/requirements-kaggle.txt) (the locked
-versions plus Unsloth, around Kaggle's own CUDA torch), reads `HF_TOKEN` from Kaggle Secrets,
-trains on one of the "GPU T4 x2" GPUs, pushes the adapter to the Hub and prints a one-line summary
+versions plus Unsloth, with Kaggle's preinstalled torch stack pinned as a pip constraint), reads
+`HF_TOKEN`, `SCRUB_TERMS` and `REPO_URL` from Kaggle Secrets, trains on one of the "GPU T4 x2" GPUs, pushes the adapter to the Hub and prints a one-line summary
 with the Hub commit SHA. Check its `# OWNER:` parameters (the training data) first; the committed
-values run unedited. Both notebooks pin `REPO_COMMIT`; `uv run scripts/repin_notebooks.py --commit <sha>`
+values run unedited. No tracked file holds the code repo's URL: add its clone URL as the
+`REPO_URL` Kaggle secret (both notebooks need it, next to `HF_TOKEN`). Both notebooks pin `REPO_COMMIT`; `uv run scripts/repin_notebooks.py --commit <sha>`
 re-pins them to a full SHA reachable from `HEAD`, which must be pushed before a notebook can check
 it out. The install list keeps transformers at 5.17.0 for Unsloth and huggingface-hub below 2.0
 for that transformers. GPU-hour budgets are in [`docs/checklist.md`](docs/checklist.md#r31-gpu-hour-budget).

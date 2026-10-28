@@ -17,6 +17,7 @@ import argparse
 import json
 import shutil
 import sys
+import tomllib
 from pathlib import Path
 from typing import Any
 
@@ -148,9 +149,24 @@ def _base_systems(args: argparse.Namespace, tuned: str, plan_only: bool) -> list
                 f"{tuned} has no adapter_config.json naming its base model (a merged or full "
                 "model); pass --base <model> to name the base, or --no-base to skip the base rows"
             )
-        base = f"hf:{name}"
+        revision = (config or {}).get("revision") or _configured_base_revision(name)
+        base = f"hf:{name}@{revision}" if revision else f"hf:{name}"
     best = load_models_config()["eval"]["best_strategy"]
     return [System(base, "zero_shot"), System(base, best)]
+
+
+def _configured_base_revision(name: str) -> str | None:
+    """train/config.toml's pinned base commit when the adapter's base is the configured base
+    (GOTCHA G27), so the base rows load the weights training used rather than ``main``."""
+    path = versions.REPO_ROOT / "train" / "config.toml"
+    if not path.is_file():
+        return None
+    with path.open("rb") as fh:
+        model = tomllib.load(fh).get("model", {})
+    if model.get("base") != name:
+        return None
+    revision = model.get("revision")
+    return str(revision) if revision else None
 
 
 def _revisions(models: list[str]) -> dict[str, str | None]:

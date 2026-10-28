@@ -182,6 +182,33 @@ def row_scenarios(
     return [by_id[r["scenario_id"]] for r in rows]
 
 
+def grid_order(
+    results: Mapping[str, Any], rows: Sequence[Mapping[str, Any]], eval_set: Path
+) -> list[Mapping[str, Any]]:
+    """``rows`` sorted by (model, strategy), then in the eval set's scenario (or conversation and
+    turn) order: the order the source run aggregated each cell in. The source transcripts are in
+    completion order, so aggregating them as written would make the cells, and the bootstrap
+    intervals within them, depend on thread timing."""
+    if "conversation_ids" in results:
+        position = {s.id: i for i, s in enumerate(load_scripts(eval_set))}
+
+        def key(row: Mapping[str, Any]) -> tuple[str, str, int, int]:
+            return (
+                row["model"],
+                row["strategy"],
+                position[row["conversation_id"]],
+                int(row["turn_index"]),
+            )
+
+    else:
+        position = {s.id: i for i, s in enumerate(load_scenarios(eval_set, None))}
+
+        def key(row: Mapping[str, Any]) -> tuple[str, str, int, int]:
+            return (row["model"], row["strategy"], position[row["scenario_id"]], 0)
+
+    return sorted(rows, key=key)
+
+
 # ---------------------------------------------------------------------------------------------
 # The new run directory (resume safety)
 # ---------------------------------------------------------------------------------------------
@@ -455,7 +482,7 @@ def run(args: argparse.Namespace) -> int:
     transcripts.write_text(
         "".join(json.dumps(r, ensure_ascii=False) + "\n" for r in rows), encoding="utf-8"
     )
-    results, writer = build_results(source, rows, run_id, judge)
+    results, writer = build_results(source, grid_order(source, rows, eval_set), run_id, judge)
     write_json(new_dir / RESULTS, results)
     (new_dir / "results.md").write_text(results_md(results, writer), encoding="utf-8")
     print(f"wrote {new_dir} ({calls} judge calls)")
