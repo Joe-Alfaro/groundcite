@@ -343,6 +343,12 @@ def _prompt_ids(messages: Messages, system: str | None) -> list[str]:
     return parse_cited_ids("\n".join(texts))
 
 
+_MOCK_ABSTAIN = (
+    "None of the provided references cover this complaint, so I can't point to a "
+    "documented step yet. Which trouble code is stored?"
+)
+
+
 class MockCompliant:
     """Cites the first provided ID in one clean step, or abstains with one question."""
 
@@ -351,10 +357,7 @@ class MockCompliant:
     def generate(self, messages: Messages, system: str | None, params: Mapping[str, Any]) -> str:
         ids = _prompt_ids(messages, system)
         if not ids:
-            return (
-                "None of the provided references cover this complaint, so I can't point to a "
-                "documented step yet. Which trouble code is stored?"
-            )
+            return _MOCK_ABSTAIN
         return f"Perform the test described in the reference and record the reading [{ids[0]}]."
 
 
@@ -370,6 +373,52 @@ class MockNaive:
             f"2. Then inspect the vacuum hoses [{ids[1]}].\n"
             "3. If either looks bad, replace the fuel pump."
         )
+
+
+_WITHDRAWN_RE = re.compile(r"withdrawn", re.IGNORECASE)
+
+
+def _live_prompt_ids(messages: Messages, system: str | None) -> list[str]:
+    """Bracketed IDs in the user turns, minus any ID that sits on a line marking it withdrawn
+    (the rollout renderer's retraction notice, D-066)."""
+    lines = [
+        line for m in messages if m.get("role") == "user" for line in m["content"].splitlines()
+    ]
+    withdrawn = {
+        sid
+        for sid in _prompt_ids(messages, system)
+        if any(sid in line and _WITHDRAWN_RE.search(line) for line in lines)
+    }
+    return [sid for sid in _prompt_ids(messages, system) if sid not in withdrawn]
+
+
+class MockSteady:
+    """The compliant reference for rollouts: cites the first live (not withdrawn) ID in one clean
+    step, or abstains with one question when no snippet is live."""
+
+    name = "mock:steady"
+
+    def generate(self, messages: Messages, system: str | None, params: Mapping[str, Any]) -> str:
+        ids = _live_prompt_ids(messages, system)
+        if not ids:
+            return _MOCK_ABSTAIN
+        return f"Perform the test described in the reference and record the reading [{ids[0]}]."
+
+
+class MockDrift:
+    """``mock:drift@k``: ``mock:steady`` while fewer than ``k`` assistant turns precede the
+    request (turn index < k), ``mock:naive`` from turn index ``k`` on."""
+
+    def __init__(self, k: int) -> None:
+        self.k = k
+        self.name = f"mock:drift@{k}"
+        self._steady = MockSteady()
+        self._naive = MockNaive()
+
+    def generate(self, messages: Messages, system: str | None, params: Mapping[str, Any]) -> str:
+        turn_index = sum(m.get("role") == "assistant" for m in messages)
+        inner = self._steady if turn_index < self.k else self._naive
+        return inner.generate(messages, system, params)
 
 
 class MockJudge:
@@ -405,12 +454,19 @@ class MockJudge:
 MOCKS: dict[str, Callable[[], Backend]] = {
     "compliant": MockCompliant,
     "naive": MockNaive,
+    "steady": MockSteady,
     "judge": MockJudge,
 }
+_DRIFT_RE = re.compile(r"drift@(\d+)")
 
 
 def _mock(spec: str, transport: Transport | None = None) -> Backend:
     name = spec.split(":", 1)[1]
+    if name.startswith("drift@"):
+        match = _DRIFT_RE.fullmatch(name)
+        if match is None:
+            raise ValueError(f"bad drift mock {name!r}; use mock:drift@<k> with k >= 0")
+        return MockDrift(int(match.group(1)))
     if name not in MOCKS:
         raise ValueError(f"unknown mock model {name!r}; known: {sorted(MOCKS)}")
     return MOCKS[name]()

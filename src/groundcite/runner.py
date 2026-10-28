@@ -200,20 +200,25 @@ def run_manifest(eval_set: Path, scenarios: Sequence[Scenario], judge: str) -> d
     }
 
 
-def check_resumable(run_dir: Path, manifest: Mapping[str, Any]) -> None:
+MANIFEST_LABELS: dict[str, str] = {
+    "eval_set_sha256": "eval set (sha256)",
+    "scenario_ids": "scenario list (--eval-set / --limit)",
+    "prompt_sha256": "prompt hashes",
+    "judge_model": "judge model",
+    "rubric_sha256": "judge rubric",
+}
+
+
+def check_resumable(
+    run_dir: Path, manifest: Mapping[str, Any], labels: Mapping[str, str] = MANIFEST_LABELS
+) -> None:
     """Raise UsageError unless ``run_dir`` was started with the same inputs as ``manifest`` and
-    every row on disk was rendered, judged and scored under them."""
+    every row on disk was rendered, judged and scored under them. ``labels`` names the manifest
+    keys that must match (it needs ``prompt_sha256``, ``judge_model`` and ``rubric_sha256``)."""
     path = run_dir / MANIFEST
     if not path.is_file():
         raise UsageError(f"{run_dir} has no {MANIFEST}; it can't be resumed safely")
     recorded = json.loads(path.read_text(encoding="utf-8"))
-    labels = {
-        "eval_set_sha256": "eval set (sha256)",
-        "scenario_ids": "scenario list (--eval-set / --limit)",
-        "prompt_sha256": "prompt hashes",
-        "judge_model": "judge model",
-        "rubric_sha256": "judge rubric",
-    }
     for key, label in labels.items():
         if recorded.get(key) != manifest[key]:
             raise UsageError(

@@ -95,7 +95,7 @@ def _cell(
         fn += actual and not predicted
 
     n = len(rows)
-    return {
+    cell = {
         "model": rows[0]["model"],
         "strategy": rows[0]["strategy"],
         "n": n,
@@ -107,6 +107,38 @@ def _cell(
         "invented_id_rate": invented / n,
         "abstain_precision": _ratio(tp, tp + fp),
         "abstain_recall": _ratio(tp, tp + fn),
+    }
+    if any("conversation_id" in r for r in rows):
+        cell.update(_conversation_metrics(rows))
+    return cell
+
+
+def _conversation_metrics(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    """Per-conversation metrics for rollout rows (one row per assistant turn, D-066).
+
+    A conversation passes when every one of its turns scores Spec-adherence 1. Its first failure
+    is the lowest failing ``turn_index``, whatever the row order. Rows without a
+    ``conversation_id`` don't count here.
+    """
+    turns: dict[str, dict[int, float]] = {}
+    for r in rows:
+        if "conversation_id" in r:
+            spec = float(r["score"]["spec_adherence"])
+            turns.setdefault(r["conversation_id"], {})[int(r["turn_index"])] = spec
+    first_failures: dict[int, int] = {}
+    by_turn: dict[int, list[float]] = {}
+    for conversation in turns.values():
+        failing = [t for t, spec in conversation.items() if spec < 1]
+        if failing:
+            first = min(failing)
+            first_failures[first] = first_failures.get(first, 0) + 1
+        for t, spec in conversation.items():
+            by_turn.setdefault(t, []).append(spec)
+    return {
+        "n_conversations": len(turns),
+        "conversation_pass_rate": (len(turns) - sum(first_failures.values())) / len(turns),
+        "first_failure_turns": {str(t): first_failures[t] for t in sorted(first_failures)},
+        "spec_adherence_by_turn": {str(t): _mean(by_turn[t]) for t in sorted(by_turn)},
     }
 
 
@@ -120,7 +152,10 @@ def aggregate_scores(
     """One JSON-ready summary per (model, strategy), in first-seen order.
 
     Spec-adherence carries a seeded percentile-bootstrap interval. Rows need ``model``,
-    ``strategy``, ``category``, ``gold``, ``reply``, ``checks`` and ``score``.
+    ``strategy``, ``category``, ``gold``, ``reply``, ``checks`` and ``score``. When a cell's rows
+    carry ``conversation_id`` and ``turn_index`` (rollouts), the cell also has
+    ``n_conversations``, ``conversation_pass_rate``, ``first_failure_turns`` and
+    ``spec_adherence_by_turn``; single-turn cells are unchanged.
     """
     cells: dict[tuple[str, str], list[Mapping[str, Any]]] = {}
     for row in rows:
