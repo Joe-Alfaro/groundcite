@@ -402,8 +402,8 @@ def test_missing_judge_key_exits_two_and_writes_nothing(
     fx = build_fixture(judge)
     cands = write_jsonl(tmp_path / "candidates.jsonl", fx["candidates"])
     out = tmp_path / "v1"
-    assert _build("--candidates", str(cands), "--out", str(out)) == 2  # default judge: OpenAI
-    assert "OPENAI_API_KEY" in capsys.readouterr().err
+    assert _build("--candidates", str(cands), "--out", str(out)) == 2  # default judge: Opus
+    assert "ANTHROPIC_API_KEY" in capsys.readouterr().err
     assert not out.exists() or not any(out.iterdir())
 
 
