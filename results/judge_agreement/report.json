@@ -30,9 +30,9 @@
         "m1:multi_turn": 1,
         "pilot:multi_turn": 2
       },
-      "adjudicated": 0,
+      "adjudicated": 13,
       "wins": 0,
-      "win_rate": null,
+      "win_rate": 0.0,
       "spend_usd": 0.553375,
       "verdict": "fail",
       "all_rows": null
@@ -59,9 +59,9 @@
         "m1:distractor": 2,
         "pilot:multi_turn": 1
       },
-      "adjudicated": 0,
-      "wins": 0,
-      "win_rate": null,
+      "adjudicated": 6,
+      "wins": 1,
+      "win_rate": 0.16666666666666666,
       "spend_usd": 0.06013780000000001,
       "verdict": "fail",
       "all_rows": null
@@ -87,9 +87,9 @@
         "m1:clean": 1,
         "pilot:multi_turn": 4
       },
-      "adjudicated": 0,
-      "wins": 0,
-      "win_rate": null,
+      "adjudicated": 7,
+      "wins": 1,
+      "win_rate": 0.14285714285714285,
       "spend_usd": 0.854086,
       "verdict": "fail",
       "all_rows": null
