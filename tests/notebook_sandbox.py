@@ -1,7 +1,9 @@
 """Run a Kaggle notebook's code cells in-process with every side effect faked.
 
 Shell commands (``subprocess``, ``os.system`` and ``!`` lines) are recorded, not run.
-``kaggle_secrets`` returns a dummy value for every secret, ``torch`` reports one T4, and file
+``kaggle_secrets`` returns a dummy value for every secret (``secrets`` overrides that: a label
+mapped to None is missing, and reading it raises the way Kaggle does when a secret is not
+attached), ``torch`` reports one T4, and file
 system checks and directory changes are no-ops that succeed. Parameter values are set the way a
 user edits the parameters cell: each ``NAME = ...`` line in the tagged cell is rewritten. Execution
 stops at the first command that ``stop_at`` matches, which is recorded with the environment it
@@ -96,11 +98,24 @@ def _fake_torch() -> types.ModuleType:
     return torch
 
 
-def _fake_secrets() -> types.ModuleType:
+class SecretNotAttached(Exception):
+    """What the fake raises for a missing secret (Kaggle raises a generic backend error)."""
+
+
+def _fake_secrets(overrides: Mapping[str, str | None] | None = None) -> types.ModuleType:
     module = types.ModuleType("kaggle_secrets")
+    overrides = dict(overrides or {})
 
     class UserSecretsClient:
         def get_secret(self, label: str) -> str:
+            if label in overrides:
+                value = overrides[label]
+                if value is None:
+                    raise SecretNotAttached(
+                        "Unexpected response from the service. Response: {'errors': ['No user "
+                        "secrets exist for kernel id 1 and label " + label + "']}."
+                    )
+                return value
             return f"dummy-{label.lower()}"
 
     module.UserSecretsClient = UserSecretsClient  # type: ignore[attr-defined]
@@ -108,7 +123,11 @@ def _fake_secrets() -> types.ModuleType:
 
 
 @contextmanager
-def _faked(sandbox: Sandbox, stop_at: Callable[[str], bool]) -> Iterator[Callable[..., Any]]:
+def _faked(
+    sandbox: Sandbox,
+    stop_at: Callable[[str], bool],
+    secrets: Mapping[str, str | None] | None = None,
+) -> Iterator[Callable[..., Any]]:
     def shell(cmd: Any, *args: Any, **kwargs: Any) -> Any:
         text = _command_text(cmd)
         sandbox.commands.append(text)
@@ -145,7 +164,9 @@ def _faked(sandbox: Sandbox, stop_at: Callable[[str], bool]) -> Iterator[Callabl
         mock.patch.object(Path, "is_file", lambda self, *a, **k: True),
         mock.patch.object(Path, "is_dir", lambda self, *a, **k: True),
         mock.patch.object(Path, "mkdir", lambda self, *a, **k: None),
-        mock.patch.dict(sys.modules, {"kaggle_secrets": _fake_secrets(), "torch": _fake_torch()}),
+        mock.patch.dict(
+            sys.modules, {"kaggle_secrets": _fake_secrets(secrets), "torch": _fake_torch()}
+        ),
     ):
         yield shell
 
@@ -155,12 +176,13 @@ def run_notebook(
     *,
     params: Mapping[str, str],
     stop_at: Callable[[str], bool],
+    secrets: Mapping[str, str | None] | None = None,
 ) -> Sandbox:
     """Execute the code cells in order until ``stop_at`` matches a command or a cell raises."""
     tagged = parameters_cell(notebook)
     sandbox = Sandbox()
     namespace: dict[str, Any] = {"__name__": "__main__", "__builtins__": builtins}
-    with _faked(sandbox, stop_at) as shell:
+    with _faked(sandbox, stop_at, secrets) as shell:
         namespace["__shell__"] = shell
         for cell in notebook["cells"]:
             if cell["cell_type"] != "code":

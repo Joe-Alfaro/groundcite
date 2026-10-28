@@ -93,12 +93,13 @@ def _openai_response(text: str) -> dict[str, Any]:
 # ---------------------------------------------------------------------------------------------
 
 
-def test_models_config_pins_the_d019_models() -> None:
+def test_models_config_pins_the_d019_models_with_the_d080_judge() -> None:
     from groundcite.config import MODELS_CONFIG_PATH, load_models_config
 
     assert Path(MODELS_CONFIG_PATH) == REPO / "config" / "models.toml"
     cfg = load_models_config()
-    assert cfg["judge"]["model"] == "openai:gpt-5.5-2026-04-23"
+    # D-080: the judge moved from OpenAI gpt-5.5 to Anthropic Claude Opus.
+    assert cfg["judge"]["model"] == "anthropic:claude-opus-5-5"
     assert cfg["teacher"]["model"] == "anthropic:claude-opus-5-5"
     assert cfg["cross_check"]["model"] == "anthropic:claude-opus-5-5"
     assert set(cfg["ablation"]["models"]) == {
@@ -107,10 +108,29 @@ def test_models_config_pins_the_d019_models() -> None:
     }
 
 
-def test_judge_model_is_a_dated_snapshot_not_an_alias() -> None:
+def test_judge_model_is_a_pinned_id_not_a_moving_alias() -> None:
+    """D-080: ``claude-opus-5-5`` is a complete, pinned Anthropic id (no date suffix exists for
+    it); a ``-latest`` alias or a bare family name would let the judge drift between runs."""
     from groundcite.config import load_models_config
 
-    assert re.search(r"-\d{4}-\d{2}-\d{2}$", load_models_config()["judge"]["model"])
+    judge = load_models_config()["judge"]["model"]
+    assert judge == "anthropic:claude-opus-5-5"
+    assert "latest" not in judge
+    assert re.fullmatch(r"anthropic:claude-[a-z]+-\d+-\d+", judge)
+
+
+def test_judge_decoding_params_are_fixed() -> None:
+    """The judge runs with the pinned [decoding.anthropic] table: a positive max_tokens and a
+    fixed effort level (Opus 5.5's default effort is medium, so it is set explicitly)."""
+    from groundcite.config import decoding_params, load_models_config
+
+    cfg = load_models_config()
+    judge = cfg["judge"]["model"]
+    params = decoding_params(judge)
+    assert params == cfg["decoding"]["anthropic"]
+    assert params.get("max_tokens", 0) > 0
+    effort = params.get("output_config", {}).get("effort")
+    assert effort in {"low", "medium", "high", "xhigh", "max"}, params
 
 
 def test_decoding_params_are_fixed_per_provider() -> None:
@@ -313,14 +333,15 @@ def test_anthropic_request_carries_pinned_model_and_decoding(
     assert body["messages"] == MESSAGES
 
 
-def test_openai_request_carries_pinned_judge_model_and_decoding(
+def test_openai_request_carries_pinned_ablation_model_and_decoding(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     from groundcite.backends import get_backend
     from groundcite.config import decoding_params, load_models_config
 
     monkeypatch.setenv("OPENAI_API_KEY", FAKE_OPENAI)
-    spec = load_models_config()["judge"]["model"]
+    # Since D-080 the OpenAI model is the second ablation family only, not the judge.
+    [spec] = [m for m in load_models_config()["ablation"]["models"] if m.startswith("openai:")]
     params = decoding_params(spec)
     transport = FakeTransport(_openai_response('{"spec_adherence": 1}'))
     out = get_backend(spec, transport=transport).generate(MESSAGES, SYSTEM, params)
@@ -344,17 +365,18 @@ def test_judge_reply_uses_config_decoding_for_the_pinned_judge(
     from groundcite.config import decoding_params, load_models_config
     from groundcite.judge import judge_reply
 
-    monkeypatch.setenv("OPENAI_API_KEY", FAKE_OPENAI)
+    monkeypatch.setenv("ANTHROPIC_API_KEY", FAKE_ANTHROPIC)
     spec = load_models_config()["judge"]["model"]
     verdict = '{"spec_adherence": 1, "robustness": 5, "reasoning": "ok"}'
-    transport = FakeTransport(_openai_response(verdict))
+    transport = FakeTransport(_anthropic_response(verdict))
     scenario = Scenario(id="t-1", messages=MESSAGES, provided_ids=PROVIDED)
     reply = "Inspect the PCV hose at the intake elbow for cracks [TSB-0417]."
     checks = [fn(reply, PROVIDED) for fn in CHECKS.values()]
     res = judge_reply(scenario, reply, checks, get_backend(spec, transport=transport))
 
-    _, _, body = transport.calls[0]
-    assert body["model"] == "gpt-5.5-2026-04-23"
+    url, _, body = transport.calls[0]
+    assert url == ANTHROPIC_URL
+    assert body["model"] == "claude-opus-5-5"
     for key, value in decoding_params(spec).items():
         assert body[key] == value, key
     assert res.model == spec

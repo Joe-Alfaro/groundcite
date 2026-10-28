@@ -10,10 +10,17 @@ Both ``train/kaggle_train.ipynb`` and ``train/kaggle_eval.ipynb``:
   notebook runs ``uv export`` or ``uv sync``, and no pip command names torch, triton or nvidia-*;
 - set ``CUDA_VISIBLE_DEVICES=0`` before the model run (Kaggle's accelerator is "GPU T4 x2");
 - keep ``REPO_URL``, ``HUB_REPO`` and the data path (``DATASET`` and ``KAGGLE_DATASET`` in the
-  training notebook, ``EVAL_SET`` in the eval notebook) in the ``parameters`` cell, each marked
-  with an ``# OWNER:`` comment on its line or in the comment block right above it;
-- fail before any shell command, with a message naming the variable, while a placeholder (a value
-  containing ``OWNER``) is still set.
+  training notebook, ``EVAL_SET`` in the eval notebook) in the ``parameters`` cell. The data paths
+  are marked with an ``# OWNER:`` comment on their line or in the comment block right above it.
+  ``REPO_URL`` and ``HUB_REPO`` are committed real values (D-081, D-082): the public GitHub repo
+  ``https://github.com/Joe-Alfaro/groundcite`` and the Hub repo
+  ``joe-alfaro/groundcite-qwen3-1.7b``, so the committed notebook runs unedited;
+- read ``HF_TOKEN`` (both notebooks: the Hub repo is private) and ``SCRUB_TERMS`` (training) from
+  Kaggle Secrets, and stop with a message naming the secret, before any shell command, when one
+  is not attached or is empty.
+
+The training notebook's Hub push creates the repo private (``create_repo(..., private=True)`` in
+``train/train_qlora.py``) and nothing in the notebooks or the training code makes it public.
 
 The training notebook trains on ``DATASET`` from the repo at ``REPO_COMMIT``, or on
 ``KAGGLE_DATASET`` (a ``/kaggle/input/...`` train.jsonl) when that is non-empty. The eval notebook
@@ -36,6 +43,7 @@ import socket
 import subprocess
 import tomllib
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -48,12 +56,18 @@ EVAL_NOTEBOOK = REPO_ROOT / "train" / "kaggle_eval.ipynb"
 REQUIREMENTS = REPO_ROOT / "train" / "requirements-kaggle.txt"
 SECRET_SCAN = REPO_ROOT / "scripts" / "secret_scan.py"
 NOTEBOOKS = {"train": NOTEBOOK, "eval": EVAL_NOTEBOOK}
-# The parameters a user must replace before the first run.
-PLACEHOLDERS = ("REPO_URL", "HUB_REPO")
-OWNER_MARKED = {
-    "train": ("REPO_URL", "HUB_REPO", "DATASET", "KAGGLE_DATASET"),
-    "eval": ("REPO_URL", "HUB_REPO", "EVAL_SET"),
+# D-081/D-082: committed real values, no longer OWNER placeholders.
+REAL_VALUES = {
+    "REPO_URL": "https://github.com/Joe-Alfaro/groundcite",
+    "HUB_REPO": "joe-alfaro/groundcite-qwen3-1.7b",
 }
+OWNER_MARKED = {
+    "train": ("DATASET", "KAGGLE_DATASET"),
+    "eval": ("EVAL_SET",),
+}
+# The Kaggle secrets each notebook needs.
+REQUIRED_SECRETS = {"train": ("HF_TOKEN", "SCRUB_TERMS"), "eval": ("HF_TOKEN",)}
+TRAIN_SCRIPT = REPO_ROOT / "train" / "train_qlora.py"
 FILLED = {"REPO_URL": "https://example.com/someone/repo.git", "HUB_REPO": "someone/gc-test"}
 # What each notebook's model run looks like.
 MODEL_RUN = {"train": "train/train_qlora.py", "eval": "eval.py"}
@@ -143,22 +157,133 @@ def test_owner_settings_are_marked_in_the_parameters_cell(
         assert any("OWNER:" in line for line in block), f"{name} has no '# OWNER:' marker"
 
 
-def test_the_committed_placeholders_contain_owner(notebook: dict[str, Any]) -> None:
-    params = source(parameters_cell(notebook))
-    for name in PLACEHOLDERS:
-        match = re.search(rf"^{name}\s*=\s*['\"]([^'\"]*)['\"]", params, re.MULTILINE)
-        assert match and "OWNER" in match.group(1), f"{name} is a placeholder until set"
-
-
-@pytest.mark.parametrize("unset", PLACEHOLDERS)
-def test_an_unset_placeholder_fails_fast_naming_it(
-    kind: str, notebook: dict[str, Any], unset: str
+@pytest.mark.parametrize("name", sorted(REAL_VALUES))
+def test_repo_url_and_hub_repo_are_the_committed_real_values(
+    notebook: dict[str, Any], name: str
 ) -> None:
-    values = {k: v for k, v in _filled(kind).items() if k != unset}
-    run = run_notebook(notebook, params=values, stop_at=lambda cmd: True)
-    assert run.error is not None, "the notebook must stop while a placeholder is set"
-    assert unset in str(run.error), f"the error must name {unset}: {run.error!r}"
-    assert run.commands == [], "fail before any shell command (no clone, no install)"
+    """D-081/D-082 replace the D-079 OWNER placeholders for these two."""
+    params = source(parameters_cell(notebook))
+    match = re.search(rf"^{name}\s*=\s*['\"]([^'\"]*)['\"]", params, re.MULTILINE)
+    assert match, f"{name} is not set in the parameters cell"
+    assert match.group(1) == REAL_VALUES[name]
+    assert "OWNER" not in match.group(1)
+
+
+def test_the_committed_notebook_reaches_the_model_run_unedited(
+    kind: str, notebook: dict[str, Any]
+) -> None:
+    run = run_notebook(notebook, params={}, stop_at=lambda cmd: MODEL_RUN[kind] in cmd)
+    assert run.error is None, f"the committed notebook failed: {run.error!r}"
+    assert run.stopped_at is not None, f"the notebook never runs {MODEL_RUN[kind]}"
+    assert any("git clone" in c and REAL_VALUES["REPO_URL"] in c for c in run.commands)
+    assert REAL_VALUES["HUB_REPO"] in run.stopped_at
+
+
+# ---------------------------------------------------------------------------------------------
+# Kaggle secrets (D-082): read from Kaggle Secrets, fail clearly when missing
+# ---------------------------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("missing", [None, ""], ids=["not-attached", "empty"])
+def test_a_missing_secret_fails_fast_naming_it(
+    kind: str, notebook: dict[str, Any], missing: str | None
+) -> None:
+    for secret in REQUIRED_SECRETS[kind]:
+        run = run_notebook(
+            notebook, params=_filled(kind), stop_at=lambda cmd: True, secrets={secret: missing}
+        )
+        assert run.error is not None, f"the notebook must stop without the {secret} secret"
+        message = str(run.error)
+        assert secret in message, f"the error must name {secret}: {run.error!r}"
+        assert re.search(r"secret", message, re.IGNORECASE), "say it is a Kaggle secret"
+        assert "Unexpected response from the service" not in message, (
+            "replace Kaggle's raw error with a clear message"
+        )
+        assert run.commands == [], "fail before any shell command (no clone, no install)"
+
+
+def test_secrets_come_from_kaggle_secrets(kind: str, notebook: dict[str, Any]) -> None:
+    code = _code(notebook)
+    assert "UserSecretsClient" in code
+    for secret in REQUIRED_SECRETS[kind]:
+        assert re.search(rf"get_secret\(\s*['\"]{secret}['\"]\s*\)", code), secret
+
+
+def test_the_secret_values_reach_the_model_run(kind: str, notebook: dict[str, Any]) -> None:
+    run = run_notebook(
+        notebook,
+        params=_filled(kind),
+        stop_at=lambda cmd: MODEL_RUN[kind] in cmd,
+        secrets={"HF_TOKEN": "hf-test-value"},
+    )
+    assert run.error is None, f"the filled-in notebook failed: {run.error!r}"
+    assert run.stop_env.get("HF_TOKEN") == "hf-test-value"
+    if kind == "train":
+        assert run.stop_env.get("SCRUB_TERMS_PATH"), "the push's scrub check gets the terms"
+
+
+# ---------------------------------------------------------------------------------------------
+# The Hub repo stays private (D-082)
+# ---------------------------------------------------------------------------------------------
+
+
+class _FakeHfApi:
+    calls: list[tuple[str, dict[str, Any]]] = []
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        pass
+
+    def create_repo(self, repo_id: str, **kwargs: Any) -> Any:
+        _FakeHfApi.calls.append(("create_repo", {"repo_id": repo_id, **kwargs}))
+        return SimpleNamespace(repo_id=repo_id)
+
+    def upload_folder(self, **kwargs: Any) -> Any:
+        _FakeHfApi.calls.append(("upload_folder", dict(kwargs)))
+        return SimpleNamespace(oid="c" * 40)
+
+    def __getattr__(self, name: str) -> Any:
+        def record(*args: Any, **kwargs: Any) -> Any:
+            _FakeHfApi.calls.append((name, dict(kwargs)))
+
+        return record
+
+
+def test_the_hub_push_creates_a_private_repo(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    import huggingface_hub
+    from train_data import load_train_module
+
+    train = load_train_module()
+    out = tmp_path / "out"
+    out.mkdir()
+    for name in (*train.ADAPTER_FILES, train.CARD_FILE, train.LOG_FILE):
+        (out / name).write_text("{}\n", encoding="utf-8")
+    monkeypatch.setattr(_FakeHfApi, "calls", [])
+    monkeypatch.setattr(huggingface_hub, "HfApi", _FakeHfApi)
+    log = {"git_sha": "0" * 40, "config_sha256": "1" * 64, "dataset_sha256": "2" * 64, "seed": 0}
+
+    train.push_to_hub(out, REAL_VALUES["HUB_REPO"], "hf-test-value", ["zzqscrubterm"], log)
+
+    creates = [kw for name, kw in _FakeHfApi.calls if name == "create_repo"]
+    assert creates, "the push creates the repo before uploading"
+    assert all(kw.get("private") is True for kw in creates), creates
+    names = [name for name, _ in _FakeHfApi.calls]
+    assert names.index("create_repo") < names.index("upload_folder")
+    for name, kw in _FakeHfApi.calls:
+        assert name not in {"update_repo_visibility", "update_repo_settings"}, name
+        assert kw.get("private") is not False, (name, kw)
+
+
+def test_nothing_makes_the_hub_repo_public() -> None:
+    public = re.compile(
+        r"private\s*=\s*False|update_repo_visibility|update_repo_settings|--public\b|"
+        r"visibility\s*=\s*['\"]public['\"]"
+    )
+    texts = {path.name: _code(_load(path)) for path in NOTEBOOKS.values()}
+    texts[TRAIN_SCRIPT.name] = TRAIN_SCRIPT.read_text(encoding="utf-8")
+    for name, text in texts.items():
+        assert not public.search(text), f"{name} must not make the Hub repo public"
 
 
 def test_the_filled_notebook_reaches_the_model_run(kind: str, notebook: dict[str, Any]) -> None:
