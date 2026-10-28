@@ -476,6 +476,10 @@ def test_an_all_error_cell_has_no_abstain_metrics() -> None:
 # ---------------------------------------------------------------------------------------------
 
 SCORE_MARKERS = ("results.json", "spec_adherence", "Spec-adherence")
+# Scripts that read per-row Spec-adherence verdicts without reporting aggregate scores.
+# judge_agreement.py compares one judge's verdicts with another's (agreement, kappa); it never
+# aggregates subject-model scores or writes results.json (D-096).
+NOT_SCORE_REPORTS = {"judge_agreement.py"}
 
 
 def _calls(tree: ast.AST, name: str) -> bool:
@@ -517,6 +521,9 @@ def test_every_script_that_reports_scores_calls_aggregate_scores() -> None:
         if delegate is not None:
             target, target_source = delegate, delegate.read_text(encoding="utf-8")
             tree = ast.parse(target_source)
+        if script.name in NOT_SCORE_REPORTS:
+            assert "results.json" not in target_source, f"{script.name} writes results.json"
+            continue
         if any(marker in target_source for marker in SCORE_MARKERS):
             reporting.append(script.name)
             assert _calls(tree, "aggregate_scores"), (

@@ -32,6 +32,9 @@ ALLOWED_HOSTS = {
     "docs.astral.sh",
     "api.openai.com",
     "api.anthropic.com",
+    # The xAI judge backend's API host and the docs host cited for its prices (D-095).
+    "api.x.ai",
+    "docs.x.ai",
     "example.com",
     "example.invalid",
 }
