@@ -3,9 +3,10 @@
 
     uv run scripts/repin_notebooks.py --commit SHA [--notebook PATH ...]
 
-A notebook clones the public repo and checks out ``REPO_COMMIT``, so the pin must be a commit that
-reaches GitHub ``main``. Merges to ``main`` are fast-forward only, so the script accepts only a
-full 40-hex SHA that is reachable from this repo's ``HEAD``. Pushing it is a separate step.
+A notebook clones the repo from the ``REPO_URL`` secret and checks out ``REPO_COMMIT``, so the pin
+must be a commit that reaches the canonical host's ``main``. Merges to ``main`` are fast-forward
+only, so the script accepts only a full 40-hex SHA that is reachable from this repo's ``HEAD``.
+Pushing it is a separate step.
 
 ``--notebook`` (repeatable) defaults to both Kaggle notebooks. Only the ``REPO_COMMIT = "..."``
 assignment changes; every other byte of each file stays the same. Every notebook is checked before
