@@ -241,10 +241,11 @@ def _section(text: str, heading: re.Pattern[str]) -> str:
 
 
 def _paragraphs(text: str) -> list[str]:
-    """Blank-line paragraphs, with each top-level list item split out as its own paragraph."""
+    """Blank-line paragraphs, with each top-level list item split out as its own paragraph and
+    line wraps collapsed to single spaces."""
     out: list[str] = []
     for block in re.split(r"\n\s*\n", text):
-        out.extend(p for p in re.split(r"\n(?=- )", block) if p.strip())
+        out.extend(" ".join(p.split()) for p in re.split(r"\n(?=- )", block) if p.strip())
     return out
 
 
