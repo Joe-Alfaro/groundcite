@@ -2,22 +2,23 @@
 # log entry: every result records the ids and the effective decoding parameters it ran with.
 
 [judge]
-# D-080: Claude Opus replaced OpenAI gpt-5.5 (M1 and the H1 pilot were scored by gpt-5.5; compare
-# them only through re-judged runs, scripts/rejudge.py). A complete pinned id, never a -latest
-# alias (Anthropic dates no snapshot of it). It shares the teacher's family: a self-preference
-# risk the R29 hand-label audit checks.
-model = "anthropic:claude-opus-5-5"
+# D-107: OpenAI gpt-5.5 stays the judge (the D-019 pin), replacing the D-080 Opus switch. It
+# decodes with the fixed [decoding.openai] table, the same effective parameters that scored M1
+# and the H1 pilot, so those runs stay directly comparable. A different family from the teacher.
+# Dataset v1 was filtered by Claude Opus; its manifest records those pins.
+model = "openai:gpt-5.5-2026-04-23"
 
 [judge_candidates]
-# The D-096 judge-agreement check (scripts/judge_agreement.py): each candidate re-scores the
-# committed sample, compared with the reference judge that scored M1 and the pilot. Grok becomes
-# the judge only if it passes the D-096 bar (D-095); Sonnet and Haiku are reference points.
+# The D-096 judge-agreement check (scripts/judge_agreement.py): each candidate re-scored the
+# committed sample, compared with the reference judge that scored M1 and the pilot. All three
+# failed the bar (results/judge_agreement); none is used as a judge (D-107).
 models = [
     "xai:grok-4.20-0309-reasoning",
     "anthropic:claude-sonnet-5-5",
     "anthropic:claude-haiku-5-5",
 ]
 reference = "openai:gpt-5.5-2026-04-23"
+status = { "xai:grok-4.20-0309-reasoning" = "rejected", "anthropic:claude-sonnet-5-5" = "rejected", "anthropic:claude-haiku-5-5" = "rejected" }
 
 [xai]
 # Which xAI API the xai: backend calls: "responses" (xAI's recommended API) or "chat" (Chat
