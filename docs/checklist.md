@@ -69,7 +69,7 @@ checkpoint are behind or waiting on that run. The reasons are in the
 | R29 | 20 hand-labeled replies, judge agrees on ≥18 | `scripts/judge_audit.py`, `tests/test_judge_audit.py`; labeling waits for tuned-model replies. The agreement study's blind adjudication (gpt-5.5 matched the label on 17 of 19 disputed replies) is related evidence, not this audit | partial |
 | R30 | Invented-ID rate, abstain precision and recall; 20–30% abstain in training mix | `src/groundcite/report.py`, `tests/test_report.py`; `data/datasets/v1/manifest.json` (abstain share 28.1%) | done |
 | R31 | T4 config (`fp16=True`), `max_seq_length` logged, GPU-hour budget table | `train/config.toml`, `train/train_qlora.py`, `tests/test_train_qlora.py`, `tests/test_train_device.py`, `tests/test_gpu_budget.py`; [GPU-hour budget](#r31-gpu-hour-budget) below (Used is 0 so far: no Kaggle run recorded yet) | done |
-| R32 | Milestone checklist | `docs/checklist.md` | done |
+| R32 | Milestone checklist | `docs/checklist.md`; deliverable-by-deliverable view in `docs/milestone1-checklist.md` | done |
 
 ## Milestone 2 (Sun Nov 1, noon CT)
 
@@ -93,7 +93,7 @@ checkpoint are behind or waiting on that run. The reasons are in the
 | R17 | Final write-up | `docs/writeup.md` (planned) | not started |
 | R18 | 3–5 minute demo video, linked from README | link in `README.md` (planned) | not started |
 | R18 | Live prompt from someone outside the project, run in one uncut take | video (planned) | owner-gated |
-| G12 | Ablation table flags the judge-family cell; the eval judge (gpt-5.5) is a different family from the teacher, so M1 and the pilot need no re-judge | flag in `src/groundcite/ablation.py`, `tests/test_ablation.py`; judge pin in `config/models.toml`, `tests/test_gpt55_judge.py`; agreement study in `results/judge_agreement/` | done |
+| G12 | Judge bias: the eval judge (gpt-5.5) is a different family from the teacher, so M1 and the pilot need no re-judge; the ablation table flags the cells that share the judge's family; dataset v1's Claude Opus filter judge is disclosed and pinned in its manifest; the three cheaper agreement candidates failed and are marked rejected | flag in `src/groundcite/ablation.py`, `tests/test_ablation.py`; judge pin and `[judge_candidates]` status in `config/models.toml`, `tests/test_gpt55_judge.py`; `data/datasets/v1/manifest.json` (`judge_model`); `results/judge_agreement/`; `docs/ai-usage.md` | done |
 | R30 | Tuned invented-ID rate ≤ base and ≤2% on own and held-out sets | `results/base_vs_tuned/`, `results/curve/` (planned) | not started |
 | — | Results tables: ablation; base vs tuned on own and held-out sets | `results/` (planned) and `docs/writeup.md` (planned) | not started |
 | — | Architecture document | `ARCHITECTURE.md` | done |

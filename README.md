@@ -35,7 +35,10 @@ agreement study and dataset v1 (448 examples) are done. Training and base and tu
 run on a Kaggle GPU; the notebooks are ready, and the first QLoRA run, the base-vs-tuned table,
 the v1 → v2 data fix and the data-efficiency curve are still to come.
 
+- Every Milestone 1 deliverable, its status and the file or command behind it:
+  [`docs/milestone1-checklist.md`](docs/milestone1-checklist.md).
 - Every item, its artifact and its status: [`docs/checklist.md`](docs/checklist.md).
+- Which AI models were used for what, and the spend controls: [`docs/ai-usage.md`](docs/ai-usage.md).
 - What is done, what is behind and why, and the next steps:
   [`docs/writeup.md`](docs/writeup.md#status-at-milestone-1).
 
