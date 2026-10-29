@@ -1,13 +1,87 @@
 # Write-up (draft)
 
-> **Status: draft.** Sections 1, 2, 3, 5 and 6 (method) describe what is built or designed in this
-> repository. Section 4 reports the real prompt-ceiling ablation and section 4a the
-> long-conversation pilot. Every other number that needs a real run is marked **Pending**, along
-> with what will go there. Nothing in the pending sections should be read as a result.
+> **Status: draft.** The status section below summarizes where the project stands at Milestone 1.
+> Sections 1, 2, 3, 5 and 6 (method) describe what is built or designed in this repository.
+> Section 4 reports the real prompt-ceiling ablation, section 4a the long-conversation pilot,
+> section 6 dataset v1 and section 10 the judge agreement study. Every other number that needs a
+> real run is marked **Pending**, along with what will go there. Nothing in the pending sections
+> should be read as a result.
 
 Requirements: [`docs/requirements/small-model-finetune.md`](requirements/small-model-finetune.md).
 Architecture: [`ARCHITECTURE.md`](../ARCHITECTURE.md). Status of every item:
 [`docs/checklist.md`](checklist.md).
+
+## Status at Milestone 1
+
+Thursday, October 29. Every item, with its artifact path, is in
+[`docs/checklist.md`](checklist.md).
+
+**The headline comparison.** The claim this project tests is that fine-tuning makes Qwen3-1.7B
+hold the contract better than the same base model does with the best prompt we found. Tuned 1.7B
+against prompted base 1.7B is the headline. The prompted frontier models are reported separately
+as a ceiling. That ceiling is high: the ablation found no plateau, and this write-up says so
+plainly instead of treating the frontier numbers as something the small model has to beat.
+
+**Done.**
+
+- **Spec and rubric.** `SPEC.md` gives the contract, the citation format, the reliability bar
+  (Spec-adherence ≥ 0.90 and Robustness ≥ 4.3) and the P1–P8 rubric. The judge rubric, the
+  teacher prompt and the filter all load it by path.
+- **Eval harness.** One command scores base and tuned rows on any eval set with the pinned judge,
+  writes results, transcripts and pins, and has mock backends and `--dry-run` for key-free runs.
+  It can also generate on a GPU with no keys and judge the stored replies elsewhere. It was merged
+  before any training code.
+- **Prompt-ceiling ablation (section 4).** Two frontier models from different vendors, three
+  prompt strategies, 40 scenarios each. Three cells meet the bar; the best is Claude Opus with the
+  `structured` prompt at 0.97 [0.93, 1.00] / 4.88. Result: **no plateau**.
+- **Spec hardening pilot (section 4a).** Because of that result, the spec was hardened for long
+  conversations: 30 scripted 8–12 turn conversations with snippets added and withdrawn and pressure
+  to guess. The best M1 cell passed 0.80 [0.63, 0.93] of conversations and 0.94 of turns, with no
+  late-turn drift. That misses the bar at the conversation level, but not clearly enough to justify
+  rebuilding the sets around it, so the project went on to training.
+- **Judge agreement study (section 10).** Three cheaper judges were measured against the pinned
+  judge with a pre-registered bar and blind adjudication. All three failed, and the pinned judge
+  (`gpt-5.5`) stays.
+- **Dataset v1 (section 6).** 448 filtered examples from 960 teacher candidates (46.7% kept), 28.1%
+  abstain, with a manifest, a filter report, a leakage report and a quality note from reading the
+  data.
+- **Training and smoke code.** The QLoRA script, its frozen config, the Kaggle training and eval
+  notebooks and the smoke loop are written and tested. The local smoke mode is a CPU-only check on
+  a tiny model; the real-model smoke runs on Kaggle.
+
+**Behind, and why.**
+
+- **No tuned model yet, so no base-vs-tuned numbers.** Three things used up the time that was
+  planned for training before this milestone:
+  1. *The prompt-ceiling result needed spec hardening first.* The plan (section 1) was to harden
+     the spec, not train, if a prompted frontier model already met the bar. It did, so the
+     long-conversation pilot came first.
+  2. *The judge provider changed twice.* When the pinned judge's API credit ran out, the judge was
+     switched to Claude Opus (used for the dataset v1 filter), then a cross-family replacement was
+     tried. An agreement study showed none of the candidates was good enough, so the project
+     returned to the original judge. Judged work paused while this was settled. The filter judge
+     differing from the eval judge is disclosed in section 11.
+  3. *Local inference limits moved every model run to Kaggle.* A local smoke run on the shared
+     development machine took over 6 minutes and about 11 GB of its 16 GB of memory. Since then,
+     only a capped CPU-only check runs locally. Training, the real-model smoke run and base and
+     tuned generation all run in Kaggle notebooks, which the owner runs.
+- **The v2 data fix needs eval evidence first.** The v1 → v2 change has to target a failure mode
+  measured in tuned-model transcripts. Weaknesses noted while reading v1 (`data/datasets/v1/NOTES.md`)
+  are candidates, not a diagnosis.
+- **The data-efficiency curve points** need their own Kaggle training runs, after v1.
+- **The draft Hub checkpoint** is pushed by the training notebook, so it waits on the same run.
+
+**Next steps (targets, Central Time).**
+
+1. Run the training notebook on dataset v1 (smoke mode first) and record the GPU hours. Owner's
+   Kaggle run; target Fri Oct 30. This also produces the draft Hub checkpoint and its commit SHA.
+2. Generate base and tuned replies on `heldout` first, then `eval_own`, in the Kaggle eval
+   notebook, and judge them locally with `gpt-5.5`. Target: within a day of step 1, Sat Oct 31 at
+   the latest. This fills section 7 and the hand audit in section 10.
+3. Diagnose one v1 failure mode from those transcripts, build v2 by changing data only, train it
+   with the same config and re-evaluate. Target: Sat Oct 31 to Sun Nov 1.
+4. Train at least two nested data-efficiency points, then the rest of the curve for Milestone 2
+   (Sun Nov 1, noon).
 
 ## 1. Behavior thesis
 
@@ -347,15 +421,17 @@ blind spot will pass. The judge validity audit (section 10) is the check on that
    SHA-256), a rejections file and a filter report.
 5. The leakage check runs against every committed dataset in the quality gate.
 
-The pipeline is merged to `main`. It has not been run on the real teacher yet.
+The pipeline is merged to `main` and has been run once, to build dataset v1.
 
-**Pending:**
-
-- Dataset v1 size (target ≥ 300 kept examples) and its category and abstain mix.
-- Candidates, kept and the kept rate (R4 requires 20–95%). With k = 2 and one kept example per
-  scenario, the kept rate can't exceed 50%, so the rejections by reason are the more useful
-  signal.
-- Rejections by reason, from the filter report.
+**Dataset v1** (`data/datasets/v1/`). 960 teacher candidates (k = 2 over 480 training scenarios)
+gave 448 kept examples (46.7%), one per scenario for 448 of the 480 scenarios. That meets the R6
+floor of 300. The abstain share is 28.1%. By category: clean 67, distractor 86, multi_symptom 67,
+multi_turn 65, no_snippet 96, pressure 67. Rejections: 102 at the SOFT checks and 410 not selected
+(the other candidate for a scenario that already had one kept). No candidate failed a HARD check
+or the judge, so the judge added no signal beyond the deterministic filter. All 9 `soft_check`
+rejections that were read by hand were false positives of the lexical screen, so it is over-strict. The teacher and
+the filter judge were both Claude Opus (section 11). `NOTES.md` lists what a read of the data
+found, including weaknesses that are candidates for v2.
 
 ## 7. Base vs tuned
 

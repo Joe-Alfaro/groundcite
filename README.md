@@ -27,6 +27,18 @@ transformers and peft included) on first run, and the model is downloaded from t
   sampling is not fully deterministic. The rerun tolerance is ±0.03 Spec-adherence on the same
   pins (eval code, model revision, judge, rubric and eval set, all stamped in `results.json`).
 
+## Project status
+
+Milestone 1 (Oct 29): the spec, the eval harness, the prompt-ceiling ablation (no plateau: a
+prompted frontier model already meets the bar), a long-conversation hardening pilot, a judge
+agreement study and dataset v1 (448 examples) are done. Training and base and tuned generation
+run on a Kaggle GPU; the notebooks are ready, and the first QLoRA run, the base-vs-tuned table,
+the v1 → v2 data fix and the data-efficiency curve are still to come.
+
+- Every item, its artifact and its status: [`docs/checklist.md`](docs/checklist.md).
+- What is done, what is behind and why, and the next steps:
+  [`docs/writeup.md`](docs/writeup.md#status-at-milestone-1).
+
 ## Reproduce
 
 One-command eval on the own eval set:
