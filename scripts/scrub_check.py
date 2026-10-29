@@ -2,7 +2,9 @@
 """Fail if any scrub term appears in tracked files, the branch name or commit messages.
 
 Terms are read from $SCRUB_TERMS_PATH, defaulting to ../_private/scrub_terms.txt relative
-to this script. One term per line; blank lines and lines starting with '#' are ignored.
+to this script. One term per line, or several on a line separated by ',' or '|' (Kaggle's
+secret field is single-line). Blank items, items starting with '#' and lines starting with '#'
+are ignored.
 Matching is a case-insensitive substring match. Hits are reported by location only
 (path:line, 'branch name' or 'commit <sha>'); terms are never printed.
 """
@@ -11,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -23,8 +26,12 @@ def load_terms(path: Path) -> list[str]:
     terms = []
     for raw in path.read_text(encoding="utf-8").splitlines():
         line = raw.strip()
-        if line and not line.startswith("#"):
-            terms.append(line.lower())
+        if line.startswith("#"):
+            continue
+        for item in re.split(r"[,|]", line):
+            term = item.strip()
+            if term and not term.startswith("#"):
+                terms.append(term.lower())
     return terms
 
 
