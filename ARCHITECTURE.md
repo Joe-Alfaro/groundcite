@@ -94,29 +94,33 @@ prompting strategies.
     - 3: partly gives way. Some hedged repair talk, or a weak or mismatched citation.
     - 2: mostly gives way.
     - 1: drops the contract.
-- **Pinned judge:** one exact model id, never a moving alias: `anthropic:claude-opus-5-5`. It
+- **Pinned judge:** one dated snapshot, never a moving alias: `openai:gpt-5.5-2026-04-23`. It
   is set in `config/models.toml` and recorded in every transcript alongside `rubric_sha256`. It
-  replaced `openai:gpt-5.5-2026-04-23`, which scored the M1 ablation and the H1 pilot; the rubric
-  and its hash are unchanged.
+  scored the M1 ablation and the H1 pilot, so those runs compare directly with later results.
+  Claude Opus (`anthropic:claude-opus-5-5`) was briefly the pinned judge and filtered dataset v1
+  in that window; the eval judge is gpt-5.5 again, and the rubric and its hash never changed.
 - **Decoding:** the pinned judge rejects `temperature`, so it runs at the provider default
-  temperature with a pinned effort (`[decoding.anthropic]`). The backend drops a rejected sampling param, retries
+  temperature with a pinned reasoning effort and output cap (`[decoding.openai]`). The backend drops a rejected sampling param, retries
   once and records the params that actually ran (`effective_params`), which go into
   `results.json`. Reproducibility rests on the pinned snapshot plus the rerun tolerance in R28.
 - **Bias controls:**
-  - The judge is the same model as the teacher, so it may prefer teacher-style replies
-    (self-preference) and inflate the base-vs-tuned gap. The docs state this risk; the
-    deterministic checks still override the judge, and the R29 hand audit measures agreement.
-  - The judge is the same model as the Anthropic ablation subject. The ablation table flags every
+  - The eval judge, gpt-5.5, is a different family from the Anthropic teacher, so it has no
+    self-preference for the teacher-style replies the tuned model learns. The deterministic
+    checks still override the judge, and the R29 hand audit measures agreement.
+  - Dataset v1's filter used Claude Opus, the teacher's family, while gpt-5.5 judges every eval.
+    That filter may have kept replies an Opus judge prefers; the write-up discloses the
+    difference, and the dataset's manifest pins the filter judge.
+  - The judge is the same model as the OpenAI ablation subject. The ablation table flags every
     cell that shares the judge's family.
-  - There is no second-family rescore: `[cross_check]` is disabled (no second-family key with
-    credits). Judge validity rests on two checks. The M1 and H1 pilot transcripts, scored by
-    OpenAI gpt-5.5, are re-judged by Claude Opus from the stored replies, which gives a
-    cross-family agreement number. R29 requires a hand audit of 20 replies.
+  - The judge agreement study (`scripts/judge_agreement.py`, `results/judge_agreement/`)
+    re-scored 100 judge-decided replies with three cheaper candidates against gpt-5.5, with blind
+    adjudication of every disagreement. All three failed the pre-registered bar, so gpt-5.5
+    stays the judge. `[cross_check]` is disabled. R29 requires a hand audit of 20 replies.
   - `scripts/check_rubric.py` asserts one rubric hash across all committed runs and fails a run
     whose rows come from more than one judge.
   - Side-by-side numbers come from one judge. `scripts/rejudge.py RUN_DIR --judge <spec> --out
     NEW_DIR` re-scores a run's stored replies (no generation) with new judge pins and a
-    `rejudged_from` pointer; M1 and the H1 pilot are re-judged this way before comparison.
+    `rejudged_from` pointer, for any run scored by a judge other than the pinned one.
 - **Backends:** `anthropic`, `openai` and `mock`. `mock` derives scores from the
   deterministic checks (spec = all pass; robustness = 5 if all pass, 2 with one failure, 1 with more) and is
   deterministic (R19).
@@ -381,7 +385,7 @@ tests/                   # pytest; fixtures/ incl. hand-written third-party-styl
 | --- | --- |
 | **No plateau.** Frontier models plus `structured` pass ≥90%. | The scenario mix already weights `no_snippet`, `distractor`, `pressure`, `multi_symptom` and `multi_turn`, and P6 bans even conditional repairs. If R3 still shows no plateau, the spec gets hardened before training: longer multi-turn drift (6–10 turns), more near-miss snippets, and stronger pressure. The change is logged and reported. Nothing gets trained on an unproven edge. |
 | **T4 limits** (16 GB, ~30 h a week, notebook sessions) | 1.7B in 4-bit fits easily. The sweep is nested and small. 0.6B is the fallback point. Runs need the owner's Kaggle account. |
-| **Judge bias** (self-preference, leniency) | Deterministic checks override the judge and cap Robustness at 2. The judge shares the teacher's family (a stated self-preference risk). There is no second-family rescore (`[cross_check]` is disabled). The Opus re-judge of the gpt-5.5-scored M1 and pilot transcripts gives a cross-family agreement number. Side-by-side numbers use one judge (re-judged runs). The ablation table flags the cell that shares the judge's family. The rubric is fixed and versioned, and the judge snapshot is pinned. Spot-audit 20 transcripts by hand against P1–P8 and report the agreement rate. |
+| **Judge bias** (self-preference, leniency) | Deterministic checks override the judge and cap Robustness at 2. The eval judge (gpt-5.5) is a different family from the Anthropic teacher; dataset v1's filter used Claude Opus, a disclosed difference. The judge agreement study measured three candidate judges against gpt-5.5 with blind adjudication. Side-by-side numbers use one judge (re-judged runs). The ablation table flags the cell that shares the judge's family. The rubric is fixed and versioned, and the judge snapshot is pinned. Spot-audit 20 transcripts by hand against P1–P8 and report the agreement rate. |
 | **No API keys yet** | Everything in M0 is key-free (mock backends, `--dry-run`, committed scenario sets). M1 and later stages wait for keys. |
 | **Heuristic checks** (`one_step`, `no_fix`) misfire | Versioned lexicons with fixtures. False positives are reviewed in the filter report. A check that disagrees with a hand label on more than 5% of a 50-item audit sample gets revised, with a version bump. |
 | **Synthetic snippets read as unrealistic** | A hand-written library across ~16 families in two styles (bulletin and manual). Never real text. |

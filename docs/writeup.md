@@ -392,11 +392,53 @@ largest-N interval. A paragraph will justify the log spacing.
 
 - **Hand audit:** 20 replies labeled by hand against P1–P8. The target is agreement with the judge
   on at least 18. The section will list the disagreements and what caused them.
-- **Cross-family agreement:** no second-family judge is available for new runs, so there is no
-  second-family rescore. Instead, the M1 and pilot transcripts (543 replies) scored by gpt-5.5 are
-  re-judged by Claude Opus, and the section reports how often the two judges agree.
 - **Rerun delta:** re-running the eval on the same pins should reproduce Spec-adherence within
   ±0.03. The observed delta goes here.
+
+### Judge agreement study
+
+The judge is `openai:gpt-5.5-2026-04-23`. When its API credit ran out, three cheaper judges were
+measured against it to see whether one could replace it: `xai:grok-4.20-0309-reasoning` (the
+intended replacement), `anthropic:claude-sonnet-5-5` and `anthropic:claude-haiku-5-5`.
+
+**Method.** The sample is 100 stored replies that gpt-5.5 had already scored: 60 from M1 (10 per
+model × strategy cell, every category) and 40 from the H1 pilot (early and late turns, cite and
+abstain, every family). It was drawn with seed 96 and committed before any call
+(`data/judge_agreement/sample.jsonl` and its manifest). Every row is judge-decided: no HARD check
+fails on it. A HARD-check failure forces Spec-adherence to 0 whatever the judge says, so forced
+rows would only inflate agreement. Each candidate re-scored the same replies with the rubric
+unchanged (`scripts/judge_agreement.py`). The bar was fixed before the run: Spec-adherence
+agreement with gpt-5.5 of at least 90%, Cohen's kappa of at least 0.75, and at least 50% of the
+adjudicated disagreements won.
+
+**Blind adjudication.** The 19 replies on which any candidate disagreed with gpt-5.5 went to a
+fresh agent with the snippets, the gold and the reply, plus the verdicts in shuffled order with no
+judge or model names. It labeled each reply against P1–P8. A judge wins an item when its verdict
+matches that label.
+
+| Judge (vs gpt-5.5, n = 100) | Agreement | Kappa | Disagreements | Adjudicated wins | Spend (USD) | Bar |
+| --- | --- | --- | --- | --- | --- | --- |
+| grok-4.20-0309-reasoning | 0.87 | 0.38 | 13 | 0 of 13 | 0.55 | fail |
+| claude-sonnet-5-5 | 0.93 | 0.42 | 7 | 1 of 7 | 0.85 | fail |
+| claude-haiku-5-5 | 0.94 | 0.47 | 6 | 1 of 6 | 0.06 | fail |
+| Always-pass baseline | 0.94 | 0.00 | — | — | — | fail |
+
+Grok disagreed mostly in one direction: on 12 of its 13 disagreements gpt-5.5 passed the reply and
+Grok failed it, and the adjudicator sided with gpt-5.5 every time. Across all 19 adjudicated
+replies, gpt-5.5 matched the blind label on 17. The always-pass baseline shows why kappa is part
+of the bar: with so few failures in the sample, a judge that passes everything agrees on 94% of
+rows.
+
+**Conclusion.** Every candidate failed the pre-registered bar, so Grok was rejected and gpt-5.5
+stays the judge. Sonnet and Haiku were reference points only, and they also share the teacher's
+family. Because gpt-5.5 scored M1 and the pilot, those numbers need no re-judge. Full outputs, the
+blind items and the labels are in `results/judge_agreement/`.
+
+**Limits.** Only 6 of the 100 judge-decided replies are reference fails (the unforced rows hold
+very few failures), so kappa is fragile: one more disagreement on a fail moves it by about 0.1,
+and no candidate could realistically reach the kappa bar. The adjudication is one agent's labels on
+19 items, and the study measures agreement with gpt-5.5, not correctness in general. It covers
+replies from M1 and the pilot, not tuned-model replies.
 
 ## 11. Limitations
 
@@ -421,12 +463,12 @@ largest-N interval. A paragraph will justify the log spacing.
 - **The judge is a model.** It is pinned, it sees the gold and the deterministic checks can
   override it, but it can still be wrong, and it shares a vendor with one ablation subject. The
   audit in section 10 measures how often, on a small sample.
-- **The judge shares the teacher's family.** The judge is Claude Opus (`claude-opus-5-5`), the
-  same model family as the teacher that wrote the training replies, so self-preference bias is a
-  risk: it may favor replies in its own style, which the tuned model learned to imitate. The
-  ablation and the long-conversation pilot were first scored by `gpt-5.5`; every comparison
-  with them uses runs re-judged by Claude Opus from the stored replies, and the gpt-5.5 vs Opus
-  agreement on those replies is the only cross-family check available.
+- **The eval judge and the filter judge differ.** Every eval is judged by `gpt-5.5`, a different
+  family from the Anthropic teacher, so the eval judge has no self-preference for the teacher's
+  style. Dataset v1's filter, though, used Claude Opus (`claude-opus-5-5`) while it was briefly
+  the pinned judge. Opus shares the teacher's family, so the filter may have kept replies an Opus
+  judge prefers (self-preference at the filter, not at the eval). Its manifest records that pin.
+  This is a disclosed difference; dataset v1 was not re-filtered.
 - **Lexical checks are approximate.** `one_step` and `no_fix` use word lists. They can flag a
   correct reply or miss a disguised repair, which is why they are SOFT.
 - **API decoding is not fully deterministic.** Local models decode greedily, but the pinned API

@@ -11,17 +11,16 @@ uv run eval.py --model <hf-repo-id> --eval-set <path>
 One command: [uv](https://docs.astral.sh/uv/) installs the pinned dependencies (torch,
 transformers and peft included) on first run, and the model is downloaded from the Hub.
 
-- **Env vars.** `ANTHROPIC_API_KEY` is required for the pinned judge, `anthropic:claude-opus-5-5`.
-  `OPENAI_API_KEY` is needed only for OpenAI subjects (the prompt-ceiling ablation). `HF_TOKEN`
-  is needed for gated or private repos. Keys are read from the environment or from `.env` at the
+- **Env vars.** `OPENAI_API_KEY` is required for the pinned judge, `openai:gpt-5.5-2026-04-23`.
+  `ANTHROPIC_API_KEY` is needed only for Anthropic subjects and the teacher. `HF_TOKEN` is needed
+  for gated or private repos. Keys are read from the environment or from `.env` at the
   repo root (override the path with `GROUNDCITE_ENV_FILE`). Without keys, `--judge mock` and
   `--dry-run` still work.
-- **Judge.** The judge is Claude Opus (`anthropic:claude-opus-5-5`), the same family as the
-  teacher that wrote the training replies, so self-preference bias is a risk; the hand-label audit
-  in the write-up measures it. The prompt-ceiling ablation (M1) and the long-conversation pilot
-  were first scored by `openai:gpt-5.5-2026-04-23`. Any table that sets them beside newer
-  results uses runs re-judged with the current judge (`scripts/rejudge.py`), since a table never
-  mixes judges.
+- **Judge.** The eval judge is `openai:gpt-5.5-2026-04-23`, a different family from the
+  Anthropic teacher, so it has no self-preference for the teacher's style. It also scored M1 and
+  the pilot, which compare directly with later results. Dataset v1's filter used Claude Opus
+  (`anthropic:claude-opus-5-5`) while it was briefly the judge: a disclosed difference from the
+  gpt-5.5 eval judge. Cheaper judges failed the agreement study (write-up, section 10).
 - **Hardware.** No GPU is required. A 1.7B model runs on an Apple silicon Mac (MPS), an NVIDIA
   GPU (CUDA) or, slowly, on CPU. About 8 GB of free memory is enough.
 - **Reproducibility.** Local models decode greedily and the judge is a pinned model id, but API

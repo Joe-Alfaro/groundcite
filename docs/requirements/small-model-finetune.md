@@ -154,10 +154,10 @@ marked **GOTCHA Gn**; `n` refers to the hunt's numbering.
 - An LLM judge scores every reply on **Spec-adherence** (0/1) and **Robustness** (1–5), each with
   written reasoning, against one versioned rubric. The judge input includes the complaint, every
   snippet with its ID, the reply and the gold label when one is present (GOTCHA G9).
-- The judge is `anthropic:claude-opus-5-5`, pinned in `config/models.toml` with fixed decoding
-  parameters. It replaced `openai:gpt-5.5-2026-04-23`, which scored the M1 ablation and the H1
-  pilot. The rubric and its hash did not change. The judge now shares a family with the teacher,
-  so self-preference is a stated risk (G12).
+- The judge is `openai:gpt-5.5-2026-04-23`, pinned in `config/models.toml` with fixed decoding
+  parameters. It scored the M1 ablation and the H1 pilot, and it is a different family from the
+  Anthropic teacher. Claude Opus was briefly the judge and filtered dataset v1; that difference
+  is disclosed (G12). The rubric and its hash did not change.
 - A deterministic behavioral check (R21) runs on every reply, and its pass/fail is reported in the
   table next to the judge score. Any HARD (structural) check failure forces Spec-adherence to 0
   (GOTCHA G11).
@@ -493,17 +493,20 @@ doesn't wait on them.
   command.
 - **G19 — Curve checkpoints.** Each curve checkpoint goes up as its own HF revision with a recorded
   SHA, so `run_curve.py` can be re-run on a third-party set.
-- **G12 — Judge bias.** The judge (Anthropic Claude Opus) is the same model as the teacher and as
-  the Anthropic ablation subject, so self-preference toward teacher-style replies is a risk for the
-  base-vs-tuned gap. The earlier judge (OpenAI gpt-5.5) differed in family from the teacher; the
-  switch is stated in the README, the write-up's limitations and the ablation README.
+- **G12 — Judge bias.** The eval judge (OpenAI gpt-5.5) is a different family from the Anthropic
+  teacher, so it has no self-preference toward the teacher-style replies the tuned model learns.
+  It is the same model as the OpenAI ablation subject.
+  - Dataset v1's filter used Claude Opus (the teacher's family) while it was briefly the judge.
+    The filter judge differs from the eval judge; the README, the write-up's limitations and the
+    results judge notes disclose this, and the dataset manifest pins the filter judge.
   - The deterministic checks still override the judge, and the R29 hand audit measures agreement.
   - The ablation table flags the cells that share the judge's family.
-  - No second-family judge rescores a subset (`[cross_check]` is disabled). Judge validity rests
-    on the R29 hand audit and on the Opus re-judge of the M1 and H1 pilot transcripts that
-    gpt-5.5 scored, which gives a cross-family agreement number.
-  - Numbers shown side by side come from the same judge: M1 and the H1 pilot are re-judged with
-    the current judge (R11) before they are compared with new results.
+  - A judge agreement check re-scored 100 judge-decided replies with three cheaper candidates
+    against gpt-5.5, with a bar fixed before the run and blind adjudication of every
+    disagreement. Grok, Sonnet and Haiku all failed it, so Grok was rejected and gpt-5.5 stays the
+    judge. `[cross_check]` is disabled.
+  - Numbers shown side by side come from the same judge (R11). M1 and the H1 pilot were scored by
+    gpt-5.5, so they compare directly with new results.
 - **G31, G32 — Live demo.**
   - Ask someone outside the project for the live demo prompt at least 24 hours before recording.
   - A public notebook link (Colab or Kaggle) runs the demo, with each reply in under 2 minutes,

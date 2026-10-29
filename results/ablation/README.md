@@ -22,11 +22,11 @@ API calls: 240 generations and 240 judge calls, plus 5 first attempts rejected f
 `scripts/check_rubric.py results/` reports one rubric hash across all runs.
 
 **Judge note.** M1 (run `m1`) and the H1 long-conversation pilot were scored by
-`openai:gpt-5.5-2026-04-23`. The project judge is now `anthropic:claude-opus-5-5`, so these
-numbers can't sit side by side with later (Opus-judged) results as they are. Any side-by-side
-comparison uses copies re-judged by Claude Opus from the stored replies with
-`scripts/rejudge.py` (no new generations); the gpt-5.5 scores here stay as the historical
-cross-family reference.
+`openai:gpt-5.5-2026-04-23`, which is also the project's eval judge, a different family from the
+Anthropic teacher. These numbers compare directly with later eval results, with no re-judge.
+Dataset v1 is the one exception in the pipeline: its filter used Claude Opus
+(`anthropic:claude-opus-5-5`) while that model was briefly the judge, a disclosed difference from
+the gpt-5.5 eval judge.
 
 ## Results
 
