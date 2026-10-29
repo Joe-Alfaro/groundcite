@@ -52,7 +52,7 @@ XAI_MODEL = "grok-4.20-0309-reasoning"
 SONNET = "anthropic:claude-sonnet-5-5"
 HAIKU = "anthropic:claude-haiku-5-5"
 REFERENCE = "openai:gpt-5.5-2026-04-23"
-ACTIVE_JUDGE = "anthropic:claude-opus-5-5"
+ACTIVE_JUDGE = REFERENCE  # D-107: Grok failed the D-096 bar; the judge stays gpt-5.5
 
 XAI_BASE = "https://api.x.ai/v1"
 CHAT_URL = f"{XAI_BASE}/chat/completions"
@@ -708,9 +708,10 @@ def test_judge_candidates_list_the_pinned_ids() -> None:
         assert "latest" not in spec
 
 
-def test_the_active_judge_is_not_switched_before_the_agreement_check() -> None:
+def test_the_active_judge_is_the_reference_after_the_agreement_check() -> None:
     cfg = config.load_models_config()
     assert cfg["judge"]["model"] == ACTIVE_JUDGE
+    assert ACTIVE_JUDGE not in cfg["judge_candidates"]["models"]
 
 
 def test_xai_api_switch_and_decoding_are_consistent() -> None:

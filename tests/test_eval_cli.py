@@ -259,7 +259,7 @@ def test_results_json_carries_the_r13_pins(env: Path, tmp_path: Path) -> None:
 
 
 def test_default_judge_is_the_pinned_config_judge(env: Path, tmp_path: Path) -> None:
-    """Without --judge, the pinned (Opus) judge is used, so a missing key stops the run."""
+    """Without --judge, the pinned (OpenAI) judge is used, so a missing key stops the run."""
     out = tmp_path / "results"
     argv = [
         "--model",
@@ -273,7 +273,7 @@ def test_default_judge_is_the_pinned_config_judge(env: Path, tmp_path: Path) -> 
         "--out",
         str(out),
     ]
-    assert JUDGE_MODEL.startswith("anthropic:")
+    assert JUDGE_MODEL.startswith("openai:")
     assert run_cli(argv) == 2
     assert no_run_written(out)
 
@@ -431,7 +431,7 @@ def test_missing_judge_key_exits_2_naming_the_var(
         str(out),
     ]
     assert run_cli(argv) == 2
-    assert "ANTHROPIC_API_KEY" in capsys.readouterr().err
+    assert "OPENAI_API_KEY" in capsys.readouterr().err
     assert no_run_written(out)
 
 
