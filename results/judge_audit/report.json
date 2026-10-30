@@ -1,0 +1,14 @@
+{
+  "n": 20,
+  "agree": 19,
+  "agreement_pct": 95.0,
+  "disagreements": [
+    {
+      "scenario_id": "ho-0042",
+      "model": "hf:Qwen/Qwen3-1.7B@70d244cc86ccca08cf5af4e1e306ecf908b1ad5e",
+      "strategy": "zero_shot",
+      "human": 1,
+      "judge": 0
+    }
+  ]
+}
