@@ -12,7 +12,8 @@ So they are marked ``release_gate``: collected but deselected by a plain ``pytes
   ``scripts/smoke_loop.sh`` and every script it stages, ``eval.py``, ``pyproject.toml`` (the
   editable install), ``src/groundcite/**``, and the data files the notebooks' parameters name
   (``DATASET``, ``EVAL_SET``).
-- **B3:** the training notebook's default ``DATASET`` is a file in the repo at ``REPO_COMMIT``.
+- **B3:** the training notebook's default ``DATASET`` is a file in the repo at ``REPO_COMMIT``,
+  and so is every curve-point subset ``CURVE_N`` can select (D-126), unchanged since the pin.
 """
 
 from __future__ import annotations
@@ -42,7 +43,10 @@ RUN_PATHS = (
     "eval.py",
     "pyproject.toml",
     "src/groundcite",
+    # The curve-point subsets the training notebook's CURVE_N selects (D-126).
+    "data/datasets/v1/subsets",
 )
+CURVE_SUBSETS = tuple(f"data/datasets/v1/subsets/n{n}.jsonl" for n in (56, 112, 224))
 # Parameters that name a repo-relative data file the notebook reads.
 DATA_PARAMS = ("DATASET", "EVAL_SET")
 # `stage <script>` lines in the smoke loop.
@@ -111,4 +115,13 @@ def test_the_default_dataset_exists_at_repo_commit() -> None:
     assert dataset, "the training notebook names a default DATASET"
     assert _git("cat-file", "-e", f"{commit}:{dataset}").returncode == 0, (
         f"DATASET {dataset} is not in the repo at REPO_COMMIT {commit[:12]}"
+    )
+
+
+@pytest.mark.parametrize("subset", CURVE_SUBSETS)
+def test_each_curve_subset_exists_at_repo_commit(subset: str) -> None:
+    """A CURVE_N run reads its subset from the clone at REPO_COMMIT (B3, D-126)."""
+    commit = _pin(NOTEBOOK)
+    assert _git("cat-file", "-e", f"{commit}:{subset}").returncode == 0, (
+        f"{subset} is not in the repo at REPO_COMMIT {commit[:12]}"
     )
