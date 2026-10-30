@@ -6,11 +6,12 @@ after every change to that code, which happens after the push (``scripts/repin_n
 So they are marked ``release_gate``: collected but deselected by a plain ``pytest`` (and so by
 ``scripts/check.sh``), and run by ``scripts/release_check.sh`` before a release.
 
-- **B1:** in both notebooks ``REPO_COMMIT`` is an ancestor of (or equal to) HEAD, and no file the
-  notebooks run differs between ``REPO_COMMIT`` and HEAD: ``train/*.py``, ``train/config.toml``,
-  ``train/requirements-kaggle.txt``, ``scripts/smoke_loop.sh`` and every script it stages,
-  ``eval.py``, ``pyproject.toml`` (the editable install), ``src/groundcite/**``, and the data
-  files the notebooks' parameters name (``DATASET``, ``EVAL_SET``).
+- **B1:** in every notebook (the two Kaggle notebooks and the inference demo) ``REPO_COMMIT`` is
+  an ancestor of (or equal to) HEAD, and no file the notebooks run differs between ``REPO_COMMIT``
+  and HEAD: ``train/*.py``, ``train/config.toml``, ``train/requirements-kaggle.txt``,
+  ``scripts/smoke_loop.sh`` and every script it stages, ``eval.py``, ``pyproject.toml`` (the
+  editable install), ``src/groundcite/**``, and the data files the notebooks' parameters name
+  (``DATASET``, ``EVAL_SET``).
 - **B3:** the training notebook's default ``DATASET`` is a file in the repo at ``REPO_COMMIT``.
 """
 
@@ -28,7 +29,9 @@ from train_data import NOTEBOOK, REPO_ROOT
 pytestmark = pytest.mark.release_gate
 
 EVAL_NOTEBOOK = REPO_ROOT / "train" / "kaggle_eval.ipynb"
-NOTEBOOKS = (NOTEBOOK, EVAL_NOTEBOOK)
+# The public demo installs the same pinned commit, so it goes stale the same way.
+DEMO_NOTEBOOK = REPO_ROOT / "train" / "demo_inference.ipynb"
+NOTEBOOKS = (NOTEBOOK, EVAL_NOTEBOOK, DEMO_NOTEBOOK)
 SMOKE_LOOP = "scripts/smoke_loop.sh"
 # Code a notebook runs from its clone, as git pathspecs.
 RUN_PATHS = (
