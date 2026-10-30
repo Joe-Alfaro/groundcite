@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Pin the Kaggle notebooks' ``REPO_COMMIT`` to one commit (D-079, D-084, D-089).
+"""Pin the notebooks' ``REPO_COMMIT`` to one commit (D-079, D-084, D-089, D-121).
 
     uv run scripts/repin_notebooks.py --commit SHA [--notebook PATH ...]
 
@@ -8,7 +8,8 @@ must be a commit that reaches the canonical host's ``main``. Merges to ``main`` 
 only, so the script accepts only a full 40-hex SHA that is reachable from this repo's ``HEAD``.
 Pushing it is a separate step.
 
-``--notebook`` (repeatable) defaults to both Kaggle notebooks. Only the ``REPO_COMMIT = "..."``
+``--notebook`` (repeatable) defaults to both Kaggle notebooks and the public inference demo
+(``train/demo_inference.ipynb``), so all three share one pin. Only the ``REPO_COMMIT = "..."``
 assignment changes; every other byte of each file stays the same. Every notebook is checked before
 any is written: a bad SHA, an unreachable commit or a notebook without the assignment exits 2 and
 changes nothing.
@@ -28,6 +29,8 @@ DEFAULT_NOTEBOOKS = (
     REPO_ROOT / "train" / "kaggle_train.ipynb",
     REPO_ROOT / "train" / "kaggle_eval.ipynb",
 )
+# The public base-vs-tuned demo installs the same commit; it is re-pinned with the Kaggle notebooks.
+DEMO_NOTEBOOKS = (REPO_ROOT / "train" / "demo_inference.ipynb",)
 SHA_RE = re.compile(r"[0-9a-f]{40}")
 # The assignment as it sits in the notebook JSON: at the start of a source string (or after an
 # escaped newline), with the value in escaped double quotes.
@@ -62,7 +65,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         "--notebook", action="append", type=Path, help="notebook to re-pin (repeatable)"
     )
     args = parser.parse_args(argv)
-    notebooks = args.notebook or list(DEFAULT_NOTEBOOKS)
+    notebooks = args.notebook or [*DEFAULT_NOTEBOOKS, *DEMO_NOTEBOOKS]
     if not SHA_RE.fullmatch(args.commit):
         print(f"error: --commit must be a full 40-hex SHA, got {args.commit!r}", file=sys.stderr)
         return 2

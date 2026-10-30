@@ -27,6 +27,21 @@ transformers and peft included) on first run, and the model is downloaded from t
   sampling is not fully deterministic. The rerun tolerance is ±0.03 Spec-adherence on the same
   pins (eval code, model revision, judge, rubric and eval set, all stamped in `results.json`).
 
+## Try it
+
+No token, no secrets and no login: everything below is public and runs logged out.
+
+- **Model.** The tuned QLoRA adapter for `Qwen/Qwen3-1.7B`:
+  [`joe-alfaro/groundcite-qwen3-1.7b`](https://huggingface.co/joe-alfaro/groundcite-qwen3-1.7b),
+  commit `b16b566d0d36d06744c90342fe836a4e6decc4e8`.
+- **Demo notebook.** [`train/demo_inference.ipynb`](train/demo_inference.ipynb) runs the pinned
+  base and the tuned adapter side by side on one complaint and its reference snippets, and prints
+  both replies with every deterministic check result. It needs a free GPU (Kaggle or Colab T4);
+  edit `COMPLAINT` and `SNIPPETS` to try your own input.
+- TODO-PUBLISH: the hosted public notebook link (Kaggle) goes here after the publish step.
+- TODO-PUBLISH: the public dataset link (training data, eval sets and dataset card on the HF
+  Hub) goes here after the publish step.
+
 ## Project status
 
 Milestone 1 (Oct 29): the spec, the eval harness, the prompt-ceiling ablation (no plateau: a
