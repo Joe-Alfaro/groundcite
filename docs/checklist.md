@@ -25,7 +25,7 @@ on v1 is done and its adapter is public at
 [`joe-alfaro/groundcite-qwen3-1.7b`](https://huggingface.co/joe-alfaro/groundcite-qwen3-1.7b) (commit
 `b16b566d0d36d06744c90342fe836a4e6decc4e8`). Base-vs-tuned, the v2 data fix and the curve points
 are still behind: they need the tuned-model eval first. The reasons are in the
-[write-up's status section](writeup.md#status-at-milestone-1).
+[write-up's status section](writeup.md#how-the-timeline-went).
 
 | Req | Item | Artifact, command or URL | Status |
 | --- | --- | --- | --- |
@@ -49,9 +49,19 @@ are still behind: they need the tuned-model eval first. The reasons are in the
 | R6 | One QLoRA run of Qwen3-1.7B on v1, training log committed | `results/training/v1/train_log.json` and `results/training/v1/README.md`: Kaggle T4, code commit `72f24f33`, frozen config v1, 168 steps (3 epochs) in 839.7 s, final step loss 0.5064, mean train loss 0.9019. Code: `train/train_qlora.py`, `train/config.toml`, `train/kaggle_train.ipynb`, `tests/test_train_qlora.py`, `tests/test_train_notebook.py` | done |
 | R6 | Base-vs-tuned table on the own eval set, with transcripts and pins | `results/base_vs_tuned/heldout/` (headline: tuned 0.48 [0.35, 0.60] / 3.47 vs base zero_shot 0.28 / 2.97, structured 0.17 / 2.35) and `results/base_vs_tuned/eval_own/` (tuned 0.57 / 3.73 vs 0.22 / 2.63, memorization caveat); `docs/writeup.md` section 7. No system meets the bar | done |
 | R6, R9 | Draft HF checkpoint and its commit hash (G14) | [`joe-alfaro/groundcite-qwen3-1.7b`](https://huggingface.co/joe-alfaro/groundcite-qwen3-1.7b) at commit `b16b566d0d36d06744c90342fe836a4e6decc4e8`, public; recorded in `results/training/v1/README.md`. The model page is the deployed artifact for Milestone 1 | done |
-| R7 | Diagnosis note: one v1 failure mode, rate, scenario IDs, data change | `results/base_vs_tuned/heldout/DIAGNOSIS.md`, `docs/writeup.md` section 8: false abstain, 14 of 60 tuned held-out replies, with scenario IDs; data change: in-scope twins of the v1 abstain scenarios (about 252 teacher calls). The fix itself is pending | done |
-| R7 | v1 and v2 logs share a config hash, dataset diff summary committed | `scripts/diff_datasets.py`, `tests/test_diff_datasets.py`; `train_qlora.py` logs `config_sha256` and `dataset_sha256`; v2 scenarios ready (`data/scenarios/train_v2_additions.jsonl`, 105 in-scope cite twins, `docs/dataset-v2-plan.md`); `data/datasets/v2/` waits for approval of the teacher spend (210 calls). Target: Sat Oct 31 | behind |
-| R7 | v2 eval shows the failure-mode rate going down | `results/base_vs_tuned/` (planned). Needs v2 training on Kaggle. Target: Sun Nov 1, before Milestone 2 | behind |
+| R7 | Diagnosis note: one v1 failure mode, rate, scenario IDs, data change | `results/base_vs_tuned/heldout/DIAGNOSIS.md`, `docs/writeup.md` section 8: false abstain, 14 of 60 tuned held-out replies, with scenario IDs; data change: in-scope twins of the v1 abstain scenarios (105 twins, 210 teacher calls; `docs/dataset-v2-plan.md`) | done |
+<!-- PENDING-B:approved -->
+| R7 | v1 and v2 logs share a config hash, dataset diff summary committed | `scripts/diff_datasets.py`, `tests/test_diff_datasets.py`; `data/datasets/v2/` ({{v2_total}} examples, `dataset_sha256` `{{v2_dataset_sha256}}`); the v2 training log has the v1 `config_sha256` | done |
+<!-- /PENDING-B -->
+<!-- PENDING-B:not-run -->
+| R7 | v1 and v2 logs share a config hash, dataset diff summary committed | `scripts/diff_datasets.py`, `tests/test_diff_datasets.py`; `train_qlora.py` logs `config_sha256` and `dataset_sha256`; v2 scenarios ready (`data/scenarios/train_v2_additions.jsonl`, 105 in-scope cite twins, `docs/dataset-v2-plan.md`). Designed, not run: the teacher step (210 calls) was not run within the budget and timeline, so `data/datasets/v2/` does not exist | partial |
+<!-- /PENDING-B -->
+<!-- PENDING-B:approved -->
+| R7 | v2 eval shows the failure-mode rate going down | `{{v2_run_dir}}`, `docs/writeup.md` section 8: held-out false abstains v1 14 of 60, v2 {{v2_false_abstain}} of 60 | {{r7_status_build}} |
+<!-- /PENDING-B -->
+<!-- PENDING-B:not-run -->
+| R7 | v2 eval shows the failure-mode rate going down | Not run: there is no v2 adapter to evaluate (`docs/writeup.md` section 8) | not started |
+<!-- /PENDING-B -->
 | R8 | ≥2 data-efficiency points on nested subsets | `scripts/make_sweep.py`, `tests/test_sweep.py`; `data/datasets/v1/subsets/`; `results/training/curve/` (4 points with logs: n56, n112, n224, plus the full 448 run in `results/training/v1/`); deterministic-check curve on the held-out set in `results/curve/heldout/README.md`. The judge-scored curve is pending approval of the judge spend | partial |
 | R10 | One-command eval writes `results.md`, `results.json`, `transcripts.jsonl`; base rows added automatically | `uv run eval.py --model <hf-repo-id> --eval-set <path>`, `tests/test_eval_cli.py` | done |
 | R10 | README first lines name the env var and the hardware | `README.md`, `tests/test_eval_hardening.py` | done |
@@ -77,9 +87,19 @@ are still behind: they need the tuned-model eval first. The reasons are in the
 
 | Req | Item | Artifact, command or URL | Status |
 | --- | --- | --- | --- |
-| R8 | ≥4 nested curve points, evaluated on own and held-out sets | `results/training/curve/README.md`: 4 nested points trained with logs (N = 56, 112, 224, 448) with one config hash and seed. Deterministic-check curve for all 4 on held-out: `results/curve/heldout/README.md`. The judge-scored curve is pending approval of the judge spend; `eval_own` for n56, n112 and n224 is not generated | partial |
+<!-- PENDING-A:approved -->
+| R8 | ≥4 nested curve points, evaluated on own and held-out sets | `results/training/curve/README.md`: 4 nested points trained with logs (N = 56, 112, 224, 448) with one config hash and seed; judge-scored on held-out in `{{curve_judged_run_dir}}`, deterministic checks in `results/curve/heldout/README.md`. `eval_own` for n56, n112 and n224 is not generated | partial |
+<!-- /PENDING-A -->
+<!-- PENDING-A:not-run -->
+| R8 | ≥4 nested curve points, evaluated on own and held-out sets | `results/training/curve/README.md`: 4 nested points trained with logs (N = 56, 112, 224, 448) with one config hash and seed. Deterministic-check curve for all 4 on held-out: `results/curve/heldout/README.md`. The judge-scored curve was not run within the budget and timeline; `eval_own` for n56, n112 and n224 is not generated | partial |
+<!-- /PENDING-A -->
 | R8 | Re-run every checkpoint on any eval set | `uv run scripts/run_curve.py --eval-set <path>` (planned) | not started |
-| R8 | Plot and table with 95% bootstrap intervals, minimum viable N | `results/curve/heldout/README.md` (deterministic-check table with 95% bootstrap intervals; no plot); `docs/writeup.md` section 9. The judge-scored table and the minimum viable N wait for approval of the judge spend | partial |
+<!-- PENDING-A:approved -->
+| R8 | Plot and table with 95% bootstrap intervals, minimum viable N | `docs/writeup.md` section 9 (judge-scored table; minimum viable N: {{min_viable_n}}), `results/curve/heldout/README.md` (deterministic-check table); no plot | partial |
+<!-- /PENDING-A -->
+<!-- PENDING-A:not-run -->
+| R8 | Plot and table with 95% bootstrap intervals, minimum viable N | `results/curve/heldout/README.md` (deterministic-check table with 95% bootstrap intervals; no plot); `docs/writeup.md` section 9. The judge-scored table was not run, so no minimum viable N is stated | partial |
+<!-- /PENDING-A -->
 | R8 | Each curve checkpoint as its own HF revision with a recorded SHA (G19) | `joe-alfaro/groundcite-qwen3-1.7b-n{56,112,224}` at `51ae124` / `c049270` / `58532b3` (full SHAs in each `train_log.json`); the curve repos are private, so a third party cannot load them yet | owner-gated |
 | R9 | Public tuned model; README gives the exact HF commit hash; eval and demo load that revision | [`joe-alfaro/groundcite-qwen3-1.7b`](https://huggingface.co/joe-alfaro/groundcite-qwen3-1.7b) at commit `b16b566d0d36d06744c90342fe836a4e6decc4e8` (public), given in `README.md`; the base-vs-tuned runs and `train/demo_inference.ipynb` load that revision | done |
 | R12 | Third-party held-out format documented, loader accepts JSONL, JSON array, CSV | `docs/eval-set-format.md`, `src/groundcite/evalset.py`, `tests/test_evalset.py` | done |
@@ -92,11 +112,11 @@ are still behind: they need the tuned-model eval first. The reasons are in the
 | R15 | Teacher provider's terms checked before publishing (G38) | dataset card (planned) | owner-gated |
 | R16 | Base-vs-tuned demo with check results; no-snippet path abstains | `uv run scripts/demo.py`, `tests/test_demo_cli.py`, `README.md` "Demo CLI" | done |
 | R16 | Public notebook link, each reply under 2 minutes, tested logged-out (G31, G32) | Colab or Kaggle link in `README.md` (planned) | owner-gated |
-| R17 | Final write-up | `docs/writeup.md`: thesis, ablation, base vs tuned, the v2 diagnosis, the curve training facts and the R29 hand audit are written; the v2 result and the curve evals with minimum viable N are pending | partial |
+| R17 | Final write-up | `docs/writeup.md`: thesis, spec, scenarios, ablation, pilot, data, base vs tuned, the v2 diagnosis and data change, the curve, the judge audit and agreement study, and limitations. Items not run are stated as not run | done |
 | R18 | 3–5 minute demo video, linked from README | link in `README.md` (planned); recorded by the owner | owner-gated |
 | R18 | Live prompt from someone outside the project, run in one uncut take | video (planned) | owner-gated |
 | G12 | Judge bias: the eval judge (gpt-5.5) is a different family from the teacher, so M1 and the pilot need no re-judge; the ablation table flags the cells that share the judge's family; dataset v1's Claude Opus filter judge is disclosed and pinned in its manifest; the three cheaper agreement candidates failed and are marked rejected | flag in `src/groundcite/ablation.py`, `tests/test_ablation.py`; judge pin and `[judge_candidates]` status in `config/models.toml`, `tests/test_gpt55_judge.py`; `data/datasets/v1/manifest.json` (`judge_model`); `results/judge_agreement/`; `docs/ai-usage.md` | done |
-| R30 | Tuned invented-ID rate ≤ base and ≤2% on own and held-out sets | `results/base_vs_tuned/`: tuned 0.02 held-out, 0.00 `eval_own` (≤2% on both, ≤ base on `eval_own`). On held-out it is one reply above base zero_shot (0.00), below base `structured` (0.40). Curve points pending | partial |
+| R30 | Tuned invented-ID rate ≤ base and ≤2% on own and held-out sets | `results/base_vs_tuned/`: tuned 0.02 held-out, 0.00 `eval_own` (≤2% on both, ≤ base on `eval_own`). On held-out it is one reply above base zero_shot (0.00), below base `structured` (0.40). Curve points (deterministic checks): 0.00 to 0.02 on held-out, `results/curve/heldout/README.md` | partial |
 | — | Results tables: ablation; base vs tuned on own and held-out sets | `results/ablation/`, `results/base_vs_tuned/heldout/`, `results/base_vs_tuned/eval_own/`, `docs/writeup.md` sections 4 and 7 | done |
 | — | Architecture document | `ARCHITECTURE.md` | done |
 | — | Canonical spec | `SPEC.md` | done |

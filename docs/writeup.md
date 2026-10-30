@@ -1,13 +1,7 @@
-# Write-up (draft)
+# Write-up
 
-> **Status: draft.** The status sections below summarize where the project stands at Milestone 1
-> and since. Sections 1, 2, 3, 5 and 6 (method) describe what is built or designed in this
-> repository. Section 4 reports the real prompt-ceiling ablation, section 4a the long-conversation
-> pilot, section 6 dataset v1, section 7 the base-vs-tuned evals, section 8 the v2 diagnosis,
-> section 9 the curve training runs (their evals are pending) and section 10 the R29 hand audit
-> and the judge agreement study. Every other number that needs a
-> real run is marked **Pending**, along with what will go there. Nothing in the pending sections
-> should be read as a result.
+Every number in this write-up comes from a committed file under `results/` or `data/`, and each
+section links the files behind it. Where a run was not done, the section says so.
 
 Requirements: [`docs/requirements/small-model-finetune.md`](requirements/small-model-finetune.md).
 Architecture: [`ARCHITECTURE.md`](../ARCHITECTURE.md). Status of every item:
@@ -19,106 +13,73 @@ commit `ccb75f757844360f10fc951d7c4f3db1a57fcb36`; the tuned adapter at
 [`joe-alfaro/groundcite-qwen3-1.7b`](https://huggingface.co/joe-alfaro/groundcite-qwen3-1.7b),
 commit `b16b566d0d36d06744c90342fe836a4e6decc4e8`.
 
-## Status update (Friday, October 30)
+## Summary
 
-- **Base vs tuned is measured (section 7).** On the held-out set (unseen symptom families), the
-  tuned model scores 0.48 [0.35, 0.60] Spec-adherence and 3.47 Robustness, against 0.28 / 2.97
-  for base with the zero-shot prompt and 0.17 / 2.35 for base with `structured`. Paired by
-  scenario, it wins 20 and loses 8 against base zero_shot (sign test p ≈ 0.036). On `eval_own`
-  (in-distribution, with a memorization caveat) it scores 0.57 / 3.73 against 0.22 / 2.63.
-  **No system meets the reliability bar on either set.**
-- **The v2 diagnosis is done; v2 is designed and its generation awaits approval (section 8).**
-  The tuned model's most frequent failure is a false abstain (14 of 60 held-out replies), usually
-  justified by a scope exclusion that is false. The data change is in-scope twins of the v1
-  abstain scenarios, with no config change.
-- **Curve points trained; evals pending (section 9).** Nested subsets of v1 at N = 56, 112 and
-  224 are trained with the v1 config and seed (final step losses 1.3040 / 1.0274 / 0.6386; the
-  full 448 run ended at 0.5064). Their held-out evals are not scored yet, so the minimum viable N
-  is not stated.
-- **The judge passes the R29 hand audit (section 10).** On 20 blind hand-labeled held-out
-  replies, the judge agrees on 19 (the bar is 18). The one disagreement is a reply that repeats
-  the same citation, which the judge fails under a literal reading of P2.
-- **Judge spend:** $7.88 logged plus about $1.6 unlogged (the first 83 held-out judgments
-  predate usage logging), about $9.5 of the $20 cap. With the conservative $6 estimate for the
-  unlogged calls, about $13.9.
+**The claim.** Fine-tuning makes Qwen3-1.7B hold a narrow grounded-citation contract better than
+the same base model does with the best prompt we found, on scenarios from symptom families the
+training data never saw. Tuned 1.7B against prompted base 1.7B is the headline. Prompted frontier
+models are reported separately as a ceiling.
 
-## Status at Milestone 1
+- **Prompt ceiling: no plateau (section 4).** Two frontier models × three prompt strategies × 40
+  scenarios. Three cells meet the reliability bar (Spec-adherence ≥ 0.90 and Robustness ≥ 4.3);
+  the best is Claude Opus with the `structured` prompt at 0.97 [0.93, 1.00] / 4.88.
+- **Long conversations: no drift (section 4a).** The best cell passed 0.80 [0.63, 0.93] of 30
+  scripted 8–12 turn conversations and 0.94 of turns. Failures come from an early scope misjudgment
+  that is repeated, not from late-turn drift.
+- **Dataset v1 (section 6).** 448 filtered examples from 960 teacher candidates (46.7% kept),
+  28.1% abstain, public on the Hub.
+- **Base vs tuned (section 7).** On the held-out set (unseen symptom families), the tuned model
+  scores 0.48 [0.35, 0.60] Spec-adherence and 3.47 Robustness, against 0.28 / 2.97 for base with
+  the zero-shot prompt and 0.17 / 2.35 for base with `structured`. Paired by scenario, it wins 20
+  and loses 8 against base zero_shot (sign test p ≈ 0.036). On `eval_own` (in-distribution, with
+  a memorization caveat) it scores 0.57 / 3.73 against 0.22 / 2.63. **No system meets the
+  reliability bar on either set.**
+- **Diagnosis (section 8).** The tuned model's most frequent failure is a false abstain (14 of 60
+  held-out replies), usually justified by a scope exclusion that is false. The data change that
+  targets it is in-scope cite twins of the v1 abstain scenarios, with no config change.
+<!-- PENDING-B:approved -->
+- **v2 (section 8).** Dataset v2 adds {{v2_kept}} kept twin examples to v1 ({{v2_total}} in
+  total). Trained with the frozen v1 config, it scores {{v2_heldout_spec}} {{v2_heldout_spec_ci}}
+  / {{v2_heldout_rob}} on the held-out set, with {{v2_false_abstain}} false abstains in 60
+  replies (v1: 14).
+<!-- /PENDING-B -->
+<!-- PENDING-B:not-run -->
+- **v2: designed, not run (section 8).** The 105 in-scope twin scenarios are generated and pass
+  every gate, but the teacher step (210 calls), the v2 training run and its eval were not run
+  within the project's budget and timeline. No v2 number exists.
+<!-- /PENDING-B -->
+<!-- PENDING-A:approved -->
+- **Data-efficiency curve (section 9).** Four nested points (N = 56, 112, 224, 448), judge-scored
+  on the held-out set. Points meeting the reliability bar: {{curve_points_meeting_bar}}. Minimum
+  viable N: {{min_viable_n}}.
+<!-- /PENDING-A -->
+<!-- PENDING-A:not-run -->
+- **Data-efficiency curve (section 9).** Four nested points (N = 56, 112, 224, 448) are trained
+  and scored on the held-out set with the deterministic checks. The abstain behavior appears
+  between N = 56 and 112, and HARD pass rises from 0.35 (N = 56 and 112) to 0.48 and 0.50
+  (N = 224 and 448). The judge-scored curve was not run, so no minimum viable N is stated.
+<!-- /PENDING-A -->
+- **Judge validity (section 10).** The judge agrees with blind hand labels on 19 of 20 held-out
+  replies (the bar is 18). Three cheaper judges failed a pre-registered agreement study, so the
+  pinned judge stayed.
+<!-- PENDING-AB:approved -->
+- **Judge spend:** {{total_judge_spend_usd}} for the eval judge across every run, against the
+  $20 cap.
+<!-- /PENDING-AB -->
+<!-- PENDING-AB:not-run -->
+- **Judge spend:** $7.88 logged for the two base-vs-tuned runs, plus about $1.6 unlogged (the
+  first 83 held-out judgments predate usage logging): about $9.5 of the $20 cap, or about $13.9
+  with a conservative $6 estimate for the unlogged calls.
+<!-- /PENDING-AB -->
 
-Thursday, October 29. Every item, with its artifact path, is in
-[`docs/checklist.md`](checklist.md).
+### How the timeline went
 
-**The headline comparison.** The claim this project tests is that fine-tuning makes Qwen3-1.7B
-hold the contract better than the same base model does with the best prompt we found. Tuned 1.7B
-against prompted base 1.7B is the headline. The prompted frontier models are reported separately
-as a ceiling. That ceiling is high: the ablation found no plateau, and this write-up says so
-plainly instead of treating the frontier numbers as something the small model has to beat.
-
-**Done.**
-
-- **Spec and rubric.** `SPEC.md` gives the contract, the citation format, the reliability bar
-  (Spec-adherence ≥ 0.90 and Robustness ≥ 4.3) and the P1–P8 rubric. The judge rubric, the
-  teacher prompt and the filter all load it by path.
-- **Eval harness.** One command scores base and tuned rows on any eval set with the pinned judge,
-  writes results, transcripts and pins, and has mock backends and `--dry-run` for key-free runs.
-  It can also generate on a GPU with no keys and judge the stored replies elsewhere. It was merged
-  before any training code.
-- **Prompt-ceiling ablation (section 4).** Two frontier models from different vendors, three
-  prompt strategies, 40 scenarios each. Three cells meet the bar; the best is Claude Opus with the
-  `structured` prompt at 0.97 [0.93, 1.00] / 4.88. Result: **no plateau**.
-- **Spec hardening pilot (section 4a).** Because of that result, the spec was hardened for long
-  conversations: 30 scripted 8–12 turn conversations with snippets added and withdrawn and pressure
-  to guess. The best M1 cell passed 0.80 [0.63, 0.93] of conversations and 0.94 of turns, with no
-  late-turn drift. That misses the bar at the conversation level, but not clearly enough to justify
-  rebuilding the sets around it, so the project went on to training.
-- **Judge agreement study (section 10).** Three cheaper judges were measured against the pinned
-  judge with a pre-registered bar and blind adjudication. All three failed, and the pinned judge
-  (`gpt-5.5`) stays.
-- **Dataset v1 (section 6).** 448 filtered examples from 960 teacher candidates (46.7% kept), 28.1%
-  abstain, with a manifest, a filter report, a leakage report and a quality note from reading the
-  data. It is public at [`joe-alfaro/groundcite-diagnostic-v1`](https://huggingface.co/datasets/joe-alfaro/groundcite-diagnostic-v1),
-  commit `ccb75f757844360f10fc951d7c4f3db1a57fcb36`.
-- **Training and smoke code.** The QLoRA script, its frozen config, the Kaggle training and eval
-  notebooks and the smoke loop are written and tested. The local smoke mode is a CPU-only check on
-  a tiny model; the real-model smoke runs on Kaggle.
-- **First QLoRA run and the draft checkpoint.** Qwen3-1.7B was trained on dataset v1 with frozen
-  config v1 on a Kaggle T4 (code commit `72f24f33`): 168 steps over 3 epochs in 839.7 s, final
-  step loss 0.5064, mean train loss 0.9019, no errors. This is the first time the real-model
-  training path ran end to end. The adapter is public at
-  [`joe-alfaro/groundcite-qwen3-1.7b`](https://huggingface.co/joe-alfaro/groundcite-qwen3-1.7b), commit
-  `b16b566d0d36d06744c90342fe836a4e6decc4e8`, and that model page is the deployed artifact for
-  this milestone. The training log is in `results/training/v1/`.
-
-**Behind, and why.**
-
-- **No base-vs-tuned numbers yet.** The tuned adapter exists but has not been evaluated. Three
-  things used up the time that was planned for training and eval before this milestone:
-  1. *The prompt-ceiling result needed spec hardening first.* The plan (section 1) was to harden
-     the spec, not train, if a prompted frontier model already met the bar. It did, so the
-     long-conversation pilot came first.
-  2. *The judge provider changed twice.* When the pinned judge's API credit ran out, the judge was
-     switched to Claude Opus (used for the dataset v1 filter), then a cross-family replacement was
-     tried. An agreement study showed none of the candidates was good enough, so the project
-     returned to the original judge. Judged work paused while this was settled. The filter judge
-     differing from the eval judge is disclosed in section 11.
-  3. *Local inference limits moved every model run to Kaggle.* A local smoke run on the shared
-     development machine took over 6 minutes and about 11 GB of its 16 GB of memory. Since then,
-     only a capped CPU-only check runs locally. Training, the real-model smoke run and base and
-     tuned generation all run in Kaggle notebooks, which the owner runs.
-- **The v2 data fix needs eval evidence first.** The v1 → v2 change has to target a failure mode
-  measured in tuned-model transcripts. Weaknesses noted while reading v1 (`data/datasets/v1/NOTES.md`)
-  are candidates, not a diagnosis.
-- **The data-efficiency curve points** need their own Kaggle training runs, now that v1 is
-  trained.
-
-**Next steps (targets, Central Time).**
-
-1. Generate base and tuned replies on `heldout` first, then `eval_own`, in the Kaggle eval
-   notebook, loading the adapter at Hub commit `b16b566d`, and judge them locally with `gpt-5.5`.
-   Target: Sat Oct 31 at the latest. This fills section 7 and the hand audit in section 10.
-2. Diagnose one v1 failure mode from those transcripts, build v2 by changing data only, train it
-   with the same config and re-evaluate. Target: Sat Oct 31 to Sun Nov 1.
-3. Train at least two nested data-efficiency points, then the rest of the curve for Milestone 2
-   (Sun Nov 1, noon).
+Three things took longer than planned. The ablation met the bar, so the plan (section 1)
+called for hardening the spec before training, and the long-conversation pilot came first. The judge provider changed twice: when the pinned judge's API credit ran out,
+judging moved to Claude Opus (used for the dataset v1 filter), then a cross-family replacement
+was tried, and an agreement study sent the project back to the original judge (section 10). And
+local inference on the shared development machine was too slow and memory-hungry, so training,
+the real-model smoke run and all base and tuned generation ran in Kaggle notebooks.
 
 ## 1. Behavior thesis
 
@@ -551,11 +512,19 @@ zero_shot (0.00), and far below base `structured` (0.40).
 
 ## 8. v1 → v2 data fix
 
-**Status: designed; generation awaiting approval.** The diagnosis is done and the data change is
-specified. The v2 data needs new teacher calls, which wait for the owner's approval, so the v2
-dataset, its training run and its eval do not exist yet. No v2 number appears anywhere in this
-write-up. Full note:
+<!-- PENDING-B:approved -->
+**Status: diagnosed, built, trained and evaluated.** The diagnosis below picked one failure mode
+from tuned-model transcripts; v2 changes the data only, and its held-out result is at the end of
+this section. Full diagnosis note:
 [`results/base_vs_tuned/heldout/DIAGNOSIS.md`](../results/base_vs_tuned/heldout/DIAGNOSIS.md).
+<!-- /PENDING-B -->
+<!-- PENDING-B:not-run -->
+**Status: diagnosed and designed; not run.** The diagnosis below picked one failure mode from
+tuned-model transcripts, and the v2 data change is specified and its scenarios are generated.
+The teacher calls, the v2 training run and its eval were not run, so no v2 number appears
+anywhere in this write-up. Full diagnosis note:
+[`results/base_vs_tuned/heldout/DIAGNOSIS.md`](../results/base_vs_tuned/heldout/DIAGNOSIS.md).
+<!-- /PENDING-B -->
 
 **Where the evidence comes from.** Only the tuned model's 60 replies on the held-out set (adapter
 `joe-alfaro/groundcite-qwen3-1.7b@b16b566d`, zero-shot prompt), in
@@ -602,25 +571,61 @@ So the model never sees one snippet rejected for a vehicle outside its range in 
 cited for a vehicle inside its range in another. "Vehicle details plus an 'Applies to' line" can
 be learned as a cue for the abstain template instead of as a comparison.
 
-**The proposed v2 data change (data only; the training config stays frozen).** Add an in-scope
-twin for each of the 126 v1 abstain scenarios: the same complaint, snippets and stressor, with
-only the vehicle moved inside one near-miss snippet's applicability (a year at a range endpoint,
-or a listed engine, body or transmission), relabeled as cite with that snippet. The scenario
+**The v2 data change (data only; the training config stays frozen).** Add an in-scope twin for
+each v1 abstain scenario that can have one: the same family, snippet texts and conversation shape,
+with only the vehicle or model year moved so that exactly one on-topic snippet now applies,
+relabeled as cite with that snippet. The training data then contains minimal pairs: the same
+snippet text rejected for a vehicle outside its range and cited for one inside it. The scenario
 generator already models applicability, so the twins come from regeneration, not hand edits, and
-they stay in the training families, so the leakage check applies unchanged. The training data
-then contains minimal pairs: the same snippet rejected for a vehicle outside its range and cited
-for one inside it.
+they stay in the training families, so the leakage check applies unchanged. Plan:
+[`docs/dataset-v2-plan.md`](dataset-v2-plan.md).
 
-- Cost: about 252 new teacher calls (two candidates per twin) and about 250 filter-judge calls.
-- Expected mix: about 117 cite examples added at v1's keep rate, about 565 in total, with the
-  abstain share falling from 28.1% to about 22%, inside the 20–30% band.
-- How it will be checked: the v1 and v2 training logs will show the same `config_sha256` and
-  different `dataset_sha256`, and the v2 eval on the held-out set will show whether the
-  false-abstain rate (now 14 of 60) goes down.
+- **The twins.** `data/scenarios/train_v2_additions.jsonl` holds 105 twins of the 126 v1 abstain
+  scenarios (`scripts/gen_v2_additions.py --seed 2027` reproduces it byte for byte). The other 21
+  can't have one: 14 multi-turn sources whose earlier turns already cite the chain steps, 4 whose
+  only on-topic near-misses are condition near-misses the complaint rules out for every vehicle,
+  2 whose only candidates come from another family, and 1 whose two near-misses share the same
+  scope change. The diagnosis note's first estimate (126 twins, about 252 calls) predates this
+  count.
+- **Gates.** The twins pass the scenario, near-miss scope, shortcut and leakage gates the eval
+  sets pass, and the training config still resolves to the v1 run's hash
+  (`tests/test_v2_additions.py`).
+- **Cost.** 210 teacher calls (105 twins × 2 candidates, as in v1), checked with
+  `scripts/distill.py --dry-run`, plus up to about 2 filter-judge calls per candidate that passes
+  the deterministic checks.
+- **Expected mix.** v2 = the 448 v1 examples unchanged + the kept twins. The abstain share is
+  22.8% if all 105 are kept and 25.2% at a 50% keep rate, inside the 20–30% band.
+- **How it is checked.** The v1 and v2 training logs show the same `config_sha256` and different
+  `dataset_sha256`; `scripts/diff_datasets.py` must report only added scenarios; and the held-out
+  eval shows whether the false-abstain count (14 of 60 for v1) goes down.
+
+<!-- PENDING-B:approved -->
+**v2 result.** {{v2_teacher_calls}} teacher calls gave {{v2_kept}} kept twin examples, for
+{{v2_total}} examples in v2 (abstain share {{v2_abstain_share}}, `dataset_sha256`
+`{{v2_dataset_sha256}}`). The v2 adapter is `{{v2_hub_adapter}}`, trained with the v1 config
+(`config_sha256` `c981fb5196d2…5943`). Held-out run:
+[`{{v2_run_dir}}`](../{{v2_run_dir}}).
+
+| Held-out (60 scenarios) | Spec-adherence (95% CI) | Robustness | False abstains | False cites |
+|---|---|---|---|---|
+| tuned v1 | 0.48 [0.35, 0.60] | 3.47 | 14 | 8 |
+| tuned v2 | {{v2_heldout_spec}} {{v2_heldout_spec_ci}} | {{v2_heldout_rob}} | {{v2_false_abstain}} | {{v2_false_cite}} |
+
+Paired by scenario, v2 against v1: {{v2_vs_v1_wins}} wins, {{v2_vs_v1_losses}} losses (sign test
+p {{v2_sign_p}}). Judge spend for the v2 eval: {{v2_judge_spend_usd}}.
+<!-- /PENDING-B -->
+<!-- PENDING-B:not-run -->
+**Why v2 was not run.** Everything that needs no paid call is done: the diagnosis, the twins and
+their gates, the dry-run cost plan and the diff tool. The remaining steps are the 210 teacher
+calls and their filter-judge calls, a v2 training run on Kaggle and a judged held-out eval of the
+v2 adapter. They did not fit within the project's API budget and timeline, so v2 stays designed,
+not run. Whether the twins lower the false-abstain rate is an open question; this write-up makes
+no claim about it.
+<!-- /PENDING-B -->
 
 ## 9. Data-efficiency curve and minimum viable N
 
-**Training is done for four nested points; their evals are pending.** Each point trains
+**Four nested points are trained.** Each point trains
 Qwen3-1.7B on one subset of dataset v1 (`data/datasets/v1/subsets/`, nested and stratified by
 category, subset seed 7) with the same frozen config (`config_sha256` `c981fb5196d2…5943`),
 training seed 0 and 3 epochs. Holding epochs fixed means a smaller N also gets fewer optimizer
@@ -646,8 +651,8 @@ the project's deterministic checks, next to the full v1 run and base from sectio
 95% bootstrap intervals (seed 0), n = 60 per row (41 cite-gold, 19 abstain-gold). Details,
 definitions and the rerun command: [`results/curve/heldout/`](../results/curve/heldout/README.md).
 
-> These are deterministic-check metrics only. The judge-scored Spec-adherence and Robustness
-> curve is pending approval, and the minimum viable N will be stated after judging.
+> These are deterministic-check metrics only. No judge scored them, so none of them meets or
+> misses the reliability bar, which is defined on the judge's Spec-adherence and Robustness.
 
 | N | System | HARD pass | SOFT flag | Invented-ID | Mode accuracy | Supports (cite gold) | Abstain P (n) | Abstain R |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -664,14 +669,35 @@ abstain in 60, like base) and N = 112, and n112 overshoots: it abstains on 31 re
 on cite-gold scenarios. HARD pass rises from 0.35 at N = 56 and 112 to 0.48 and 0.50 at 224 and
 448, level with base zero_shot.
 
-**Pending: the judged curve and the minimum viable N.** The curve points have no Spec-adherence
-or Robustness number yet. The 448 point's held-out score is the tuned row in section 7 (0.48 /
-3.47). Once the three curve points are scored on `heldout` (and `eval_own`), this section will give a table
-and a plot of Spec-adherence and Robustness against N with 95% bootstrap intervals, and will
-state the **minimum viable N**: the smallest N that meets the reliability bar on `heldout`. If
-no N meets it (the full 448 run does not, section 7), the section will say so and report the
-smallest N whose score falls inside the 448 point's interval. The spacing is powers of two
-(N/8 to N), which covers almost an order of magnitude in four runs on free T4 time.
+**Minimum viable N** is defined as the smallest N that meets the reliability bar on `heldout`. If
+no N meets it (the full 448 run does not, section 7), it is the smallest N whose Spec-adherence
+falls inside the 448 point's 95% interval, [0.35, 0.60]. The spacing is powers of two (N/8 to N),
+which covers almost an order of magnitude in four runs on free T4 time.
+
+<!-- PENDING-A:approved -->
+**Judge-scored curve (held-out, 60 scenarios per point).** Same judge, rubric and pins as
+section 7; the 448 row is the tuned row there. Run: [`{{curve_judged_run_dir}}`](../{{curve_judged_run_dir}}).
+
+| N | Spec-adherence (95% CI) | Robustness |
+| --- | --- | --- |
+| 56 | {{curve_n56_spec}} {{curve_n56_spec_ci}} | {{curve_n56_rob}} |
+| 112 | {{curve_n112_spec}} {{curve_n112_spec_ci}} | {{curve_n112_rob}} |
+| 224 | {{curve_n224_spec}} {{curve_n224_spec_ci}} | {{curve_n224_rob}} |
+| 448 (full v1) | 0.48 [0.35, 0.60] | 3.47 |
+
+Points meeting the reliability bar: {{curve_points_meeting_bar}}. **Minimum viable N:
+{{min_viable_n}}.** Judge spend for the curve: {{curve_judge_spend_usd}}.
+<!-- /PENDING-A -->
+<!-- PENDING-A:not-run -->
+**The reported curve is the deterministic one above.** The judge-scored curve (Spec-adherence and
+Robustness for N = 56, 112 and 224 on `heldout`) and the `eval_own` generations for those points
+were not run within the project's budget and timeline, so **no minimum viable N is stated**. The
+generations are committed (`results/curve/heldout/n<N>/inputs/`), so judging them later needs
+only `eval.py --judge-from` on each file, with no new generation. What the deterministic curve
+does show: the abstain behavior is learned somewhere between N = 56 and 112, and HARD pass at
+N = 224 (0.48) is already level with the full 448 run (0.50). Whether N = 224 also matches the
+448 point on the judge's Spec-adherence is the open question.
+<!-- /PENDING-A -->
 
 ## 10. Judge validity audit
 
@@ -709,8 +735,9 @@ output are in [`results/judge_audit/`](../results/judge_audit/README.md).
 
 ### Rerun delta
 
-**Pending.** Re-running the eval on the same pins should reproduce Spec-adherence within ±0.03.
-The observed delta goes here.
+**Not measured.** Re-running the eval on the same pins should reproduce Spec-adherence within
+±0.03 (`scripts/rerun_delta.py` computes it from two run directories). No second judge pass on
+the same pins was run, so the tolerance in `README.md` is a stated target, not a measured result.
 
 ### Judge agreement study
 
@@ -792,5 +819,25 @@ replies from M1 and the pilot, not tuned-model replies.
   models run at provider defaults, so reruns can differ within the stated tolerance.
 - **Single-step scope.** The contract asks for the first step only. It doesn't test whether a
   model can carry a full diagnosis to a conclusion, and it shouldn't be read that way.
-- **One model size.** The main results are for Qwen3-1.7B, trained with QLoRA on free T4 GPUs.
-  Other sizes are not covered.
+- **One model size, one seed.** The main results are for Qwen3-1.7B, trained with QLoRA on free
+  T4 GPUs, one training seed per point. Other sizes and seed variance are not covered.
+- **Small eval sets.** The held-out set has 60 scenarios, so a 95% interval on Spec-adherence is
+  about ±0.12 wide, and most curve intervals overlap.
+- **No rerun delta.** The ±0.03 rerun tolerance was not measured (section 10).
+<!-- PENDING-B:approved -->
+- **One data iteration.** v1 → v2 is a single data change aimed at one failure mode, judged on
+  one held-out set of 60 scenarios.
+<!-- /PENDING-B -->
+<!-- PENDING-B:not-run -->
+- **The diagnosed failure mode is not fixed.** v2 is designed and its scenarios are built, but it
+  was not distilled, trained or evaluated, so the tuned model reported here is the v1 adapter and
+  its false abstains (14 of 60 held-out replies) stand.
+<!-- /PENDING-B -->
+<!-- PENDING-A:approved -->
+- **Curve on one set.** The judge-scored curve covers `heldout` only; the curve points were not
+  generated on `eval_own`.
+<!-- /PENDING-A -->
+<!-- PENDING-A:not-run -->
+- **No minimum viable N.** The curve points are scored by the deterministic checks only, which
+  can't say whether a point meets the reliability bar.
+<!-- /PENDING-A -->

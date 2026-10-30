@@ -19,7 +19,7 @@ Kaggle GPU. The first QLoRA run on dataset v1 is done, and its adapter is public
 `b16b566d0d36d06744c90342fe836a4e6decc4e8`; that model page is the deployed artifact for this
 check-in. The adapter has not been evaluated yet, so the rows that need tuned-model numbers are
 still missing or partial. The reasons are in the
-[write-up's status section](writeup.md#status-at-milestone-1).
+[write-up's status section](writeup.md#how-the-timeline-went).
 
 ## Summary
 
