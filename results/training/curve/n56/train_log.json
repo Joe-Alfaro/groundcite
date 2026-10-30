@@ -1,0 +1,181 @@
+{
+  "backend": "unsloth",
+  "chat_template_sha256": "a55ee1b1660128b7098723e0abcd92caa0788061051c62d51cbe87d9cf1974d8",
+  "config": {
+    "lora": {
+      "alpha": 32,
+      "dropout": 0.05,
+      "r": 16,
+      "target_modules": [
+        "q_proj",
+        "k_proj",
+        "v_proj",
+        "o_proj",
+        "gate_proj",
+        "up_proj",
+        "down_proj"
+      ]
+    },
+    "model": {
+      "base": "Qwen/Qwen3-1.7B",
+      "load_in_4bit": true,
+      "revision": "70d244cc86ccca08cf5af4e1e306ecf908b1ad5e"
+    },
+    "train": {
+      "bf16": false,
+      "fp16": true,
+      "gradient_accumulation_steps": 2,
+      "gradient_checkpointing": true,
+      "learning_rate": 0.0002,
+      "logging_steps": 1,
+      "lr_scheduler_type": "cosine",
+      "max_grad_norm": 1.0,
+      "max_seq_length": 2048,
+      "num_train_epochs": 3,
+      "optim": "adamw_torch",
+      "per_device_train_batch_size": 4,
+      "step_policy": "epochs",
+      "warmup_steps": 0.05,
+      "weight_decay": 0.0
+    },
+    "version": 1
+  },
+  "config_sha256": "c981fb5196d25647ea69c6ee091cfb92a51fc73b6de0aa05576a2618aaf55943",
+  "dataset": {
+    "by_category": {
+      "clean": 8,
+      "distractor": 11,
+      "multi_symptom": 9,
+      "multi_turn": 8,
+      "no_snippet": 12,
+      "pressure": 8
+    },
+    "examples": 56
+  },
+  "dataset_sha256": "ba8ebc90c8f4de72c354b2c8031c3ab8f277f69abcc6da2a2237a2645c62b993",
+  "device": "auto",
+  "dropped_too_long": 0,
+  "git_dirty": false,
+  "git_sha": "c0be9258c80eff7c0f6d73515a7b71797ddd7fd6",
+  "hub": {
+    "commit_sha": "51ae1244af5e0f1a92bd1e61ae9f6c52a860b814",
+    "repo": "joe-alfaro/groundcite-qwen3-1.7b-n56"
+  },
+  "library_versions": {
+    "accelerate": "1.15.0",
+    "anthropic": "2.3.0",
+    "bitsandbytes": "0.50.2",
+    "groundcite": "0.1.0",
+    "huggingface-hub": "1.33.0",
+    "openai": "3.40.0",
+    "peft": "0.21.2",
+    "python": "3.13.15",
+    "python-dotenv": "1.2.4",
+    "tokenizers": "0.23.3",
+    "torch": "2.11.0+cu128",
+    "transformers": "5.17.0",
+    "unsloth": "2026.10.10",
+    "unsloth_zoo": "2026.10.10"
+  },
+  "loss_curve": [
+    {
+      "loss": 4.792401313781738,
+      "step": 1
+    },
+    {
+      "loss": 5.1229248046875,
+      "step": 2
+    },
+    {
+      "loss": 4.699271202087402,
+      "step": 3
+    },
+    {
+      "loss": 3.0189261436462402,
+      "step": 4
+    },
+    {
+      "loss": 2.3818442821502686,
+      "step": 5
+    },
+    {
+      "loss": 2.152618408203125,
+      "step": 6
+    },
+    {
+      "loss": 2.1569271087646484,
+      "step": 7
+    },
+    {
+      "loss": 2.052762031555176,
+      "step": 8
+    },
+    {
+      "loss": 1.8754730224609375,
+      "step": 9
+    },
+    {
+      "loss": 1.5765501260757446,
+      "step": 10
+    },
+    {
+      "loss": 1.528921365737915,
+      "step": 11
+    },
+    {
+      "loss": 1.7530734539031982,
+      "step": 12
+    },
+    {
+      "loss": 1.57470703125,
+      "step": 13
+    },
+    {
+      "loss": 1.3483641147613525,
+      "step": 14
+    },
+    {
+      "loss": 1.4190926551818848,
+      "step": 15
+    },
+    {
+      "loss": 1.3245601654052734,
+      "step": 16
+    },
+    {
+      "loss": 1.4726029634475708,
+      "step": 17
+    },
+    {
+      "loss": 1.4318151473999023,
+      "step": 18
+    },
+    {
+      "loss": 1.13479745388031,
+      "step": 19
+    },
+    {
+      "loss": 1.2218389511108398,
+      "step": 20
+    },
+    {
+      "loss": 1.3039813041687012,
+      "step": 21
+    }
+  ],
+  "max_seq_length": 2048,
+  "p99_tokens": 957,
+  "runtime": {
+    "device": "cuda",
+    "fp16": true,
+    "gradient_checkpointing": true,
+    "load_in_4bit": true,
+    "loaded_base": {
+      "name": "Qwen/Qwen3-1.7B",
+      "revision": "70d244cc86ccca08cf5af4e1e306ecf908b1ad5e"
+    }
+  },
+  "seed": 0,
+  "steps": 21,
+  "trained_examples": 56
+}

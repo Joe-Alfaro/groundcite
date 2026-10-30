@@ -1,0 +1,433 @@
+{
+  "backend": "unsloth",
+  "chat_template_sha256": "a55ee1b1660128b7098723e0abcd92caa0788061051c62d51cbe87d9cf1974d8",
+  "config": {
+    "lora": {
+      "alpha": 32,
+      "dropout": 0.05,
+      "r": 16,
+      "target_modules": [
+        "q_proj",
+        "k_proj",
+        "v_proj",
+        "o_proj",
+        "gate_proj",
+        "up_proj",
+        "down_proj"
+      ]
+    },
+    "model": {
+      "base": "Qwen/Qwen3-1.7B",
+      "load_in_4bit": true,
+      "revision": "70d244cc86ccca08cf5af4e1e306ecf908b1ad5e"
+    },
+    "train": {
+      "bf16": false,
+      "fp16": true,
+      "gradient_accumulation_steps": 2,
+      "gradient_checkpointing": true,
+      "learning_rate": 0.0002,
+      "logging_steps": 1,
+      "lr_scheduler_type": "cosine",
+      "max_grad_norm": 1.0,
+      "max_seq_length": 2048,
+      "num_train_epochs": 3,
+      "optim": "adamw_torch",
+      "per_device_train_batch_size": 4,
+      "step_policy": "epochs",
+      "warmup_steps": 0.05,
+      "weight_decay": 0.0
+    },
+    "version": 1
+  },
+  "config_sha256": "c981fb5196d25647ea69c6ee091cfb92a51fc73b6de0aa05576a2618aaf55943",
+  "dataset": {
+    "by_category": {
+      "clean": 33,
+      "distractor": 44,
+      "multi_symptom": 34,
+      "multi_turn": 32,
+      "no_snippet": 48,
+      "pressure": 33
+    },
+    "examples": 224
+  },
+  "dataset_sha256": "fb4051ef3eab8408ba3c935ef0ca4ea3700ce618e7187ace116bd166390a2b90",
+  "device": "auto",
+  "dropped_too_long": 0,
+  "git_dirty": false,
+  "git_sha": "c0be9258c80eff7c0f6d73515a7b71797ddd7fd6",
+  "hub": {
+    "commit_sha": "58532b3bbe315ad40197ecddb3b1f925c59ac83c",
+    "repo": "joe-alfaro/groundcite-qwen3-1.7b-n224"
+  },
+  "library_versions": {
+    "accelerate": "1.15.0",
+    "anthropic": "2.3.0",
+    "bitsandbytes": "0.50.2",
+    "groundcite": "0.1.0",
+    "huggingface-hub": "1.33.0",
+    "openai": "3.40.0",
+    "peft": "0.21.2",
+    "python": "3.13.15",
+    "python-dotenv": "1.2.4",
+    "tokenizers": "0.23.3",
+    "torch": "2.11.0+cu128",
+    "transformers": "5.17.0",
+    "unsloth": "2026.10.10",
+    "unsloth_zoo": "2026.10.10"
+  },
+  "loss_curve": [
+    {
+      "loss": 4.577083587646484,
+      "step": 1
+    },
+    {
+      "loss": 4.533763408660889,
+      "step": 2
+    },
+    {
+      "loss": 4.763761520385742,
+      "step": 3
+    },
+    {
+      "loss": 3.755993366241455,
+      "step": 4
+    },
+    {
+      "loss": 2.869576930999756,
+      "step": 5
+    },
+    {
+      "loss": 2.0295281410217285,
+      "step": 6
+    },
+    {
+      "loss": 2.097637176513672,
+      "step": 7
+    },
+    {
+      "loss": 1.8257505893707275,
+      "step": 8
+    },
+    {
+      "loss": 1.9408988952636719,
+      "step": 9
+    },
+    {
+      "loss": 1.9344768524169922,
+      "step": 10
+    },
+    {
+      "loss": 1.7410776615142822,
+      "step": 11
+    },
+    {
+      "loss": 1.5920071601867676,
+      "step": 12
+    },
+    {
+      "loss": 1.5297515392303467,
+      "step": 13
+    },
+    {
+      "loss": 1.8536670207977295,
+      "step": 14
+    },
+    {
+      "loss": 1.5212273597717285,
+      "step": 15
+    },
+    {
+      "loss": 1.581702709197998,
+      "step": 16
+    },
+    {
+      "loss": 1.4010858535766602,
+      "step": 17
+    },
+    {
+      "loss": 1.3311443328857422,
+      "step": 18
+    },
+    {
+      "loss": 1.4845054149627686,
+      "step": 19
+    },
+    {
+      "loss": 1.619117021560669,
+      "step": 20
+    },
+    {
+      "loss": 1.452359914779663,
+      "step": 21
+    },
+    {
+      "loss": 1.2451846599578857,
+      "step": 22
+    },
+    {
+      "loss": 1.1277801990509033,
+      "step": 23
+    },
+    {
+      "loss": 1.2130405902862549,
+      "step": 24
+    },
+    {
+      "loss": 1.163804531097412,
+      "step": 25
+    },
+    {
+      "loss": 1.2715562582015991,
+      "step": 26
+    },
+    {
+      "loss": 1.0923246145248413,
+      "step": 27
+    },
+    {
+      "loss": 0.9721776247024536,
+      "step": 28
+    },
+    {
+      "loss": 1.0938162803649902,
+      "step": 29
+    },
+    {
+      "loss": 0.8966519832611084,
+      "step": 30
+    },
+    {
+      "loss": 1.2250508069992065,
+      "step": 31
+    },
+    {
+      "loss": 1.076271653175354,
+      "step": 32
+    },
+    {
+      "loss": 0.7150552272796631,
+      "step": 33
+    },
+    {
+      "loss": 0.8865976333618164,
+      "step": 34
+    },
+    {
+      "loss": 0.7154887318611145,
+      "step": 35
+    },
+    {
+      "loss": 0.883236289024353,
+      "step": 36
+    },
+    {
+      "loss": 0.968030571937561,
+      "step": 37
+    },
+    {
+      "loss": 0.807694673538208,
+      "step": 38
+    },
+    {
+      "loss": 0.8477041721343994,
+      "step": 39
+    },
+    {
+      "loss": 0.9875075817108154,
+      "step": 40
+    },
+    {
+      "loss": 0.7310482263565063,
+      "step": 41
+    },
+    {
+      "loss": 0.8878582715988159,
+      "step": 42
+    },
+    {
+      "loss": 0.9451216459274292,
+      "step": 43
+    },
+    {
+      "loss": 0.9126055240631104,
+      "step": 44
+    },
+    {
+      "loss": 0.9429818391799927,
+      "step": 45
+    },
+    {
+      "loss": 0.7360100746154785,
+      "step": 46
+    },
+    {
+      "loss": 1.0022106170654297,
+      "step": 47
+    },
+    {
+      "loss": 0.8976131081581116,
+      "step": 48
+    },
+    {
+      "loss": 0.8347406387329102,
+      "step": 49
+    },
+    {
+      "loss": 0.770423173904419,
+      "step": 50
+    },
+    {
+      "loss": 0.8210440874099731,
+      "step": 51
+    },
+    {
+      "loss": 0.8748258352279663,
+      "step": 52
+    },
+    {
+      "loss": 1.0468963384628296,
+      "step": 53
+    },
+    {
+      "loss": 0.7717175483703613,
+      "step": 54
+    },
+    {
+      "loss": 0.8064886331558228,
+      "step": 55
+    },
+    {
+      "loss": 0.7789602279663086,
+      "step": 56
+    },
+    {
+      "loss": 0.6272718906402588,
+      "step": 57
+    },
+    {
+      "loss": 0.5278341174125671,
+      "step": 58
+    },
+    {
+      "loss": 0.5981109738349915,
+      "step": 59
+    },
+    {
+      "loss": 0.5290363430976868,
+      "step": 60
+    },
+    {
+      "loss": 0.694351077079773,
+      "step": 61
+    },
+    {
+      "loss": 0.7939022779464722,
+      "step": 62
+    },
+    {
+      "loss": 0.6500759124755859,
+      "step": 63
+    },
+    {
+      "loss": 0.6846204996109009,
+      "step": 64
+    },
+    {
+      "loss": 0.5778861045837402,
+      "step": 65
+    },
+    {
+      "loss": 0.7038516402244568,
+      "step": 66
+    },
+    {
+      "loss": 0.6081640124320984,
+      "step": 67
+    },
+    {
+      "loss": 0.5289414525032043,
+      "step": 68
+    },
+    {
+      "loss": 0.679912269115448,
+      "step": 69
+    },
+    {
+      "loss": 0.6036058664321899,
+      "step": 70
+    },
+    {
+      "loss": 0.663908064365387,
+      "step": 71
+    },
+    {
+      "loss": 0.6231850385665894,
+      "step": 72
+    },
+    {
+      "loss": 0.596532940864563,
+      "step": 73
+    },
+    {
+      "loss": 0.5298066735267639,
+      "step": 74
+    },
+    {
+      "loss": 0.6636072397232056,
+      "step": 75
+    },
+    {
+      "loss": 0.6738853454589844,
+      "step": 76
+    },
+    {
+      "loss": 0.6770207285881042,
+      "step": 77
+    },
+    {
+      "loss": 0.7203322649002075,
+      "step": 78
+    },
+    {
+      "loss": 0.675696074962616,
+      "step": 79
+    },
+    {
+      "loss": 0.6219024062156677,
+      "step": 80
+    },
+    {
+      "loss": 0.5759841203689575,
+      "step": 81
+    },
+    {
+      "loss": 0.6657137274742126,
+      "step": 82
+    },
+    {
+      "loss": 0.5823088884353638,
+      "step": 83
+    },
+    {
+      "loss": 0.6385955810546875,
+      "step": 84
+    }
+  ],
+  "max_seq_length": 2048,
+  "p99_tokens": 1068,
+  "runtime": {
+    "device": "cuda",
+    "fp16": true,
+    "gradient_checkpointing": true,
+    "load_in_4bit": true,
+    "loaded_base": {
+      "name": "Qwen/Qwen3-1.7B",
+      "revision": "70d244cc86ccca08cf5af4e1e306ecf908b1ad5e"
+    }
+  },
+  "seed": 0,
+  "steps": 84,
+  "trained_examples": 224
+}
