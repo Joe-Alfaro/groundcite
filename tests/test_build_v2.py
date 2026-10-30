@@ -19,6 +19,7 @@ import hashlib
 import json
 import os
 import subprocess
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
@@ -241,9 +242,19 @@ def _build(*args: str) -> subprocess.CompletedProcess[str]:
     )
 
 
-def _untouched() -> None:
-    assert not (REPO_ROOT / "data" / "distill" / "v2_additions").exists()
-    assert not (REPO_ROOT / "data" / "datasets" / "v2").exists()
+OUTPUTS = (REPO_ROOT / "data" / "distill" / "v2_additions", REPO_ROOT / "data" / "datasets" / "v2")
+
+
+def _snapshot() -> dict[Path, list[str]]:
+    """What the script could write; v2 may already be built, so compare before and after."""
+    return {p: sorted(str(f) for f in p.rglob("*")) if p.exists() else [] for p in OUTPUTS}
+
+
+@pytest.fixture
+def untouched() -> Iterator[None]:
+    before = _snapshot()
+    yield
+    assert _snapshot() == before, "the script wrote outputs"
 
 
 def test_build_v2_is_an_executable_strict_shell_script() -> None:
@@ -264,7 +275,8 @@ def test_build_v2_runs_the_pipeline_in_order() -> None:
         "scripts/scrub_check.py",
         "git commit",
     ]
-    positions = [text.find(step) for step in steps]
+    # The last mention of each: the scrub check also runs as a preflight, before any paid call.
+    positions = [text.rfind(step) for step in steps]
     assert all(p >= 0 for p in positions), dict(zip(steps, positions, strict=True))
     assert positions == sorted(positions)
     assert "--teacher anthropic:claude-opus-5-5" in text
@@ -273,25 +285,23 @@ def test_build_v2_runs_the_pipeline_in_order() -> None:
     assert V1_SHA in text
 
 
-def test_the_default_is_a_dry_run_that_writes_nothing() -> None:
+def test_the_default_is_a_dry_run_that_writes_nothing(untouched: None) -> None:
     result = _build()
     assert result.returncode == 0, result.stderr
     out = result.stdout
     assert "dry run" in out.lower()
     assert "teacher calls: 210" in out
     assert "--approved" in out
-    _untouched()
 
 
 @pytest.mark.parametrize(
     ("name", "spec"),
     [("opus", "anthropic:claude-opus-5-5"), ("gpt-5.5", "openai:gpt-5.5-2026-04-23")],
 )
-def test_a_dry_run_names_the_filter_judge(name: str, spec: str) -> None:
+def test_a_dry_run_names_the_filter_judge(name: str, spec: str, untouched: None) -> None:
     result = _build("--filter", name)
     assert result.returncode == 0, result.stderr
     assert spec in result.stdout
-    _untouched()
 
 
 @pytest.mark.parametrize(
@@ -299,8 +309,7 @@ def test_a_dry_run_names_the_filter_judge(name: str, spec: str) -> None:
     [["--approved"], ["--filter", "sonnet"], ["--approved", "--filter", "haiku"], ["--bogus"]],
     ids=["approved-without-filter", "unknown-filter", "approved-unknown-filter", "unknown-flag"],
 )
-def test_bad_arguments_exit_2_before_any_step(args: list[str]) -> None:
+def test_bad_arguments_exit_2_before_any_step(args: list[str], untouched: None) -> None:
     result = _build(*args)
     assert result.returncode == 2
     assert "teacher calls" not in result.stdout
-    _untouched()
