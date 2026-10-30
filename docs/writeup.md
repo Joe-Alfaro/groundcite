@@ -636,10 +636,34 @@ Final step loss is a training loss on a different number of examples per point, 
 measure. Each log's `dataset_sha256` equals the sha256 of the committed subset file, and every
 subset example was trained (0 dropped as too long).
 
-**Pending: the evals and the minimum viable N.** The held-out evals of the 56, 112 and 224
-adapters have not been run or scored, so this section has no Spec-adherence or Robustness number
-per point yet. The 448 point's held-out score is the tuned row in section 7 (0.48 / 3.47). Once
-the three curve points are scored on `heldout` (and `eval_own`), this section will give a table
+**Held-out, deterministic checks only (no judge).** The 56, 112 and 224 adapters have generated
+replies to `heldout` with the main run's pins (adapter revisions, eval-set hash and base
+revision verified; their base replies match the main run exactly). The table scores them with
+the project's deterministic checks, next to the full v1 run and base from section 7. Rates with
+95% bootstrap intervals (seed 0), n = 60 per row (41 cite-gold, 19 abstain-gold). Details,
+definitions and the rerun command: [`results/curve/heldout/`](../results/curve/heldout/README.md).
+
+> These are deterministic-check metrics only. The judge-scored Spec-adherence and Robustness
+> curve is pending approval, and the minimum viable N will be stated after judging.
+
+| N | System | HARD pass | SOFT flag | Invented-ID | Mode accuracy | Supports (cite gold) | Abstain P (n) | Abstain R |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 0 | base zero_shot | 0.47 [0.35, 0.60] | 0.20 [0.10, 0.30] | 0.00 [0.00, 0.00] | 0.65 [0.53, 0.77] | 0.68 [0.54, 0.83] | 0.00 (2) | 0.00 [0.00, 0.00] |
+| 0 | base structured | 0.20 [0.10, 0.30] | 0.15 [0.07, 0.25] | 0.40 [0.28, 0.52] | 0.68 [0.57, 0.78] | 0.27 [0.15, 0.41] | 0.50 (4) | 0.11 [0.00, 0.26] |
+| 56 | tuned | 0.35 [0.22, 0.47] | 0.08 [0.02, 0.17] | 0.00 [0.00, 0.00] | 0.70 [0.58, 0.82] | 0.49 [0.34, 0.63] | 1.00 (1) | 0.05 [0.00, 0.16] |
+| 112 | tuned | 0.35 [0.23, 0.47] | 0.15 [0.07, 0.23] | 0.02 [0.00, 0.05] | 0.53 [0.40, 0.65] | 0.24 [0.12, 0.39] | 0.35 (31) | 0.58 [0.37, 0.79] |
+| 224 | tuned | 0.48 [0.35, 0.62] | 0.10 [0.03, 0.18] | 0.02 [0.00, 0.05] | 0.67 [0.55, 0.78] | 0.51 [0.34, 0.66] | 0.47 (17) | 0.42 [0.16, 0.63] |
+| 448 | tuned (full v1) | 0.50 [0.37, 0.63] | 0.05 [0.00, 0.12] | 0.02 [0.00, 0.05] | 0.63 [0.50, 0.75] | 0.46 [0.32, 0.61] | 0.44 (25) | 0.58 [0.37, 0.79] |
+
+Mode accuracy alone is weak here: citing every time would score 0.68. Most intervals overlap,
+but two things are clear without the judge. The abstain behavior appears between N = 56 (one
+abstain in 60, like base) and N = 112, and n112 overshoots: it abstains on 31 replies, 20 of them
+on cite-gold scenarios. HARD pass rises from 0.35 at N = 56 and 112 to 0.48 and 0.50 at 224 and
+448, level with base zero_shot.
+
+**Pending: the judged curve and the minimum viable N.** The curve points have no Spec-adherence
+or Robustness number yet. The 448 point's held-out score is the tuned row in section 7 (0.48 /
+3.47). Once the three curve points are scored on `heldout` (and `eval_own`), this section will give a table
 and a plot of Spec-adherence and Robustness against N with 95% bootstrap intervals, and will
 state the **minimum viable N**: the smallest N that meets the reliability bar on `heldout`. If
 no N meets it (the full 448 run does not, section 7), the section will say so and report the

@@ -32,4 +32,5 @@ To rerun a point, train on its subset with the same config and seed on a CUDA ho
 uv run train/train_qlora.py --dataset data/datasets/v1/subsets/n<N>.jsonl --out runs/n<N> --seed 0
 ```
 
-The held-out evals of the curve adapters are pending: no quality numbers per point yet.
+The held-out deterministic-check metrics of the curve adapters are in
+[`results/curve/heldout/`](../../curve/heldout/README.md); the judge-scored evals are pending.
