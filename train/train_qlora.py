@@ -3,12 +3,14 @@
 
     uv run train/train_qlora.py --dataset data/datasets/v1/train.jsonl --out runs/v1 --seed 0 \\
         [--base Qwen/Qwen3-1.7B] [--max-steps N] [--epochs E] [--batch-size N] \\
-        [--backend unsloth|peft] [--device auto|cpu|cuda] [--hub-repo org/name] [--dry-run]
+        [--backend unsloth|peft] [--device auto|cpu|cuda] [--hub-repo org/name] \\
+        [--expect-config-sha256 HEX] [--dry-run]
 
 Hyperparameters come from ``train/config.toml`` only; ``--base``, ``--max-steps``, ``--epochs``
 and ``--batch-size`` override it and are part of the logged config hash. The dataset, output dir,
-seed, backend and device are not, so v1 and v2 runs share one config hash (R7). The configured base
-is loaded at its pinned Hub ``revision``; ``--base`` clears the pin (GOTCHA G27).
+seed, backend and device are not, so v1 and v2 runs share one config hash (R7), and
+``--expect-config-sha256`` exits 2 before any work when the resolved config hashes otherwise. The
+configured base is loaded at its pinned Hub ``revision``; ``--base`` clears the pin (GOTCHA G27).
 
 Backends: ``unsloth`` (default) is the Kaggle T4 path: a 4-bit base, fp16, Unsloth's kernels. It
 needs a CUDA GPU and the ``unsloth`` package, which the Kaggle notebook installs; it is not a
@@ -34,6 +36,7 @@ import importlib.util
 import json
 import math
 import os
+import re
 import shutil
 import sys
 import tempfile
@@ -88,6 +91,12 @@ def _positive_int(text: str) -> int:
     return value
 
 
+def _sha256_hex(text: str) -> str:
+    if not re.fullmatch(r"[0-9a-f]{64}", text):
+        raise argparse.ArgumentTypeError(f"not a 64-hex sha256: {text!r}")
+    return text
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = _Parser(prog="train_qlora.py", description=__doc__.splitlines()[0])
     parser.add_argument("--dataset", type=Path, required=True, help="train.jsonl to train on")
@@ -104,6 +113,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--device", choices=DEVICES, default="auto", help="cpu never uses MPS or CUDA"
     )
     parser.add_argument("--hub-repo", help="push the adapter to this Hub repo (needs HF_TOKEN)")
+    parser.add_argument(
+        "--expect-config-sha256",
+        type=_sha256_hex,
+        help="exit 2 before any work unless the resolved config hashes to this",
+    )
     parser.add_argument("--dry-run", action="store_true", help="print the plan; write nothing")
     return parser
 
@@ -679,6 +693,12 @@ def dry_run(plan: dict[str, Any], records: Sequence[Mapping[str, Any]]) -> int:
 
 def run(args: argparse.Namespace) -> int:
     plan, records = _plan(args)
+    expected = args.expect_config_sha256
+    if expected and plan["config_sha256"] != expected:
+        raise UsageError(
+            f"config_sha256 {plan['config_sha256']} differs from the expected {expected}: "
+            "the training config is frozen; nothing trained"
+        )
     if args.dry_run:
         return dry_run(plan, records)
 
