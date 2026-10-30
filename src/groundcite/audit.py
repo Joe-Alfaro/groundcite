@@ -198,6 +198,48 @@ def _allocate(sizes: Mapping[Any, int], n: int, rng: random.Random) -> dict[Any,
     return alloc
 
 
+def _stratified(
+    keys: Sequence[RowKey],
+    indexed: Mapping[RowKey, Mapping[str, Any]],
+    n: int,
+    rng: random.Random,
+) -> list[RowKey]:
+    """``n`` of ``keys``, stratified over (category, judge verdict)."""
+    strata: dict[tuple[str, int], list[RowKey]] = {}
+    for key in keys:
+        row = indexed[key]
+        verdict = spec_score(row, "transcripts")
+        strata.setdefault((str(row.get("category")), verdict), []).append(key)
+    strata = dict(sorted(strata.items()))
+    alloc = _allocate({s: len(ks) for s, ks in strata.items()}, n, rng)
+    return [key for s, ks in strata.items() for key in rng.sample(ks, alloc[s])]
+
+
+def _sheet_row(row: Mapping[str, Any], scenario: Scenario) -> dict[str, Any]:
+    """What a human needs to label a reply: the conversation, snippets and gold."""
+    return {
+        "category": row.get("category"),
+        "messages": scenario.messages,
+        "reply": row.get("reply"),
+        "snippets": scenario.snippets,
+        "gold": row.get("gold"),
+        "human_label": {"spec_adherence": None, "p_failed": []},
+    }
+
+
+def _checked_rows(
+    rows: Sequence[Mapping[str, Any]], scenarios: Sequence[Scenario], n: int
+) -> tuple[dict[RowKey, Mapping[str, Any]], dict[str, Scenario]]:
+    by_id = {s.id: s for s in scenarios}
+    indexed = index_rows(rows, "transcripts")
+    missing = sorted({key[0] for key in indexed} - by_id.keys())
+    if missing:
+        raise AuditError(f"scenarios missing from the eval set: {', '.join(missing)}")
+    if len(indexed) < n:
+        raise AuditError(f"only {len(indexed)} transcript rows; can't sample {n}")
+    return indexed, by_id
+
+
 def sample_sheet(
     rows: Sequence[Mapping[str, Any]],
     scenarios: Sequence[Scenario],
@@ -211,42 +253,85 @@ def sample_sheet(
     the eval set and the gold) and no judge verdict. Rows are shuffled so the verdict can't be read
     from the order either.
     """
-    by_id = {s.id: s for s in scenarios}
-    indexed = index_rows(rows, "transcripts")
-    missing = sorted({key[0] for key in indexed} - by_id.keys())
-    if missing:
-        raise AuditError(f"scenarios missing from the eval set: {', '.join(missing)}")
-    if len(indexed) < n:
-        raise AuditError(f"only {len(indexed)} transcript rows; can't sample {n}")
+    indexed, by_id = _checked_rows(rows, scenarios, n)
+    rng = random.Random(seed)
+    picked = _stratified(list(indexed), indexed, n, rng)
+    rng.shuffle(picked)
+    return [
+        {
+            "scenario_id": key[0],
+            "model": key[1],
+            "strategy": key[2],
+            **_sheet_row(indexed[key], by_id[key[0]]),
+        }
+        for key in picked
+    ]
 
-    strata: dict[tuple[str, int], list[RowKey]] = {}
-    for key, row in indexed.items():
-        verdict = spec_score(row, "transcripts")
-        strata.setdefault((str(row.get("category")), verdict), []).append(key)
-    strata = dict(sorted(strata.items()))
+
+def sample_system_blind_sheet(
+    rows: Sequence[Mapping[str, Any]],
+    scenarios: Sequence[Scenario],
+    *,
+    n: int,
+    seed: int,
+) -> tuple[list[dict[str, Any]], dict[str, dict[str, str]]]:
+    """``(sheet, key)``: like ``sample_sheet``, but the sheet also hides which system wrote each
+    reply, so the hand labels can't favor one (R29).
+
+    The sample is split across systems (model, strategy) as evenly as their sizes allow, then
+    stratified over (category, judge verdict) within each. Each sheet row gets an opaque
+    ``audit_id`` (its position after the shuffle) instead of the model and strategy; ``key`` maps
+    every ``audit_id`` back to its scenario_id, model and strategy for ``unblind_sheet``.
+    """
+    indexed, by_id = _checked_rows(rows, scenarios, n)
+    systems: dict[tuple[str, str], list[RowKey]] = {}
+    for key in indexed:
+        systems.setdefault((key[1], key[2]), []).append(key)
+    systems = dict(sorted(systems.items()))
 
     rng = random.Random(seed)
-    alloc = _allocate({s: len(keys) for s, keys in strata.items()}, n, rng)
-    picked = [key for s, keys in strata.items() for key in rng.sample(keys, alloc[s])]
+    alloc = _allocate({s: len(keys) for s, keys in systems.items()}, n, rng)
+    picked = [
+        key for s, keys in systems.items() for key in _stratified(keys, indexed, alloc[s], rng)
+    ]
     rng.shuffle(picked)
 
     sheet: list[dict[str, Any]] = []
-    for key in picked:
-        row, scenario = indexed[key], by_id[key[0]]
+    key_map: dict[str, dict[str, str]] = {}
+    for i, key in enumerate(picked, start=1):
+        audit_id = f"audit-{i:03d}"
+        key_map[audit_id] = {"scenario_id": key[0], "model": key[1], "strategy": key[2]}
         sheet.append(
-            {
-                "scenario_id": key[0],
-                "model": key[1],
-                "strategy": key[2],
-                "category": row.get("category"),
-                "messages": scenario.messages,
-                "reply": row.get("reply"),
-                "snippets": scenario.snippets,
-                "gold": row.get("gold"),
-                "human_label": {"spec_adherence": None, "p_failed": []},
-            }
+            {"audit_id": audit_id, "scenario_id": key[0], **_sheet_row(indexed[key], by_id[key[0]])}
         )
-    return sheet
+    return sheet, key_map
+
+
+def is_system_blind(sheet: Sequence[Mapping[str, Any]]) -> bool:
+    """True for a sheet written by ``sample_system_blind_sheet`` (its rows carry audit_id)."""
+    return any("audit_id" in entry for entry in sheet)
+
+
+def unblind_sheet(
+    sheet: Sequence[Mapping[str, Any]], key: Mapping[str, Any]
+) -> list[dict[str, Any]]:
+    """The sheet with each row's model and strategy restored from ``key``. A row whose audit_id
+    is not in the key, or whose scenario no longer matches it, is an error."""
+    unblinded = []
+    for i, entry in enumerate(sheet, start=1):
+        audit_id = entry.get("audit_id")
+        system = key.get(audit_id) if isinstance(audit_id, str) else None
+        if not isinstance(system, Mapping):
+            raise AuditError(f"sheet row {i}: audit_id {audit_id!r} is not in the key file")
+        if system.get("scenario_id") != entry.get("scenario_id"):
+            raise AuditError(
+                f"sheet row {i} ({audit_id}): scenario_id {entry.get('scenario_id')!r} does not "
+                f"match the key's {system.get('scenario_id')!r}"
+            )
+        unblinded.append(
+            {**entry, "model": system.get("model"), "strategy": system.get("strategy")}
+        )
+    return unblinded
 
 
 def score_sheet(

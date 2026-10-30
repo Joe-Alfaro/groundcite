@@ -43,6 +43,25 @@ No token, no secrets and no login: everything below is public and runs logged ou
   [`joe-alfaro/groundcite-diagnostic-v1`](https://huggingface.co/datasets/joe-alfaro/groundcite-diagnostic-v1),
   commit `ccb75f757844360f10fc951d7c4f3db1a57fcb36`.
 
+### Demo CLI
+
+`scripts/demo.py` sends one complaint, with optional reference snippets, to a base and a tuned
+model under the same zero-shot prompt, then prints both replies and a PASS / FAIL / n/a table of
+every deterministic check for each. With the mock models it needs no key, no download and no GPU:
+
+```bash
+uv run scripts/demo.py --model mock:compliant --base mock:naive \
+  --complaint "My 2016 hatchback takes three or four tries to restart after a short stop on a hot day." \
+  --snippet "TSB-4417: Connect a fuel pressure gauge at the rail test port and watch the leak-down." \
+  --snippet "SM 4.2.6: Wiper motor park switch check with the key on."
+```
+
+Without snippets the run is scored as an abstain case (the on-spec reply cites nothing and asks
+for one detail). `--snippets FILE` takes a JSON array of `{"id", "text"}`, `--scenario SET --id ID`
+takes a row from any eval set, and `--json` prints one JSON object. Leave out `--model` and
+`--base` to run the pinned adapter and base above through transformers (loaded on the first
+reply; needs a GPU or a lot of patience).
+
 ## Project status
 
 Milestone 1 (Oct 29): the spec, the eval harness, the prompt-ceiling ablation (no plateau: a
