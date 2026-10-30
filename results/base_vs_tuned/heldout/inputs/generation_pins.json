@@ -1,0 +1,120 @@
+{
+  "eval_set": {
+    "path": "data/scenarios/heldout.jsonl",
+    "sha256": "13dae80532ab13f3d8e0290374e1fd1abb81df05a23b36e749ca347ae4b3c564"
+  },
+  "scenario_ids": [
+    "ho-0001",
+    "ho-0002",
+    "ho-0003",
+    "ho-0004",
+    "ho-0005",
+    "ho-0006",
+    "ho-0007",
+    "ho-0008",
+    "ho-0009",
+    "ho-0010",
+    "ho-0011",
+    "ho-0012",
+    "ho-0013",
+    "ho-0014",
+    "ho-0015",
+    "ho-0016",
+    "ho-0017",
+    "ho-0018",
+    "ho-0019",
+    "ho-0020",
+    "ho-0021",
+    "ho-0022",
+    "ho-0023",
+    "ho-0024",
+    "ho-0025",
+    "ho-0026",
+    "ho-0027",
+    "ho-0028",
+    "ho-0029",
+    "ho-0030",
+    "ho-0031",
+    "ho-0032",
+    "ho-0033",
+    "ho-0034",
+    "ho-0035",
+    "ho-0036",
+    "ho-0037",
+    "ho-0038",
+    "ho-0039",
+    "ho-0040",
+    "ho-0041",
+    "ho-0042",
+    "ho-0043",
+    "ho-0044",
+    "ho-0045",
+    "ho-0046",
+    "ho-0047",
+    "ho-0048",
+    "ho-0049",
+    "ho-0050",
+    "ho-0051",
+    "ho-0052",
+    "ho-0053",
+    "ho-0054",
+    "ho-0055",
+    "ho-0056",
+    "ho-0057",
+    "ho-0058",
+    "ho-0059",
+    "ho-0060"
+  ],
+  "systems": [
+    {
+      "model": "hf:Qwen/Qwen3-1.7B@70d244cc86ccca08cf5af4e1e306ecf908b1ad5e",
+      "strategy": "zero_shot"
+    },
+    {
+      "model": "hf:Qwen/Qwen3-1.7B@70d244cc86ccca08cf5af4e1e306ecf908b1ad5e",
+      "strategy": "structured"
+    },
+    {
+      "model": "hf:joe-alfaro/groundcite-qwen3-1.7b",
+      "strategy": "zero_shot"
+    }
+  ],
+  "models": [
+    {
+      "model": "hf:Qwen/Qwen3-1.7B@70d244cc86ccca08cf5af4e1e306ecf908b1ad5e",
+      "model_revision": "70d244cc86ccca08cf5af4e1e306ecf908b1ad5e",
+      "chat_template_sha256": "a55ee1b1660128b7098723e0abcd92caa0788061051c62d51cbe87d9cf1974d8"
+    },
+    {
+      "model": "hf:joe-alfaro/groundcite-qwen3-1.7b",
+      "model_revision": "b16b566d0d36d06744c90342fe836a4e6decc4e8",
+      "chat_template_sha256": "a55ee1b1660128b7098723e0abcd92caa0788061051c62d51cbe87d9cf1974d8"
+    }
+  ],
+  "decoding": {
+    "hf:Qwen/Qwen3-1.7B@70d244cc86ccca08cf5af4e1e306ecf908b1ad5e": {
+      "do_sample": false,
+      "max_new_tokens": 256
+    },
+    "hf:joe-alfaro/groundcite-qwen3-1.7b": {
+      "do_sample": false,
+      "max_new_tokens": 256
+    }
+  },
+  "git_sha": "72f24f331402c9f846e382a251744e29f49c0dab",
+  "git_dirty": false,
+  "library_versions": {
+    "python": "3.13.15",
+    "groundcite": "0.1.0",
+    "anthropic": "2.3.0",
+    "openai": "3.40.0",
+    "python-dotenv": "1.2.4",
+    "torch": "2.11.0+cu128",
+    "transformers": "5.17.0",
+    "peft": "0.21.2"
+  },
+  "prompt_sha256": {
+    "zero_shot": "5792d0fd701efc9ebcc5d09ffe616cdef747d5362baa79647c11d8ba4befc6c1",
+    "structured": "daecf3e11aa0ca87b5db7ff4954b027aa15d4fbdfa539482a26e43a2076c32ef"
+  }
+}
