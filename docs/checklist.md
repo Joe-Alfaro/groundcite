@@ -120,3 +120,16 @@ the session's setup time was not recorded.
 | Eval generation for the curve checkpoints | 3.0 | 0 |
 | Reruns and failed sessions | 3.0 | 0 |
 | Total | 15.0 | 0.28 |
+
+## Judge API budget
+
+Eval judge: `openai:gpt-5.5-2026-04-23`. Total judge spend cap: $20 actual (raised from $10 by the
+owner), covering base vs tuned (held-out set first, then `eval_own`), v2 and the curve points.
+Spent so far: $0.
+
+| Run | Planned (USD) | Spent (USD) |
+| --- | --- | --- |
+| Base vs tuned, held-out set (3 rows) | about 5.8 | 0 |
+| Base vs tuned, `eval_own` (3 rows) | about 9.6 | 0 |
+| v2 and curve points, held-out set | the rest (about 4.6) | 0 |
+| Total | 20.0 (cap) | 0 |

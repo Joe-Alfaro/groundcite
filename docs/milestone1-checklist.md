@@ -81,3 +81,12 @@ still missing or partial. The reasons are in the
 | R8 | At least two data-efficiency points, or a documented reason | partial | `scripts/make_sweep.py`, `docs/checklist.md`, `docs/writeup.md` (status section) | No points yet; the reason (every run is on Kaggle, and the full v1 run only just finished) and the plan are documented. |
 | R14 | Data-efficiency training logs for rerunning a point | missing | `train/train_qlora.py` writes `train_log.json` (config and dataset hashes, seed, loss curve) | Due with the first curve point. The full v1 run's log is committed in `results/training/v1/train_log.json`; no curve-point logs yet. |
 | R29 | Judge validity evidence | partial | `results/judge_agreement/`, `docs/writeup.md` section 10, `scripts/judge_audit.py` | The agreement study kept gpt-5.5 (it matched a blind label on 17 of 19 disputed replies); the 20-reply hand audit waits for tuned-model replies. |
+
+## Judge API budget
+
+Next to the [R31 GPU-hour budget](checklist.md#r31-gpu-hour-budget): the eval judge is
+`openai:gpt-5.5-2026-04-23`, with a total judge spend cap of $20 actual (raised from $10 by the
+owner) for base vs tuned (held-out set first, then `eval_own`), v2 and the curve points. Spent so
+far: $0. Planned allocation: held-out set, 3 rows, about $5.8; `eval_own`, 3 rows, about $9.6; the
+rest for v2 and the curve on the held-out set. Details:
+[judge API budget](checklist.md#judge-api-budget).
