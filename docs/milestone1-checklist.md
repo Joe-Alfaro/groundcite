@@ -25,8 +25,8 @@ still missing or partial. The reasons are in the
 
 | Status | Rows |
 | --- | --- |
-| met | 26 |
-| partial | 5 |
+| met | 27 |
+| partial | 4 |
 | missing | 0 |
 | owner-gated | 1 |
 | **Total** | **32** |
@@ -81,7 +81,7 @@ still missing or partial. The reasons are in the
 | R7 | One failure mode diagnosed from evals and fixed by a data change (v2) | partial | `results/base_vs_tuned/heldout/DIAGNOSIS.md`, `docs/writeup.md` section 8; `scripts/diff_datasets.py` (ready); `data/scenarios/train_v2_additions.jsonl`, `docs/dataset-v2-plan.md` | Diagnosis done from tuned-model transcripts: false abstain, 14 of 60 held-out replies. The v2 scenarios are ready (105 in-scope cite twins of the v1 abstain scenarios); the teacher spend awaits approval. |
 | R8 | At least two data-efficiency points, or a documented reason | partial | `scripts/make_sweep.py`, `data/datasets/v1/subsets/`, `results/training/curve/README.md`, `results/curve/heldout/README.md`, `docs/writeup.md` section 9 | Since the check-in, the curve has 4 nested points trained with logs (N = 56, 112, 224 with the v1 config and seed, plus the full 448 run). The deterministic-check curve on the held-out set is in `results/curve/heldout/README.md`; the judge-scored curve is pending approval of the judge spend. |
 | R14 | Data-efficiency training logs for rerunning a point | met | `results/training/curve/n{56,112,224}/train_log.json`, `results/training/curve/README.md`, `results/training/v1/train_log.json` | Every point's log has the config and dataset hashes, seed and loss curve; the README gives the rerun command. |
-| R29 | Judge validity evidence | partial | `results/judge_agreement/`, `docs/writeup.md` section 10, `scripts/judge_audit.py` | The agreement study kept gpt-5.5 (it matched a blind label on 17 of 19 disputed replies). The 20-reply hand-audit tooling is done (`judge_audit.py --blind-system`); the hand audit is pending. |
+| R29 | Judge validity evidence | met | `results/judge_audit/`, `results/judge_agreement/`, `docs/writeup.md` section 10, `scripts/judge_audit.py` | The 20-reply blind hand audit agrees with the judge on 19 of 20 (bar 18); the one disagreement is a borderline repeated citation. The agreement study kept gpt-5.5 (it matched a blind label on 17 of 19 disputed replies). |
 
 ## Judge API budget
 

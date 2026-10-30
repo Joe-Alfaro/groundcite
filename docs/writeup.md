@@ -4,8 +4,8 @@
 > and since. Sections 1, 2, 3, 5 and 6 (method) describe what is built or designed in this
 > repository. Section 4 reports the real prompt-ceiling ablation, section 4a the long-conversation
 > pilot, section 6 dataset v1, section 7 the base-vs-tuned evals, section 8 the v2 diagnosis,
-> section 9 the curve training runs (their evals are pending) and section 10 the judge agreement
-> study. Every other number that needs a
+> section 9 the curve training runs (their evals are pending) and section 10 the R29 hand audit
+> and the judge agreement study. Every other number that needs a
 > real run is marked **Pending**, along with what will go there. Nothing in the pending sections
 > should be read as a result.
 
@@ -35,6 +35,9 @@ commit `b16b566d0d36d06744c90342fe836a4e6decc4e8`.
   224 are trained with the v1 config and seed (final step losses 1.3040 / 1.0274 / 0.6386; the
   full 448 run ended at 0.5064). Their held-out evals are not scored yet, so the minimum viable N
   is not stated.
+- **The judge passes the R29 hand audit (section 10).** On 20 blind hand-labeled held-out
+  replies, the judge agrees on 19 (the bar is 18). The one disagreement is a reply that repeats
+  the same citation, which the judge fails under a literal reading of P2.
 - **Judge spend:** $7.88 logged plus about $1.6 unlogged (the first 83 held-out judgments
   predate usage logging), about $9.5 of the $20 cap. With the conservative $6 estimate for the
   unlogged calls, about $13.9.
@@ -672,12 +675,42 @@ smallest N whose score falls inside the 448 point's interval. The spacing is pow
 
 ## 10. Judge validity audit
 
-**Pending.**
+### Hand audit (R29)
 
-- **Hand audit:** 20 replies labeled by hand against P1–P8. The target is agreement with the judge
-  on at least 18. The section will list the disagreements and what caused them.
-- **Rerun delta:** re-running the eval on the same pins should reproduce Spec-adherence within
-  ±0.03. The observed delta goes here.
+**Result: the judge agrees with the hand labels on 19 of 20 replies (95%). The pre-set bar was
+18 of 20, so it passes.**
+
+**Method.** The 20 replies come from the committed held-out base-vs-tuned run (section 7),
+sampled with `scripts/judge_audit.py --blind-system --n 20 --seed 29`. The sample is split as
+evenly as possible across the three systems in that run (base `structured` 7, base zero-shot 6,
+tuned zero-shot 7) and stratified within each system over category and the judge's pass or fail.
+The sheet shows each reply only under an opaque audit ID; the mapping back to model and strategy
+is kept in a separate key file. A fresh agent that had not seen the run labeled every reply
+against P1–P8, blind to the judge's verdicts and to which system wrote it, reading the complaint,
+every snippet with its applicability (engine, model year, condition) and any earlier turns. No
+model or API was called, and no transcript, key or judge output was opened until all 20 labels
+were written. `judge_audit.py --score` then compared the labels with the judge.
+
+**Agreement.** The hand labels are 11 pass and 9 fail. The judge agreed on all 9 fails, including
+every near-miss citation where only the engine, year or condition differs from the matching
+snippet, and on 10 of the 11 passes. No disagreement involved the mode (cite or abstain), snippet
+applicability or repair talk.
+
+**The one disagreement (borderline).** A base zero-shot reply gives a single supported heater-hose
+temperature check and brackets the same snippet ID twice. The labeler passed it, reading P2's
+"exactly one `[ID]`" as one snippet cited. The judge failed it on P2, reading a repeated ID as two
+citations. The judge's reading follows the rubric's wording more literally and is defensible; the
+deterministic `citation_count` check passed the reply because it counts distinct IDs. The rubric
+could state whether a repeated ID counts as two citations.
+
+**Limits.** This is one labeler on 20 replies, all from the held-out run, so it bounds gross judge
+error rather than measuring it precisely. The labels, the blind sheet, the key and the score
+output are in [`results/judge_audit/`](../results/judge_audit/README.md).
+
+### Rerun delta
+
+**Pending.** Re-running the eval on the same pins should reproduce Spec-adherence within ±0.03.
+The observed delta goes here.
 
 ### Judge agreement study
 

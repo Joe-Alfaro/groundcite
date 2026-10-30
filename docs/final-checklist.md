@@ -22,8 +22,8 @@ Status as of Friday, October 30.
 
 | Status | Rows |
 | --- | --- |
-| met | 9 |
-| partial | 5 |
+| met | 10 |
+| partial | 4 |
 | missing | 0 |
 | owner-gated | 1 |
 
@@ -39,10 +39,10 @@ Status as of Friday, October 30.
 | R3 | Prompt-ceiling ablation results table | met | [`results/ablation/README.md`](../results/ablation/README.md), `results/ablation/m1/`, `docs/writeup.md` section 4 | None. |
 | R7 | One failure mode fixed by a data change (v2) | partial | [`results/base_vs_tuned/heldout/DIAGNOSIS.md`](../results/base_vs_tuned/heldout/DIAGNOSIS.md), `docs/writeup.md` section 8; [`docs/dataset-v2-plan.md`](dataset-v2-plan.md), `data/scenarios/train_v2_additions.jsonl` | Diagnosis done (false abstain, 14 of 60 held-out replies). The v2 scenarios are ready: 105 in-scope cite twins of the v1 abstain scenarios. The teacher spend (210 calls, plus the filter's judge calls) awaits approval; then v2 training on Kaggle and a held-out eval. |
 | R8 | Full data-efficiency curve (≥4 nested points) with minimum viable N | partial | [`results/training/curve/README.md`](../results/training/curve/README.md) (4 nested points trained with logs: N = 56, 112, 224, plus the full 448 run in `results/training/v1/`); [`results/curve/heldout/README.md`](../results/curve/heldout/README.md) (deterministic-check curve on the held-out set, all 4 points); `docs/writeup.md` section 9 | The judge-scored curve (Spec-adherence and Robustness) is pending approval of the judge spend, and the minimum viable N is stated after judging. The curve adapters are private, so `scripts/run_curve.py` (not built) could not load them for a third party. |
-| R17 | Write-up | partial | [`docs/writeup.md`](writeup.md) | The thesis, ablation, base vs tuned, v2 diagnosis and curve training facts are written. Pending: the v2 result, the curve evals with minimum viable N, and the R29 hand audit with the rerun delta (section 10). |
+| R17 | Write-up | partial | [`docs/writeup.md`](writeup.md) | The thesis, ablation, base vs tuned, v2 diagnosis and curve training facts are written. The R29 hand audit is in section 10. Pending: the v2 result, the curve evals with minimum viable N, and the rerun delta (section 10). |
 | R18 | 3–5 minute demo video with a live outside prompt, linked from `README.md` | owner-gated | link in `README.md` (not yet) | Recorded by the owner. The demo CLI (`scripts/demo.py`) can run it live; the hosted notebook link is not published (see R16). |
 | R12 | Accept a third-party held-out set (JSONL, JSON array, CSV; three fixtures produce scored output) | met | [`docs/eval-set-format.md`](eval-set-format.md), `src/groundcite/evalset.py`, `tests/test_evalset.py`, `tests/test_eval_fixture_sets.py` (each fixture set runs end to end through `eval.py` and produces `results.json`, `results.md` and `transcripts.jsonl`) | None. |
-| R29 | Judge validity: 20 hand-labeled replies, judge agrees on ≥18, reported in the write-up | partial | `scripts/judge_audit.py` (with `--blind-system`, which hides model and strategy behind an audit ID), `tests/test_judge_audit.py`, `tests/test_judge_audit_heldout.py`; related evidence in `results/judge_agreement/` and `docs/writeup.md` section 10 | The tooling is done; the 20-reply hand audit is pending. The agreement study (gpt-5.5 matched a blind label on 17 of 19 disputed replies) is related, not this audit. |
+| R29 | Judge validity: 20 hand-labeled replies, judge agrees on ≥18, reported in the write-up | met | [`results/judge_audit/`](../results/judge_audit/README.md) (blind sheet, key, labels, `report.json`), `scripts/judge_audit.py`, `tests/test_judge_audit.py`, `tests/test_judge_audit_heldout.py`; `docs/writeup.md` section 10 | None. The judge agrees on 19 of 20 blind hand-labeled held-out replies; the one disagreement is a borderline repeated citation that the judge fails under a literal reading of P2. |
 | R1 | Canonical spec | met | [`SPEC.md`](../SPEC.md) | None. |
 | R32 | Milestone checklists | met | [`docs/checklist.md`](checklist.md), [`docs/milestone1-checklist.md`](milestone1-checklist.md), this file | None. |
 | — | Architecture document | met | [`ARCHITECTURE.md`](../ARCHITECTURE.md) | None. |
