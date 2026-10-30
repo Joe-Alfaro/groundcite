@@ -321,6 +321,27 @@ def test_the_card_says_synthetic_not_real_service_information(
     assert "synthetic, not real service information" in body.lower()
 
 
+def test_the_card_names_the_teacher_and_its_providers_terms(
+    env: Path, fake_hub: type[FakeHfApi], scrub_terms: Path, dataset: Path, tmp_path: Path
+) -> None:
+    """D-122: the full dataset ships with the teacher's replies, so the card names the teacher
+    model and says use is subject to the teacher provider's terms."""
+    manifest = json.loads((dataset / "manifest.json").read_text(encoding="utf-8"))
+    teacher = manifest["teacher_model"]
+    provider = teacher.split(":", 1)[0]
+    _, body = _card(_stage(tmp_path, dataset))
+    assert teacher in body, "name the teacher model"
+    assert "synthetic, not real service information" in body.lower()
+    terms_lines = [
+        line
+        for line in body.splitlines()
+        if re.search(r"\bsubject to\b", line, re.IGNORECASE)
+        and re.search(r"\bterms\b", line, re.IGNORECASE)
+        and provider.lower() in line.lower()
+    ]
+    assert terms_lines, f"say use is subject to the teacher provider's ({provider}) terms"
+
+
 def test_the_card_covers_schema_method_counts_teacher_limits_and_ids(
     env: Path, fake_hub: type[FakeHfApi], scrub_terms: Path, dataset: Path, tmp_path: Path
 ) -> None:
