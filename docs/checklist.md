@@ -88,7 +88,7 @@ are still behind: they need the tuned-model eval first. The reasons are in the
 | R14 | Rerun one ablation cell | `uv run scripts/run_ablation.py --model <m> --strategy few_shot --limit 30`, `tests/test_ablation.py` | done |
 | R14 | Rerun one curve point from a published subset | `uv run train/train_qlora.py --dataset data/datasets/<v>/subsets/n<N>.jsonl --seed <s>` (planned) | not started |
 | R14 | Training logs committed for every point | `results/curve/*/train_log.json` (planned) | not started |
-| R15 | Public dataset with card ("synthetic, not real service information") | HF Hub dataset repo (planned) | owner-gated |
+| R15 | Public dataset with card ("synthetic, not real service information") | [`joe-alfaro/groundcite-diagnostic-v1`](https://huggingface.co/datasets/joe-alfaro/groundcite-diagnostic-v1) at commit `ccb75f757844360f10fc951d7c4f3db1a57fcb36`, `data/datasets/v1/publish.json` | done |
 | R15 | Teacher provider's terms checked before publishing (G38) | dataset card (planned) | owner-gated |
 | R16 | Base-vs-tuned demo with check results; no-snippet path abstains | `uv run scripts/demo.py` (planned) | not started |
 | R16 | Public notebook link, each reply under 2 minutes, tested logged-out (G31, G32) | Colab or Kaggle link in `README.md` (planned) | owner-gated |
