@@ -44,7 +44,8 @@ plainly instead of treating the frontier numbers as something the small model ha
   (`gpt-5.5`) stays.
 - **Dataset v1 (section 6).** 448 filtered examples from 960 teacher candidates (46.7% kept), 28.1%
   abstain, with a manifest, a filter report, a leakage report and a quality note from reading the
-  data.
+  data. It is public at [`joe-alfaro/groundcite-diagnostic-v1`](https://huggingface.co/datasets/joe-alfaro/groundcite-diagnostic-v1),
+  commit `ccb75f757844360f10fc951d7c4f3db1a57fcb36`.
 - **Training and smoke code.** The QLoRA script, its frozen config, the Kaggle training and eval
   notebooks and the smoke loop are written and tested. The local smoke mode is a CPU-only check on
   a tiny model; the real-model smoke runs on Kaggle.
@@ -428,7 +429,9 @@ blind spot will pass. The judge validity audit (section 10) is the check on that
 
 The pipeline is merged to `main` and has been run once, to build dataset v1.
 
-**Dataset v1** (`data/datasets/v1/`). 960 teacher candidates (k = 2 over 480 training scenarios)
+**Dataset v1** (`data/datasets/v1/`; public on the HF Hub at
+[`joe-alfaro/groundcite-diagnostic-v1`](https://huggingface.co/datasets/joe-alfaro/groundcite-diagnostic-v1), commit
+`ccb75f757844360f10fc951d7c4f3db1a57fcb36`). 960 teacher candidates (k = 2 over 480 training scenarios)
 gave 448 kept examples (46.7%), one per scenario for 448 of the 480 scenarios. That meets the R6
 floor of 300. The abstain share is 28.1%. By category: clean 67, distractor 86, multi_symptom 67,
 multi_turn 65, no_snippet 96, pressure 67. Rejections: 102 at the SOFT checks and 410 not selected

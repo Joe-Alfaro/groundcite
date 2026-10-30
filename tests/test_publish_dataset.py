@@ -153,9 +153,9 @@ def scrub_terms(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 @pytest.fixture
 def dataset(tmp_path: Path) -> Path:
-    """A copy of v1 outside git, with a recorded generation date."""
+    """A copy of v1 outside git, with a recorded generation date and no publish record yet."""
     out = tmp_path / "datasets" / "v9"
-    shutil.copytree(V1, out)
+    shutil.copytree(V1, out, ignore=shutil.ignore_patterns("publish.json"))
     manifest = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
     manifest["generated_at"] = GENERATED_AT
     (out / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")

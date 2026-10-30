@@ -39,8 +39,9 @@ No token, no secrets and no login: everything below is public and runs logged ou
   both replies with every deterministic check result. It needs a free GPU (Kaggle or Colab T4);
   edit `COMPLAINT` and `SNIPPETS` to try your own input.
 - TODO-PUBLISH: the hosted public notebook link (Kaggle) goes here after the publish step.
-- TODO-PUBLISH: the public dataset link (training data, eval sets and dataset card on the HF
-  Hub) goes here after the publish step.
+- **Dataset.** Dataset v1 (training data, eval sets and dataset card):
+  [`joe-alfaro/groundcite-diagnostic-v1`](https://huggingface.co/datasets/joe-alfaro/groundcite-diagnostic-v1),
+  commit `ccb75f757844360f10fc951d7c4f3db1a57fcb36`.
 
 ## Project status
 

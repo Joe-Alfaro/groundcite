@@ -25,11 +25,11 @@ still missing or partial. The reasons are in the
 
 | Status | Rows |
 | --- | --- |
-| met | 21 |
+| met | 22 |
 | partial | 6 |
 | missing | 3 |
 | owner-gated | 1 |
-| **Total** | **31** |
+| **Total** | **32** |
 
 ## Project basics
 
@@ -76,6 +76,7 @@ still missing or partial. The reasons are in the
 | R5 | Full loop generate → train → eval on a smoke batch | partial | `scripts/smoke_loop.sh`, `tests/test_smoke_loop.py` | Local mode runs end to end as a CPU-only check on a tiny model. The real-model training path has now run end to end on Kaggle (`results/training/v1/`); the eval step on a real model is still pending. |
 | R6 | First real QLoRA training run | met | `results/training/v1/` (`train_log.json`, `README.md`), `train/train_qlora.py`, `train/config.toml`, `train/kaggle_train.ipynb` | Qwen3-1.7B on dataset v1 with frozen config v1, Kaggle T4, code commit `72f24f33`: 168 steps (3 epochs) in 839.7 s, final step loss 0.5064, mean train loss 0.9019, no errors. |
 | R6, R9 | Draft model checkpoint on the Hub with its commit hash | met | [`joe-alfaro/groundcite-qwen3-1.7b`](https://huggingface.co/joe-alfaro/groundcite-qwen3-1.7b) at commit `b16b566d0d36d06744c90342fe836a4e6decc4e8`; `results/training/v1/README.md` | Public. The LoRA adapter, its config, the model card and the training log. This model page is the deployed artifact for Milestone 1. |
+| R15 | Dataset published | met | [`joe-alfaro/groundcite-diagnostic-v1`](https://huggingface.co/datasets/joe-alfaro/groundcite-diagnostic-v1) at commit `ccb75f757844360f10fc951d7c4f3db1a57fcb36`; `data/datasets/v1/publish.json` | Public. Dataset v1 with its dataset card, published from `main` `92113c3`. |
 | R6 | First base-vs-tuned numbers in the verified format | missing | `results/base_vs_tuned/` (planned), `train/kaggle_eval.ipynb`, `eval.py --judge-from` | Needs the trained adapter. Target: within a day of the Kaggle run. |
 | R7 | One failure mode diagnosed from evals and fixed by a data change (v2) | missing | `scripts/diff_datasets.py` (ready); diagnosis note and `data/datasets/v2/` (planned) | The failure mode must come from tuned-model transcripts, not a guess. Candidate weaknesses are noted in `data/datasets/v1/NOTES.md`. |
 | R8 | At least two data-efficiency points, or a documented reason | partial | `scripts/make_sweep.py`, `docs/checklist.md`, `docs/writeup.md` (status section) | No points yet; the reason (every run is on Kaggle, and the full v1 run only just finished) and the plan are documented. |
