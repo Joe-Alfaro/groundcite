@@ -1,0 +1,8 @@
+{
+  "judge_model": "openai:gpt-5.5-2026-04-23",
+  "calls": 97,
+  "input_tokens": 198118,
+  "output_tokens": 11965,
+  "reasoning_tokens": 18649,
+  "cost_usd": 1.90901
+}

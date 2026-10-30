@@ -68,5 +68,6 @@
     "structured": "daecf3e11aa0ca87b5db7ff4954b027aa15d4fbdfa539482a26e43a2076c32ef"
   },
   "judge_model": "openai:gpt-5.5-2026-04-23",
-  "rubric_sha256": "636a9c79b9ba0ad02b082351bd25e385c0963c9d8edffedad3919e56b556b4bf"
+  "rubric_sha256": "636a9c79b9ba0ad02b082351bd25e385c0963c9d8edffedad3919e56b556b4bf",
+  "generations_sha256": "34eba7e962e7be16df8ca2f2d366e5d59817ee65267286657e4faaddedf2c684"
 }

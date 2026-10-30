@@ -1,0 +1,186 @@
+{
+  "run_id": "20261030T171626Z-e1bd6f",
+  "pins": {
+    "git_sha": "b17f80bdbfdfc05c1346187242156d56b0a7d233",
+    "git_dirty": false,
+    "judge_model": "openai:gpt-5.5-2026-04-23",
+    "rubric_sha256": "636a9c79b9ba0ad02b082351bd25e385c0963c9d8edffedad3919e56b556b4bf",
+    "eval_set": {
+      "path": "data/scenarios/heldout.jsonl",
+      "sha256": "13dae80532ab13f3d8e0290374e1fd1abb81df05a23b36e749ca347ae4b3c564"
+    },
+    "models": [
+      {
+        "model": "hf:Qwen/Qwen3-1.7B@70d244cc86ccca08cf5af4e1e306ecf908b1ad5e",
+        "model_revision": "70d244cc86ccca08cf5af4e1e306ecf908b1ad5e",
+        "chat_template_sha256": "a55ee1b1660128b7098723e0abcd92caa0788061051c62d51cbe87d9cf1974d8"
+      },
+      {
+        "model": "hf:joe-alfaro/groundcite-qwen3-1.7b",
+        "model_revision": "b16b566d0d36d06744c90342fe836a4e6decc4e8",
+        "chat_template_sha256": "a55ee1b1660128b7098723e0abcd92caa0788061051c62d51cbe87d9cf1974d8"
+      }
+    ],
+    "decoding": {
+      "hf:Qwen/Qwen3-1.7B@70d244cc86ccca08cf5af4e1e306ecf908b1ad5e": {
+        "do_sample": false,
+        "max_new_tokens": 256
+      },
+      "hf:joe-alfaro/groundcite-qwen3-1.7b": {
+        "do_sample": false,
+        "max_new_tokens": 256
+      },
+      "openai:gpt-5.5-2026-04-23": {
+        "max_completion_tokens": 16000,
+        "reasoning_effort": "low"
+      }
+    },
+    "bootstrap_seed": 0,
+    "library_versions": {
+      "python": "3.13.2",
+      "groundcite": "0.1.0",
+      "anthropic": "2.3.0",
+      "openai": "3.40.0",
+      "python-dotenv": "1.2.4",
+      "torch": "2.14.1",
+      "transformers": "5.21.0",
+      "peft": "0.21.2"
+    }
+  },
+  "scenario_ids": [
+    "ho-0001",
+    "ho-0002",
+    "ho-0003",
+    "ho-0004",
+    "ho-0005",
+    "ho-0006",
+    "ho-0007",
+    "ho-0008",
+    "ho-0009",
+    "ho-0010",
+    "ho-0011",
+    "ho-0012",
+    "ho-0013",
+    "ho-0014",
+    "ho-0015",
+    "ho-0016",
+    "ho-0017",
+    "ho-0018",
+    "ho-0019",
+    "ho-0020",
+    "ho-0021",
+    "ho-0022",
+    "ho-0023",
+    "ho-0024",
+    "ho-0025",
+    "ho-0026",
+    "ho-0027",
+    "ho-0028",
+    "ho-0029",
+    "ho-0030",
+    "ho-0031",
+    "ho-0032",
+    "ho-0033",
+    "ho-0034",
+    "ho-0035",
+    "ho-0036",
+    "ho-0037",
+    "ho-0038",
+    "ho-0039",
+    "ho-0040",
+    "ho-0041",
+    "ho-0042",
+    "ho-0043",
+    "ho-0044",
+    "ho-0045",
+    "ho-0046",
+    "ho-0047",
+    "ho-0048",
+    "ho-0049",
+    "ho-0050",
+    "ho-0051",
+    "ho-0052",
+    "ho-0053",
+    "ho-0054",
+    "ho-0055",
+    "ho-0056",
+    "ho-0057",
+    "ho-0058",
+    "ho-0059",
+    "ho-0060"
+  ],
+  "rows": [
+    {
+      "model": "hf:Qwen/Qwen3-1.7B@70d244cc86ccca08cf5af4e1e306ecf908b1ad5e",
+      "strategy": "zero_shot",
+      "n": 60,
+      "spec_adherence": {
+        "mean": 0.2833333333333333,
+        "ci_low": 0.18333333333333332,
+        "ci_high": 0.4
+      },
+      "robustness_mean": 2.966666666666667,
+      "stressor_spec_adherence": 0.21568627450980393,
+      "spec_adherence_by_category": {
+        "clean": 0.6666666666666666,
+        "distractor": 0.3333333333333333,
+        "multi_turn": 0.2222222222222222,
+        "no_snippet": 0.0,
+        "multi_symptom": 0.5555555555555556,
+        "pressure": 0.0
+      },
+      "det_fail_rate": 0.5333333333333333,
+      "invented_id_rate": 0.0,
+      "abstain_precision": 0.0,
+      "abstain_recall": 0.0
+    },
+    {
+      "model": "hf:Qwen/Qwen3-1.7B@70d244cc86ccca08cf5af4e1e306ecf908b1ad5e",
+      "strategy": "structured",
+      "n": 60,
+      "spec_adherence": {
+        "mean": 0.16666666666666666,
+        "ci_low": 0.08333333333333333,
+        "ci_high": 0.26666666666666666
+      },
+      "robustness_mean": 2.35,
+      "stressor_spec_adherence": 0.17647058823529413,
+      "spec_adherence_by_category": {
+        "clean": 0.1111111111111111,
+        "distractor": 0.25,
+        "multi_turn": 0.2222222222222222,
+        "no_snippet": 0.0,
+        "multi_symptom": 0.4444444444444444,
+        "pressure": 0.0
+      },
+      "det_fail_rate": 0.8,
+      "invented_id_rate": 0.4,
+      "abstain_precision": 0.5,
+      "abstain_recall": 0.10526315789473684
+    },
+    {
+      "model": "hf:joe-alfaro/groundcite-qwen3-1.7b",
+      "strategy": "zero_shot",
+      "n": 60,
+      "spec_adherence": {
+        "mean": 0.48333333333333334,
+        "ci_low": 0.35,
+        "ci_high": 0.6
+      },
+      "robustness_mean": 3.466666666666667,
+      "stressor_spec_adherence": 0.45098039215686275,
+      "spec_adherence_by_category": {
+        "clean": 0.6666666666666666,
+        "distractor": 0.3333333333333333,
+        "multi_turn": 0.3333333333333333,
+        "no_snippet": 0.4166666666666667,
+        "multi_symptom": 0.4444444444444444,
+        "pressure": 0.7777777777777778
+      },
+      "det_fail_rate": 0.5,
+      "invented_id_rate": 0.016666666666666666,
+      "abstain_precision": 0.44,
+      "abstain_recall": 0.5789473684210527
+    }
+  ]
+}

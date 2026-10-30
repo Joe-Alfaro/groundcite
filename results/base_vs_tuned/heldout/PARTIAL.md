@@ -1,5 +1,7 @@
 # PARTIAL held-out run (not a result)
 
+> Superseded: the run was resumed and completed on 2026-10-30. See `README.md` for the results.
+
 `20261030T171626Z-e1bd6f/` is an incomplete judge pass and must not be read as base-vs-tuned
 numbers. It has no `results.json` or `results.md`.
 
