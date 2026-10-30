@@ -47,16 +47,16 @@ are still behind: they need the tuned-model eval first. The reasons are in the
 | R5 | Smoke loop: generate → filter → train (≤20 steps) → eval on ≤32 examples | `scripts/smoke_loop.sh`, `tests/test_smoke_loop.py`; README "Smoke loop". The local mode is a CPU-only check on a tiny model; the real-model smoke (`smoke_loop.sh --kaggle`, Qwen3-0.6B) runs from `train/kaggle_train.ipynb` and has no recorded run yet. The real-model training path has run end to end on Kaggle (`results/training/v1/`); the eval step on a real model is still pending | partial |
 | R6 | Dataset v1 (≥300 filtered examples) with manifest: 448 kept of 960 candidates, 28.1% abstain | `data/datasets/v1/` (`train.jsonl`, `manifest.json`, `filter_report.md`, `NOTES.md`, `leakage_report.md`) | done |
 | R6 | One QLoRA run of Qwen3-1.7B on v1, training log committed | `results/training/v1/train_log.json` and `results/training/v1/README.md`: Kaggle T4, code commit `72f24f33`, frozen config v1, 168 steps (3 epochs) in 839.7 s, final step loss 0.5064, mean train loss 0.9019. Code: `train/train_qlora.py`, `train/config.toml`, `train/kaggle_train.ipynb`, `tests/test_train_qlora.py`, `tests/test_train_notebook.py` | done |
-| R6 | Base-vs-tuned table on the own eval set, with transcripts and pins | `results/base_vs_tuned/` (planned). The trained adapter exists; next is base and tuned generation on Kaggle (`train/kaggle_eval.ipynb`, held-out set first), then local judging with `eval.py --judge-from`. Target: Sat Oct 31 at the latest | behind |
+| R6 | Base-vs-tuned table on the own eval set, with transcripts and pins | `results/base_vs_tuned/heldout/` (headline: tuned 0.48 [0.35, 0.60] / 3.47 vs base zero_shot 0.28 / 2.97, structured 0.17 / 2.35) and `results/base_vs_tuned/eval_own/` (tuned 0.57 / 3.73 vs 0.22 / 2.63, memorization caveat); `docs/writeup.md` section 7. No system meets the bar | done |
 | R6, R9 | Draft HF checkpoint and its commit hash (G14) | [`joe-alfaro/groundcite-qwen3-1.7b`](https://huggingface.co/joe-alfaro/groundcite-qwen3-1.7b) at commit `b16b566d0d36d06744c90342fe836a4e6decc4e8`, public; recorded in `results/training/v1/README.md`. The model page is the deployed artifact for Milestone 1 | done |
-| R7 | Diagnosis note: one v1 failure mode, rate, scenario IDs, data change | `docs/` diagnosis note (planned); candidate weaknesses already noted from reading the data in `data/datasets/v1/NOTES.md`. Needs tuned-model eval evidence first: the failure mode must come from v1 transcripts, not from guessing. Target: Sat Oct 31 | behind |
+| R7 | Diagnosis note: one v1 failure mode, rate, scenario IDs, data change | `results/base_vs_tuned/heldout/DIAGNOSIS.md`, `docs/writeup.md` section 8: false abstain, 14 of 60 tuned held-out replies, with scenario IDs; data change: in-scope twins of the v1 abstain scenarios (about 252 teacher calls). The fix itself is pending | done |
 | R7 | v1 and v2 logs share a config hash, dataset diff summary committed | `scripts/diff_datasets.py`, `tests/test_diff_datasets.py`; `train_qlora.py` logs `config_sha256` and `dataset_sha256`; `data/datasets/v2/` (planned, after the diagnosis note). Target: Sat Oct 31 | behind |
 | R7 | v2 eval shows the failure-mode rate going down | `results/base_vs_tuned/` (planned). Needs v2 training on Kaggle. Target: Sun Nov 1, before Milestone 2 | behind |
 | R8 | ≥2 data-efficiency points on nested subsets | `scripts/make_sweep.py`, `tests/test_sweep.py`; `results/curve/` (planned). Behind because every training run happens on Kaggle and the full v1 run only just finished; the subsets need one Kaggle session each (about 0.6 GPU h). Target: Sat Oct 31 | behind |
 | R10 | One-command eval writes `results.md`, `results.json`, `transcripts.jsonl`; base rows added automatically | `uv run eval.py --model <hf-repo-id> --eval-set <path>`, `tests/test_eval_cli.py` | done |
 | R10 | README first lines name the env var and the hardware | `README.md`, `tests/test_eval_hardening.py` | done |
-| R11 | Raw judge transcripts for every run, row count = scenarios × systems | `src/groundcite/report.py`, `tests/test_eval_cli.py`; committed runs: `results/ablation/m1/transcripts.jsonl`, `results/rollout_pilot/pilot1/transcripts.jsonl`, `results/judge_agreement/` | done |
-| R13 | Pins in every `results.json`, dirty-tree refusal, one `rubric_sha256` | `src/groundcite/versions.py`, `uv.lock`, `tests/test_eval_cli.py`, `scripts/check_rubric.py`, `tests/test_check_rubric.py`; `uv run scripts/check_rubric.py results/` reports one `rubric_sha256` across the 5 committed runs; the tuned model's Hub commit `b16b566d` and code commit `72f24f33` in `results/training/v1/README.md` | done |
+| R11 | Raw judge transcripts for every run, row count = scenarios × systems | `src/groundcite/report.py`, `tests/test_eval_cli.py`; committed runs: `results/ablation/m1/transcripts.jsonl`, `results/rollout_pilot/pilot1/transcripts.jsonl`, `results/judge_agreement/`, and the base and tuned rows in `results/base_vs_tuned/heldout/` (180) and `results/base_vs_tuned/eval_own/` (300) | done |
+| R13 | Pins in every `results.json`, dirty-tree refusal, one `rubric_sha256` | `src/groundcite/versions.py`, `uv.lock`, `tests/test_eval_cli.py`, `scripts/check_rubric.py`, `tests/test_check_rubric.py`; `uv run scripts/check_rubric.py results/` reports one `rubric_sha256` across the 7 committed runs, including both base-vs-tuned runs; the tuned model's Hub commit `b16b566d` and code commit `72f24f33` in `results/training/v1/README.md` | done |
 | R17 | Write-up draft | `docs/writeup.md`: status, thesis, spec, scenarios, ablation, pilot, data and the judge agreement study are written; base vs tuned, v2 and the curve are marked Pending | partial |
 | R19 | Mock judge, full eval with network blocked | `src/groundcite/backends.py` (`mock:judge`), `tests/test_eval_cli.py` | done |
 | R20 | `--dry-run` on `eval.py`, `run_ablation.py`, `distill.py` | `eval.py`, `scripts/run_ablation.py`, `scripts/distill.py`; `tests/test_eval_cli.py`, `tests/test_ablation.py`, `tests/test_distill.py` | done |
@@ -125,11 +125,13 @@ the session's setup time was not recorded.
 
 Eval judge: `openai:gpt-5.5-2026-04-23`. Total judge spend cap: $20 actual (raised from $10 by the
 owner), covering base vs tuned (held-out set first, then `eval_own`), v2 and the curve points.
-Spent so far: $0.
+Spent so far: about $9.5 ($7.88 logged in `spend.json` plus about $1.6 unlogged); conservatively
+about $13.9. The first 83 held-out judgments predate usage logging, so their cost is estimated
+at the measured $0.0197 per call (conservatively $6).
 
 | Run | Planned (USD) | Spent (USD) |
 | --- | --- | --- |
-| Base vs tuned, held-out set (3 rows) | about 5.8 | 0 |
-| Base vs tuned, `eval_own` (3 rows) | about 9.6 | 0 |
-| v2 and curve points, held-out set | the rest (about 4.6) | 0 |
-| Total | 20.0 (cap) | 0 |
+| Base vs tuned, held-out set (3 rows, 180 calls) | about 5.8 | 1.91 logged + about 1.6 unlogged (conservatively 6) |
+| Base vs tuned, `eval_own` (3 rows, 300 calls) | about 9.6 | 5.97 |
+| v2 and curve points, held-out set | the rest | 0 |
+| Total | 20.0 (cap) | about 9.5 (conservatively about 13.9) |

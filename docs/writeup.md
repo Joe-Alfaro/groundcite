@@ -1,15 +1,32 @@
 # Write-up (draft)
 
-> **Status: draft.** The status section below summarizes where the project stands at Milestone 1.
-> Sections 1, 2, 3, 5 and 6 (method) describe what is built or designed in this repository.
-> Section 4 reports the real prompt-ceiling ablation, section 4a the long-conversation pilot,
-> section 6 dataset v1 and section 10 the judge agreement study. Every other number that needs a
+> **Status: draft.** The status sections below summarize where the project stands at Milestone 1
+> and since. Sections 1, 2, 3, 5 and 6 (method) describe what is built or designed in this
+> repository. Section 4 reports the real prompt-ceiling ablation, section 4a the long-conversation
+> pilot, section 6 dataset v1, section 7 the base-vs-tuned evals, section 8 the v2 diagnosis and
+> section 10 the judge agreement study. Every other number that needs a
 > real run is marked **Pending**, along with what will go there. Nothing in the pending sections
 > should be read as a result.
 
 Requirements: [`docs/requirements/small-model-finetune.md`](requirements/small-model-finetune.md).
 Architecture: [`ARCHITECTURE.md`](../ARCHITECTURE.md). Status of every item:
 [`docs/checklist.md`](checklist.md).
+
+## Status update (Friday, October 30)
+
+- **Base vs tuned is measured (section 7).** On the held-out set (unseen symptom families), the
+  tuned model scores 0.48 [0.35, 0.60] Spec-adherence and 3.47 Robustness, against 0.28 / 2.97
+  for base with the zero-shot prompt and 0.17 / 2.35 for base with `structured`. Paired by
+  scenario, it wins 20 and loses 8 against base zero_shot (sign test p ≈ 0.036). On `eval_own`
+  (in-distribution, with a memorization caveat) it scores 0.57 / 3.73 against 0.22 / 2.63.
+  **No system meets the reliability bar on either set.**
+- **The v2 diagnosis is done; v2 is in progress (section 8).** The tuned model's most frequent
+  failure is a false abstain (14 of 60 held-out replies), usually justified by a scope exclusion
+  that is false. The data change is in-scope twins of the v1 abstain scenarios, with no config
+  change.
+- **Judge spend:** $7.88 logged plus about $1.6 unlogged (the first 83 held-out judgments
+  predate usage logging), about $9.5 of the $20 cap. With the conservative $6 estimate for the
+  unlogged calls, about $13.9.
 
 ## Status at Milestone 1
 
@@ -443,21 +460,102 @@ found, including weaknesses that are candidates for v2.
 
 ## 7. Base vs tuned
 
-**Pending.** One QLoRA run of Qwen3-1.7B on v1, evaluated with
-`uv run eval.py --model <hf-repo-id> --eval-set <path>` on `eval_own` and `heldout`. Each table
-will have these rows: base with the zero-shot prompt, base with the best ablation strategy, and
-tuned with the zero-shot prompt. The columns are the same as in section 4. The section will report
-whether data → behavior held, with numbers, the pinned model revision, and quoted transcripts that
-show base failing and tuned passing on the same scenario. It will also report the invented-ID
-rate, which should be no higher than base and at most 2% on both sets.
+One QLoRA run of Qwen3-1.7B on v1 (adapter
+[`joe-alfaro/groundcite-qwen3-1.7b`](https://huggingface.co/joe-alfaro/groundcite-qwen3-1.7b) at
+Hub commit `b16b566d`), against base Qwen3-1.7B (revision `70d244cc`) with the zero-shot prompt
+and with `structured`, the best strategy in the ablation. Replies were generated greedily on
+Kaggle (code commit `72f24f3`) and judged locally with the pinned judge `gpt-5.5` and rubric
+`636a9c79…b4bf`, the same hash as the ablation and the pilot. Full tables, transcripts and pins:
+[`results/base_vs_tuned/heldout/`](../results/base_vs_tuned/heldout/README.md) and
+[`results/base_vs_tuned/eval_own/`](../results/base_vs_tuned/eval_own/README.md).
+
+**The held-out set is the headline.** Its five symptom families are reserved: none of them
+appears in training, `eval_own`, the ablation set or the few-shot examples. `eval_own` shares
+families with training, and its near-miss distractors can be solved by memorizing snippet text (a
+text-identity probe solves 0.95 of it), so it shows in-distribution performance and may be
+inflated, especially on `distractor`.
+
+**Held-out set** (60 scenarios):
+
+| System | Strategy | Spec-adherence (95% CI) | Robustness | Stressor spec | HARD-check fail | Invented-ID rate | Abstain P / R |
+|---|---|---|---|---|---|---|---|
+| base | zero_shot | 0.28 [0.18, 0.40] | 2.97 | 0.22 | 0.53 | 0.00 | 0.00 / 0.00 |
+| base | structured | 0.17 [0.08, 0.27] | 2.35 | 0.18 | 0.80 | 0.40 | 0.50 / 0.11 |
+| tuned | zero_shot | 0.48 [0.35, 0.60] | 3.47 | 0.45 | 0.50 | 0.02 | 0.44 / 0.58 |
+
+| System | Strategy | clean | distractor | multi_turn | no_snippet | multi_symptom | pressure |
+|---|---|---|---|---|---|---|---|
+| base | zero_shot | 0.67 | 0.33 | 0.22 | 0.00 | 0.56 | 0.00 |
+| base | structured | 0.11 | 0.25 | 0.22 | 0.00 | 0.44 | 0.00 |
+| tuned | zero_shot | 0.67 | 0.33 | 0.33 | 0.42 | 0.44 | 0.78 |
+
+**`eval_own`** (100 scenarios):
+
+| System | Strategy | Spec-adherence (95% CI) | Robustness | Stressor spec | HARD-check fail | Invented-ID rate | Abstain P / R |
+|---|---|---|---|---|---|---|---|
+| base | zero_shot | 0.22 [0.14, 0.30] | 2.63 | 0.19 | 0.62 | 0.06 | n/a / 0.00 |
+| base | structured | 0.17 [0.10, 0.25] | 2.33 | 0.16 | 0.80 | 0.38 | 0.27 / 0.10 |
+| tuned | zero_shot | 0.57 [0.47, 0.66] | 3.73 | 0.53 | 0.40 | 0.00 | 0.50 / 0.57 |
+
+| System | Strategy | clean | distractor | multi_turn | no_snippet | multi_symptom | pressure |
+|---|---|---|---|---|---|---|---|
+| base | zero_shot | 0.40 | 0.20 | 0.33 | 0.00 | 0.33 | 0.13 |
+| base | structured | 0.20 | 0.15 | 0.20 | 0.05 | 0.27 | 0.20 |
+| tuned | zero_shot | 0.80 | 0.35 | 0.33 | 0.70 | 0.60 | 0.67 |
+
+**Tuned minus base:**
+
+| Set | vs | Spec-adherence | Robustness | Paired wins / losses (sign test) |
+|---|---|---|---|---|
+| held-out | base zero_shot | +0.20 | +0.50 | 20 / 8 (p ≈ 0.036) |
+| held-out | base structured | +0.31 | +1.12 | 23 / 4 (p ≈ 0.0003) |
+| `eval_own` | base zero_shot | +0.35 | +1.10 | 41 / 6 (p < 0.0001) |
+| `eval_own` | base structured | +0.40 | +1.40 | 49 / 9 (p < 0.0001) |
+
+A paired win is a scenario the tuned model passes and that base row fails; a loss is the reverse.
+
+**Verdict.** Data → behavior held in direction: the tuned model beats base on both sets, against
+both prompts, and the held-out gain survives a paired test. But **no system meets the reliability
+bar** (Spec-adherence ≥ 0.90, Robustness ≥ 4.3) on either set. On the held-out set, the tuned
+model reaches 0.48 / 3.47.
+
+The gain comes from the abstain and pressure rules. Base zero_shot never abstains correctly
+(held-out no_snippet 0.00, pressure 0.00), and the tuned model reaches 0.42 and 0.78 there. On
+held-out `clean` and `distractor` the tuned model gains nothing over base zero_shot. Example,
+held-out `ho-0025` (gold: abstain, because the only on-topic snippet covers 2011-2021 and the
+vehicle is a 2010):
+
+- Base zero_shot: "Check each wheel on a road-force balancer. [SM-4298]" fails P1 and P4.
+- Tuned: "None of the references here fit your 2010 1.8L: the steering wheel shake bulletin
+  covers 2011-2021 models, and the others deal with caliper slides or coolant flow. Could you
+  share the service manual section covering steering-wheel shimmy for the 2010 1.8L?" passes.
+
+**Invented IDs.** The tuned model invents an ID in 1 of 60 held-out replies (0.02, `ho-0014`
+cites `[6.8]` for `SEC 6.8`) and in none on `eval_own`. That meets the ≤ 2% target on both sets.
+On `eval_own` it is below base zero_shot (0.06); on the held-out set it is one reply above base
+zero_shot (0.00), and far below base `structured` (0.40).
 
 ## 8. v1 → v2 data fix
 
-**Pending.** One failure mode found in the v1 transcripts, with its v1 rate and example scenario
-IDs. The data change that targets it (examples added, removed or relabeled), with the committed
-dataset diff summary. The v1 and v2 training logs will show the same config hash and different
-dataset hashes, and the v2 eval on the same set will show whether the rate went down. Results are
-fixed by changing data, not hyperparameters.
+**In progress.** The diagnosis is done; the v2 dataset, its training run and its eval are not.
+Full note: [`results/base_vs_tuned/heldout/DIAGNOSIS.md`](../results/base_vs_tuned/heldout/DIAGNOSIS.md).
+
+- **Failure mode (from the tuned model's held-out transcripts only):** false abstain. The model
+  says none of the references fits and cites nothing when a provided snippet does apply. Rate:
+  14 of 60 tuned replies (23%), 14 of the 41 cite scenarios (34%), 14 of its 31 failures. In 9 of
+  the 14, the reason it gives is a scope exclusion that is false: the snippet's applicability line
+  includes the vehicle, or the model misquotes the range. Examples: `ho-0011` (a 2012 car,
+  rejected for a 2011-2021 bulletin), `ho-0018` (the reply invents a "2010-2015" range for a
+  snippet that covers 2009-2022), `ho-0034`, `ho-0052`. The mirror image, citing an out-of-scope
+  near-miss when gold is abstain, adds 8 more. Together they make up all 22 wrong-mode failures.
+- **Why v1 teaches it:** all 126 v1 abstain examples reject on-topic near-miss snippets for year,
+  engine, body or equipment, and those near-miss snippets are never the cited gold in a v1 cite
+  example. The model learns the abstain template, not the comparison that should trigger it.
+- **Data change (no config change):** add an in-scope twin of each v1 abstain scenario,
+  regenerated with the vehicle moved inside one near-miss snippet's applicability and relabeled
+  as cite with that snippet. This needs about 252 new teacher calls (two candidates per twin).
+  The v1 and v2 training logs will show the same config hash and different dataset hashes. The
+  v2 eval on the held-out set will show whether the false-abstain rate goes down.
 
 ## 9. Data-efficiency curve and minimum viable N
 
