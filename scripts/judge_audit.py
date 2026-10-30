@@ -6,7 +6,10 @@
 
 --sample writes a blind JSONL sheet (no judge verdict), stratified over (category, judge
 pass/fail); fill each row's human_label with a 0/1 pass label (and p_failed for the write-up).
---score compares the labels with the judge's pass/fail verdicts and writes a JSON report.
+With --blind-system the sheet also hides the model and strategy behind an opaque audit_id, the
+sample is split evenly across systems first, and the mapping goes to SHEET.key.json (don't open
+it while labeling). --score compares the labels with the judge's pass/fail verdicts and writes a
+JSON report; a blind sheet is matched to its transcripts through its key file.
 Exit 1 when agreement is below 90% (18/20), 2 on bad input.
 """
 
@@ -19,10 +22,14 @@ from pathlib import Path
 
 from groundcite.audit import (
     AuditError,
+    is_system_blind,
     meets_agreement_bar,
+    read_json,
     read_jsonl,
     sample_sheet,
+    sample_system_blind_sheet,
     score_sheet,
+    unblind_sheet,
 )
 from groundcite.evalset import EvalSetError, load_eval_set
 from groundcite.runner import write_json
@@ -36,9 +43,19 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--eval-set", type=Path, help="--sample: the run's eval set")
     parser.add_argument("--n", type=int, default=20, help="--sample: rows to sample (default 20)")
     parser.add_argument("--seed", type=int, help="--sample: sampling seed")
+    parser.add_argument(
+        "--blind-system",
+        action="store_true",
+        help="--sample: hide model and strategy behind an audit_id; the key goes to SHEET.key.json",
+    )
     parser.add_argument("--transcripts", type=Path, help="--score: the run's transcripts.jsonl")
     parser.add_argument("--out", type=Path, required=True, help="sheet (JSONL) or report (JSON)")
     return parser
+
+
+def key_path(sheet: Path) -> Path:
+    """Where a system-blind sheet's key lives: next to the sheet."""
+    return sheet.with_suffix(".key.json")
 
 
 def _sample(args: argparse.Namespace) -> int:
@@ -47,16 +64,30 @@ def _sample(args: argparse.Namespace) -> int:
         scenarios = load_eval_set(args.eval_set)
     except (OSError, EvalSetError) as exc:
         raise AuditError(f"{args.eval_set}: {exc}") from None
-    sheet = sample_sheet(rows, scenarios, n=args.n, seed=args.seed)
+    if args.blind_system:
+        sheet, key = sample_system_blind_sheet(rows, scenarios, n=args.n, seed=args.seed)
+        write_json(key_path(args.out), key)
+    else:
+        sheet = sample_sheet(rows, scenarios, n=args.n, seed=args.seed)
     args.out.write_text(
         "".join(json.dumps(r, ensure_ascii=False) + "\n" for r in sheet), encoding="utf-8"
     )
     print(f"wrote {len(sheet)} rows to {args.out}; fill human_label in each, then run --score")
+    if args.blind_system:
+        print(f"the system key is in {key_path(args.out)}; don't open it until the labels are in")
     return 0
 
 
 def _score(args: argparse.Namespace) -> int:
     sheet = read_jsonl(args.score, str(args.score))
+    if is_system_blind(sheet):
+        path = key_path(args.score)
+        if not path.is_file():
+            raise AuditError(f"{args.score}: blind sheet, but its key file {path} is missing")
+        key = read_json(path, str(path))
+        if not isinstance(key, dict):
+            raise AuditError(f"{path}: the key file must be a JSON object")
+        sheet = unblind_sheet(sheet, key)
     rows = read_jsonl(args.transcripts, str(args.transcripts))
     report = score_sheet(sheet, rows)
     write_json(args.out, report)
@@ -79,6 +110,8 @@ def main(argv: list[str] | None = None) -> int:
         parser.error("--sample needs --eval-set and --seed")
     if args.score and args.transcripts is None:
         parser.error("--score needs --transcripts")
+    if args.score and args.blind_system:
+        parser.error("--blind-system applies to --sample; --score reads the key file itself")
     try:
         return _sample(args) if args.sample else _score(args)
     except AuditError as exc:
