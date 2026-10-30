@@ -30,7 +30,11 @@ The training notebook's Hub push creates the repo private (``create_repo(..., pr
 ``train/train_qlora.py``) and nothing in the notebooks or the training code makes it public.
 
 The training notebook trains on ``DATASET`` from the repo at ``REPO_COMMIT``, or on
-``KAGGLE_DATASET`` (a ``/kaggle/input/...`` train.jsonl) when that is non-empty. The eval notebook
+``KAGGLE_DATASET`` (a ``/kaggle/input/...`` train.jsonl) when that is non-empty. ``CURVE_N``
+(owner-marked, default 0 = off) runs a data-efficiency curve point (D-126) with no code edit: 56,
+112 or 224 trains on ``data/datasets/v1/subsets/n<N>.jsonl`` and pushes to its own private repo
+``<HUB_REPO>-n<N>``, so the full-v1 adapter in ``HUB_REPO`` is never overwritten. Any other size,
+or ``CURVE_N`` together with ``KAGGLE_DATASET``, stops before the model run. The eval notebook
 runs ``eval.py --generate-only`` for ``hf:HUB_REPO`` (so the base rows, zero-shot and the best
 ablation prompt, come along) on ``EVAL_SET`` and writes under ``/kaggle/working``; it holds no API
 keys, because judging runs locally with ``eval.py --judge-from``.
@@ -68,7 +72,7 @@ NOTEBOOKS = {"train": NOTEBOOK, "eval": EVAL_NOTEBOOK}
 # (D-083, D-091), never a tracked value.
 REAL_VALUES = {"HUB_REPO": "joe-alfaro/groundcite-qwen3-1.7b"}
 OWNER_MARKED = {
-    "train": ("DATASET", "KAGGLE_DATASET"),
+    "train": ("DATASET", "KAGGLE_DATASET", "CURVE_N"),
     "eval": ("EVAL_SET",),
 }
 # The Kaggle secrets each notebook needs.
@@ -91,6 +95,8 @@ KNOWN_REQUIRES = {
     ("transformers", "5.17.0"): {"huggingface-hub": ">=1.5.0,<2.0"},
 }
 NO_SOLUTION = "No solution found"
+# D-126: the data-efficiency curve points on nested subsets of dataset v1 (448 is the full v1 run).
+CURVE_SIZES = (56, 112, 224)
 
 
 def _load(path: Path) -> dict[str, Any]:
@@ -677,6 +683,57 @@ def test_training_reads_a_kaggle_dataset_path_when_one_is_given() -> None:
     path = "/kaggle/input/groundcite-v1/train.jsonl"
     run = _run_to_model(_load(NOTEBOOK), "train", KAGGLE_DATASET=path)
     assert flag(run.stopped_at or "", "--dataset") == path
+
+
+def test_the_committed_notebook_trains_the_full_dataset_into_hub_repo() -> None:
+    """CURVE_N is off by default: the main run's data and Hub repo are exactly as before."""
+    notebook = _load(NOTEBOOK)
+    run = run_notebook(
+        notebook,
+        params={},
+        stop_at=lambda cmd: MODEL_RUN["train"] in cmd,
+        secrets={"REPO_URL": FAKE_REPO_URL},
+    )
+    assert run.error is None, f"the committed notebook failed: {run.error!r}"
+    command = run.stopped_at or ""
+    assert flag(command, "--hub-repo") == REAL_VALUES["HUB_REPO"]
+    assert flag(command, "--dataset") == _params(notebook)["DATASET"]
+
+
+@pytest.mark.parametrize("n", CURVE_SIZES)
+def test_a_curve_point_trains_its_subset_into_its_own_hub_repo(n: int) -> None:
+    run = _run_to_model(_load(NOTEBOOK), "train", CURVE_N=n)  # type: ignore[arg-type]
+    command = run.stopped_at or ""
+    subset = f"data/datasets/v1/subsets/n{n}.jsonl"
+    assert flag(command, "--dataset") == subset
+    assert (REPO_ROOT / subset).is_file(), f"{subset} is committed"
+    assert flag(command, "--hub-repo") == f"{FILLED['HUB_REPO']}-n{n}"
+
+
+def test_the_committed_curve_point_never_pushes_to_the_main_adapter_repo() -> None:
+    run = _run_to_model(_load(NOTEBOOK), "train", HUB_REPO=REAL_VALUES["HUB_REPO"], CURVE_N=112)  # type: ignore[arg-type]
+    assert flag(run.stopped_at or "", "--hub-repo") == f"{REAL_VALUES['HUB_REPO']}-n112"
+
+
+@pytest.mark.parametrize(
+    "extra",
+    [
+        {"CURVE_N": 100},
+        {"CURVE_N": 448},
+        {"CURVE_N": 112, "KAGGLE_DATASET": "/kaggle/input/groundcite-v1/train.jsonl"},
+    ],
+    ids=["unknown-size", "full-size", "with-kaggle-dataset"],
+)
+def test_a_bad_curve_point_stops_before_the_model_run(extra: dict[str, Any]) -> None:
+    run = run_notebook(
+        _load(NOTEBOOK),
+        params=_filled("train", **extra),
+        stop_at=lambda cmd: MODEL_RUN["train"] in cmd,
+        secrets={"REPO_URL": FAKE_REPO_URL},
+    )
+    assert run.stopped_at is None, "no model run"
+    assert isinstance(run.error, ValueError)
+    assert "CURVE_N" in str(run.error)
 
 
 # ---------------------------------------------------------------------------------------------
