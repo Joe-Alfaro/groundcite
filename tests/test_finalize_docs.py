@@ -18,6 +18,7 @@ sources alone; without it the files are rewritten in place.
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import subprocess
 import sys
@@ -25,15 +26,18 @@ from pathlib import Path
 
 import pytest
 
-from groundcite.finalize import (
-    DOC_FILES,
-    FinalizeError,
-    placeholders,
-    render,
-)
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = REPO_ROOT / "scripts" / "finalize_docs.py"
+
+_spec = importlib.util.spec_from_file_location("finalize_docs", SCRIPT)
+assert _spec is not None and _spec.loader is not None
+finalize_docs = importlib.util.module_from_spec(_spec)
+sys.modules["finalize_docs"] = finalize_docs
+_spec.loader.exec_module(finalize_docs)
+DOC_FILES = finalize_docs.DOC_FILES
+FinalizeError = finalize_docs.FinalizeError
+placeholders = finalize_docs.placeholders
+render = finalize_docs.render
 
 SOURCE = """# Title
 
