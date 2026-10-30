@@ -1,4 +1,4 @@
-"""Training dataset v2 changes parameters only, never the config (R7, G21, D-145).
+"""Training dataset v2 changes parameters only, never the config (R7, G21, D-146).
 
 - ``train/train_qlora.py --expect-config-sha256 HEX`` exits 2, before any model work and before a
   dry run prints its plan, when the resolved config hashes to anything else. The flag is not part

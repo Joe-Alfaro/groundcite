@@ -46,6 +46,15 @@ plans **210 teacher calls** (105 scenarios, k=2) and makes no request. The filte
 to about 2 judge calls per candidate that passes the deterministic checks, as in v1. Running it
 without `--dry-run` needs owner approval for the spend.
 
+`scripts/build_v2.sh` runs this whole plan. By default it is a dry run: it prints the plan and
+the teacher call count and writes nothing. After approval,
+`scripts/build_v2.sh --approved --filter opus|gpt-5.5` runs the teacher step (stopping if it
+plans more than 210 calls), the filter with the chosen judge into `data/datasets/v2/additions/`,
+`scripts/assemble_dataset.py` (v1 bytes unchanged, then the kept twins, with a summed manifest),
+the diff below, the leakage, secret and scrub checks, and a commit. Training v2 then needs only
+two notebook parameter edits (`DATASET = "data/datasets/v2/train.jsonl"` and a `HUB_REPO` ending
+in `-v2`), and the notebook stops unless the config still hashes to v1's.
+
 ## Build and compare
 
 After the teacher step, the candidates go through the same filter (`scripts/build_dataset.py`,

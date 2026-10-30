@@ -1,4 +1,4 @@
-"""Pre-staged dataset v2 build (R7, G21, D-145): assemble v1 + the kept twins, and the gated script.
+"""Pre-staged dataset v2 build (R7, G21, D-146): assemble v1 + the kept twins, and the gated script.
 
 ``scripts/assemble_dataset.py --base DIR --additions DIR --out DIR [--expect-base-sha256 HEX]``
 writes ``<out>/train.jsonl`` (the base train.jsonl bytes, unchanged, then the additions') and
