@@ -1,0 +1,226 @@
+{
+  "run_id": "20261030T185720Z-a9795e",
+  "pins": {
+    "git_sha": "9936bb4641172792903c25566d60d27d092b3868",
+    "git_dirty": false,
+    "judge_model": "openai:gpt-5.5-2026-04-23",
+    "rubric_sha256": "636a9c79b9ba0ad02b082351bd25e385c0963c9d8edffedad3919e56b556b4bf",
+    "eval_set": {
+      "path": "data/scenarios/eval_own.jsonl",
+      "sha256": "9955cd63e8d80a96f9bfa40326fd883cce83f76d9a2a2306d15f557d0a701ea2"
+    },
+    "models": [
+      {
+        "model": "hf:Qwen/Qwen3-1.7B@70d244cc86ccca08cf5af4e1e306ecf908b1ad5e",
+        "model_revision": "70d244cc86ccca08cf5af4e1e306ecf908b1ad5e",
+        "chat_template_sha256": "a55ee1b1660128b7098723e0abcd92caa0788061051c62d51cbe87d9cf1974d8"
+      },
+      {
+        "model": "hf:joe-alfaro/groundcite-qwen3-1.7b",
+        "model_revision": "b16b566d0d36d06744c90342fe836a4e6decc4e8",
+        "chat_template_sha256": "a55ee1b1660128b7098723e0abcd92caa0788061051c62d51cbe87d9cf1974d8"
+      }
+    ],
+    "decoding": {
+      "hf:Qwen/Qwen3-1.7B@70d244cc86ccca08cf5af4e1e306ecf908b1ad5e": {
+        "do_sample": false,
+        "max_new_tokens": 256
+      },
+      "hf:joe-alfaro/groundcite-qwen3-1.7b": {
+        "do_sample": false,
+        "max_new_tokens": 256
+      },
+      "openai:gpt-5.5-2026-04-23": {
+        "max_completion_tokens": 16000,
+        "reasoning_effort": "low"
+      }
+    },
+    "bootstrap_seed": 0,
+    "library_versions": {
+      "python": "3.13.2",
+      "groundcite": "0.1.0",
+      "anthropic": "2.3.0",
+      "openai": "3.40.0",
+      "python-dotenv": "1.2.4",
+      "torch": "2.14.1",
+      "transformers": "5.21.0",
+      "peft": "0.21.2"
+    }
+  },
+  "scenario_ids": [
+    "eo-0001",
+    "eo-0002",
+    "eo-0003",
+    "eo-0004",
+    "eo-0005",
+    "eo-0006",
+    "eo-0007",
+    "eo-0008",
+    "eo-0009",
+    "eo-0010",
+    "eo-0011",
+    "eo-0012",
+    "eo-0013",
+    "eo-0014",
+    "eo-0015",
+    "eo-0016",
+    "eo-0017",
+    "eo-0018",
+    "eo-0019",
+    "eo-0020",
+    "eo-0021",
+    "eo-0022",
+    "eo-0023",
+    "eo-0024",
+    "eo-0025",
+    "eo-0026",
+    "eo-0027",
+    "eo-0028",
+    "eo-0029",
+    "eo-0030",
+    "eo-0031",
+    "eo-0032",
+    "eo-0033",
+    "eo-0034",
+    "eo-0035",
+    "eo-0036",
+    "eo-0037",
+    "eo-0038",
+    "eo-0039",
+    "eo-0040",
+    "eo-0041",
+    "eo-0042",
+    "eo-0043",
+    "eo-0044",
+    "eo-0045",
+    "eo-0046",
+    "eo-0047",
+    "eo-0048",
+    "eo-0049",
+    "eo-0050",
+    "eo-0051",
+    "eo-0052",
+    "eo-0053",
+    "eo-0054",
+    "eo-0055",
+    "eo-0056",
+    "eo-0057",
+    "eo-0058",
+    "eo-0059",
+    "eo-0060",
+    "eo-0061",
+    "eo-0062",
+    "eo-0063",
+    "eo-0064",
+    "eo-0065",
+    "eo-0066",
+    "eo-0067",
+    "eo-0068",
+    "eo-0069",
+    "eo-0070",
+    "eo-0071",
+    "eo-0072",
+    "eo-0073",
+    "eo-0074",
+    "eo-0075",
+    "eo-0076",
+    "eo-0077",
+    "eo-0078",
+    "eo-0079",
+    "eo-0080",
+    "eo-0081",
+    "eo-0082",
+    "eo-0083",
+    "eo-0084",
+    "eo-0085",
+    "eo-0086",
+    "eo-0087",
+    "eo-0088",
+    "eo-0089",
+    "eo-0090",
+    "eo-0091",
+    "eo-0092",
+    "eo-0093",
+    "eo-0094",
+    "eo-0095",
+    "eo-0096",
+    "eo-0097",
+    "eo-0098",
+    "eo-0099",
+    "eo-0100"
+  ],
+  "rows": [
+    {
+      "model": "hf:Qwen/Qwen3-1.7B@70d244cc86ccca08cf5af4e1e306ecf908b1ad5e",
+      "strategy": "zero_shot",
+      "n": 100,
+      "spec_adherence": {
+        "mean": 0.22,
+        "ci_low": 0.14,
+        "ci_high": 0.3
+      },
+      "robustness_mean": 2.63,
+      "stressor_spec_adherence": 0.18823529411764706,
+      "spec_adherence_by_category": {
+        "multi_symptom": 0.3333333333333333,
+        "pressure": 0.13333333333333333,
+        "distractor": 0.2,
+        "multi_turn": 0.3333333333333333,
+        "clean": 0.4,
+        "no_snippet": 0.0
+      },
+      "det_fail_rate": 0.62,
+      "invented_id_rate": 0.06,
+      "abstain_precision": null,
+      "abstain_recall": 0.0
+    },
+    {
+      "model": "hf:Qwen/Qwen3-1.7B@70d244cc86ccca08cf5af4e1e306ecf908b1ad5e",
+      "strategy": "structured",
+      "n": 100,
+      "spec_adherence": {
+        "mean": 0.17,
+        "ci_low": 0.1,
+        "ci_high": 0.25
+      },
+      "robustness_mean": 2.33,
+      "stressor_spec_adherence": 0.16470588235294117,
+      "spec_adherence_by_category": {
+        "multi_symptom": 0.26666666666666666,
+        "pressure": 0.2,
+        "distractor": 0.15,
+        "multi_turn": 0.2,
+        "clean": 0.2,
+        "no_snippet": 0.05
+      },
+      "det_fail_rate": 0.8,
+      "invented_id_rate": 0.38,
+      "abstain_precision": 0.2727272727272727,
+      "abstain_recall": 0.1
+    },
+    {
+      "model": "hf:joe-alfaro/groundcite-qwen3-1.7b",
+      "strategy": "zero_shot",
+      "n": 100,
+      "spec_adherence": {
+        "mean": 0.57,
+        "ci_low": 0.47,
+        "ci_high": 0.66
+      },
+      "robustness_mean": 3.73,
+      "stressor_spec_adherence": 0.5294117647058824,
+      "spec_adherence_by_category": {
+        "multi_symptom": 0.6,
+        "pressure": 0.6666666666666666,
+        "distractor": 0.35,
+        "multi_turn": 0.3333333333333333,
+        "clean": 0.8,
+        "no_snippet": 0.7
+      },
+      "det_fail_rate": 0.4,
+      "invented_id_rate": 0.0,
+      "abstain_precision": 0.5,
+      "abstain_recall": 0.5666666666666667
+    }
+  ]
+}
