@@ -15,6 +15,7 @@ stderr when the caller captures it, and ``CalledProcessError`` when the caller c
 from __future__ import annotations
 
 import builtins
+import contextlib
 import os
 import re
 import shlex
@@ -39,6 +40,8 @@ class Sandbox:
     stopped_at: str | None = None
     stop_env: dict[str, str] = field(default_factory=dict)
     error: BaseException | None = None
+    # The notebook's globals after the run, for checking the values it computed.
+    namespace: dict[str, Any] = field(default_factory=dict)
 
 
 def source(cell: Mapping[str, Any]) -> str:
@@ -97,6 +100,14 @@ def _fake_torch() -> types.ModuleType:
     )
     torch.cuda = cuda  # type: ignore[attr-defined]
     torch.__version__ = "2.0.0+cu121"  # type: ignore[attr-defined]
+    # Enough of the inference API for a notebook that loads and runs a model on fakes.
+    torch.float16 = "float16"  # type: ignore[attr-defined]
+    torch.bfloat16 = "bfloat16"  # type: ignore[attr-defined]
+    torch.float32 = "float32"  # type: ignore[attr-defined]
+    torch.no_grad = contextlib.nullcontext  # type: ignore[attr-defined]
+    torch.inference_mode = contextlib.nullcontext  # type: ignore[attr-defined]
+    torch.manual_seed = lambda *a, **k: None  # type: ignore[attr-defined]
+    torch.device = lambda *a, **k: a[0] if a else "cuda"  # type: ignore[attr-defined]
     return torch
 
 
@@ -212,6 +223,7 @@ def run_notebook(
     tagged = parameters_cell(notebook)
     sandbox = Sandbox()
     namespace: dict[str, Any] = {"__name__": "__main__", "__builtins__": builtins}
+    sandbox.namespace = namespace
     with _faked(sandbox, stop_at, secrets, fail_at) as shell:
         namespace["__shell__"] = shell
         for cell in notebook["cells"]:

@@ -35,6 +35,10 @@ ALLOWED_HOSTS = {
     # The xAI judge backend's API host and the docs host cited for its prices (D-095).
     "api.x.ai",
     "docs.x.ai",
+    # A public Kaggle notebook link for the inference demo (R16, G32, D-118). Colab is not
+    # allowlisted: its notebook URLs embed the code host's path.
+    "kaggle.com",
+    "www.kaggle.com",
     "example.com",
     "example.invalid",
 }
