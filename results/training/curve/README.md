@@ -33,4 +33,10 @@ uv run train/train_qlora.py --dataset data/datasets/v1/subsets/n<N>.jsonl --out 
 ```
 
 The held-out deterministic-check metrics of the curve adapters are in
-[`results/curve/heldout/`](../../curve/heldout/README.md); the judge-scored evals are pending.
+[`results/curve/heldout/`](../../curve/heldout/README.md).
+<!-- PENDING-A:approved -->
+The judge-scored held-out evals are in `{{curve_judged_run_dir}}`.
+<!-- /PENDING-A -->
+<!-- PENDING-A:not-run -->
+The judge-scored evals were not run (`docs/writeup.md` section 9).
+<!-- /PENDING-A -->

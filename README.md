@@ -72,19 +72,26 @@ run on a Kaggle GPU. The first QLoRA run on v1 is done (168 steps, 3 epochs; log
 [`joe-alfaro/groundcite-qwen3-1.7b`](https://huggingface.co/joe-alfaro/groundcite-qwen3-1.7b), commit
 `b16b566d0d36d06744c90342fe836a4e6decc4e8`.
 
-Since then (Oct 30): base vs tuned is measured on the own and held-out sets (tuned beats base,
-and no system meets the reliability bar; [`results/base_vs_tuned/`](results/base_vs_tuned/)),
-the v1 failure mode is diagnosed and the v2 data change is designed, and three nested curve points
-are trained ([`results/training/curve/`](results/training/curve/README.md)). The v2 data, the
-curve-point evals and the minimum viable N are still to come. Milestone 2 deliverables:
-[`docs/final-checklist.md`](docs/final-checklist.md).
+Milestone 2: base vs tuned is measured on the own and held-out sets (tuned beats base, and no
+system meets the reliability bar; [`results/base_vs_tuned/`](results/base_vs_tuned/)), the
+v1 failure mode is diagnosed, the R29 judge audit passes (19 of 20), and three nested curve points
+are trained ([`results/training/curve/`](results/training/curve/README.md)).
+<!-- PENDING-AB:approved -->
+The judge-scored data-efficiency curve gives a minimum viable N of {{min_viable_n}}, and dataset
+v2 scores {{v2_heldout_spec}} / {{v2_heldout_rob}} on the held-out set (write-up, sections 8
+and 9).
+<!-- /PENDING-AB -->
+<!-- PENDING-AB:not-run -->
+The data-efficiency curve is reported with deterministic checks only, so no minimum viable N is
+stated, and the v2 data change is designed but not run (write-up, sections 8 and 9).
+<!-- /PENDING-AB -->
+Milestone 2 deliverables: [`docs/final-checklist.md`](docs/final-checklist.md).
 
 - Every Milestone 1 deliverable, its status and the file or command behind it:
   [`docs/milestone1-checklist.md`](docs/milestone1-checklist.md).
 - Every item, its artifact and its status: [`docs/checklist.md`](docs/checklist.md).
 - Which AI models were used for what, and the spend controls: [`docs/ai-usage.md`](docs/ai-usage.md).
-- What is done, what is behind and why, and the next steps:
-  [`docs/writeup.md`](docs/writeup.md#status-at-milestone-1).
+- Every result, how it was measured, and the limitations: [`docs/writeup.md`](docs/writeup.md).
 
 ## Reproduce
 

@@ -27,4 +27,4 @@ It records the config and dataset hashes, the seed, library versions, the chat t
 the per-step loss curve. The train time and mean train loss come from the run's trainer output,
 not from this file.
 
-No eval of this adapter has run yet: base-vs-tuned numbers are pending.
+The base-vs-tuned evals of this adapter are in [`results/base_vs_tuned/`](../../base_vs_tuned/).

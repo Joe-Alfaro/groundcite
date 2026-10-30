@@ -1,9 +1,17 @@
 # Data-efficiency curve: held-out set, deterministic checks only
 
+<!-- PENDING-A:approved -->
+> **These are deterministic-check metrics only.** The judge-scored Spec-adherence and Robustness
+> curve and the minimum viable N ({{min_viable_n}}) are in `{{curve_judged_run_dir}}` and
+> `docs/writeup.md` section 9. Nothing on this page meets or misses the reliability bar, which
+> is defined on the judge's Spec-adherence and Robustness.
+<!-- /PENDING-A -->
+<!-- PENDING-A:not-run -->
 > **These are deterministic-check metrics only. No judge has scored these replies.** The
-> judge-scored Spec-adherence and Robustness curve is pending approval of the judge spend, and the
-> **minimum viable N will be stated after judging**. Nothing on this page meets or misses the
+> judge-scored curve was not run within the project's budget and timeline, so this table is the
+> reported curve and **no minimum viable N is stated**. Nothing on this page meets or misses the
 > reliability bar, which is defined on the judge's Spec-adherence and Robustness.
+<!-- /PENDING-A -->
 
 Each curve point (N = 56, 112, 224) is a QLoRA adapter trained on a nested subset of dataset v1
 ([`results/training/curve/`](../../training/curve/README.md)). Its replies to the 60 scenarios in
@@ -80,7 +88,7 @@ points. Without the judge, the clear signals are:
 - **SOFT flags are at or below base** (0.05 to 0.15 tuned, 0.15 to 0.20 base).
 
 Whether n224 matches full v1 on the judged Spec-adherence is the question that sets the minimum
-viable N; it waits for the judge.
+viable N, and only the judge can answer it.
 
 ## Reproduce
 
