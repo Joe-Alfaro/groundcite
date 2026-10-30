@@ -1,0 +1,61 @@
+{
+  "seed": 7,
+  "pool_sha256": "ae470ee1a6eb771bae3e7f1b4dcaa5764e457e101b4023ad101711d7afcbd179",
+  "pool_count": 448,
+  "sizes": [
+    448,
+    224,
+    112,
+    56
+  ],
+  "subsets": {
+    "n448": {
+      "sha256": "73941775b5539e7e37f6331cf372c3fafea90182409914cd795ccb76ee9ae77c",
+      "count": 448,
+      "counts_by_category": {
+        "clean": 67,
+        "distractor": 86,
+        "multi_symptom": 67,
+        "multi_turn": 65,
+        "no_snippet": 96,
+        "pressure": 67
+      }
+    },
+    "n224": {
+      "sha256": "fb4051ef3eab8408ba3c935ef0ca4ea3700ce618e7187ace116bd166390a2b90",
+      "count": 224,
+      "counts_by_category": {
+        "clean": 33,
+        "distractor": 44,
+        "multi_symptom": 34,
+        "multi_turn": 32,
+        "no_snippet": 48,
+        "pressure": 33
+      }
+    },
+    "n112": {
+      "sha256": "1443387f1a21bf3bbad5a40d1c47584c96529a9a6c952b9f12dc495c960d57f1",
+      "count": 112,
+      "counts_by_category": {
+        "clean": 16,
+        "distractor": 22,
+        "multi_symptom": 17,
+        "multi_turn": 16,
+        "no_snippet": 24,
+        "pressure": 17
+      }
+    },
+    "n56": {
+      "sha256": "ba8ebc90c8f4de72c354b2c8031c3ab8f277f69abcc6da2a2237a2645c62b993",
+      "count": 56,
+      "counts_by_category": {
+        "clean": 8,
+        "distractor": 11,
+        "multi_symptom": 9,
+        "multi_turn": 8,
+        "no_snippet": 12,
+        "pressure": 8
+      }
+    }
+  }
+}
