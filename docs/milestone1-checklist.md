@@ -25,10 +25,9 @@ still missing or partial. The reasons are in the
 
 | Status | Rows |
 | --- | --- |
-| met | 25 |
-| partial | 6 |
+| met | 26 |
+| partial | 5 |
 | missing | 0 |
-| owner-gated | 1 |
 | owner-gated | 1 |
 | **Total** | **32** |
 
@@ -54,7 +53,7 @@ still missing or partial. The reasons are in the
 | R10 | One-command eval | met | `uv run eval.py --model <hf-repo-id> --eval-set <path>` | Tested end to end on mock models and judge; not yet run on the tuned adapter. |
 | R11 | Raw judge transcripts as JSONL (score and reasoning per example) | met | `results/ablation/m1/transcripts.jsonl`, `results/rollout_pilot/pilot1/transcripts.jsonl`, `results/judge_agreement/*/transcripts.jsonl`, `results/base_vs_tuned/*/2*/transcripts.jsonl` | Every committed run has them, including the base and tuned rows (180 held-out, 300 `eval_own`). |
 | R13 | Pinned versions: eval-code commit and model commit | met | `src/groundcite/versions.py`, `uv.lock`, `uv run scripts/check_rubric.py results/`, `results/training/v1/`, `results/base_vs_tuned/` | Every `results.json` pins eval code, judge, rubric, eval set and decoding. The tuned model is pinned to Hub commit `b16b566d0d36d06744c90342fe836a4e6decc4e8`, trained from code commit `72f24f33` (both in `results/training/v1/README.md`), and both base-vs-tuned runs pin the tuned rows to that commit. `check_rubric.py results/` reports one rubric hash across 7 runs. |
-| R12 | Accepts a third-party held-out set | partial | `docs/eval-set-format.md`, `src/groundcite/evalset.py`, `tests/test_evalset.py` | Due at Milestone 2. Loader takes JSONL, JSON array or CSV now; the scored-output test through `eval.py` is still planned. |
+| R12 | Accepts a third-party held-out set | met | `docs/eval-set-format.md`, `src/groundcite/evalset.py`, `tests/test_evalset.py`, `tests/test_eval_fixture_sets.py` | Due at Milestone 2 and done since the check-in: the loader takes JSONL, JSON array or CSV, and each fixture set is tested end to end through `eval.py` to scored output. |
 
 ## Prompt-ceiling ablation (required in full at Milestone 1)
 
@@ -79,10 +78,10 @@ still missing or partial. The reasons are in the
 | R6, R9 | Draft model checkpoint on the Hub with its commit hash | met | [`joe-alfaro/groundcite-qwen3-1.7b`](https://huggingface.co/joe-alfaro/groundcite-qwen3-1.7b) at commit `b16b566d0d36d06744c90342fe836a4e6decc4e8`; `results/training/v1/README.md` | Public. The LoRA adapter, its config, the model card and the training log. This model page is the deployed artifact for Milestone 1. |
 | R15 | Dataset published | met | [`joe-alfaro/groundcite-diagnostic-v1`](https://huggingface.co/datasets/joe-alfaro/groundcite-diagnostic-v1) at commit `ccb75f757844360f10fc951d7c4f3db1a57fcb36`; `data/datasets/v1/publish.json` | Public. Dataset v1 with its dataset card, published from `main` `92113c3`. |
 | R6 | First base-vs-tuned numbers in the verified format | met | `results/base_vs_tuned/heldout/`, `results/base_vs_tuned/eval_own/` (README, `results.json`, `transcripts.jsonl`, `spend.json` each), `docs/writeup.md` section 7 | Held-out (headline): tuned 0.48 [0.35, 0.60] / 3.47 vs base zero_shot 0.28 / 2.97 and base structured 0.17 / 2.35. `eval_own`: tuned 0.57 / 3.73 vs 0.22 / 2.63. No system meets the bar. |
-| R7 | One failure mode diagnosed from evals and fixed by a data change (v2) | partial | `results/base_vs_tuned/heldout/DIAGNOSIS.md`, `docs/writeup.md` section 8; `scripts/diff_datasets.py` (ready); `data/datasets/v2/` (planned) | Diagnosis done from tuned-model transcripts: false abstain, 14 of 60 held-out replies. Data change chosen (in-scope twins of the v1 abstain scenarios); the fix is pending. |
-| R8 | At least two data-efficiency points, or a documented reason | partial | `scripts/make_sweep.py`, `data/datasets/v1/subsets/`, `results/training/curve/README.md`, `docs/writeup.md` section 9 | Since the check-in, three nested points (N = 56, 112, 224) are trained with the v1 config and seed, next to the full 448 run. Their held-out evals are pending, so there are no quality numbers per point yet. |
+| R7 | One failure mode diagnosed from evals and fixed by a data change (v2) | partial | `results/base_vs_tuned/heldout/DIAGNOSIS.md`, `docs/writeup.md` section 8; `scripts/diff_datasets.py` (ready); `data/scenarios/train_v2_additions.jsonl`, `docs/dataset-v2-plan.md` | Diagnosis done from tuned-model transcripts: false abstain, 14 of 60 held-out replies. The v2 scenarios are ready (105 in-scope cite twins of the v1 abstain scenarios); the teacher spend awaits approval. |
+| R8 | At least two data-efficiency points, or a documented reason | partial | `scripts/make_sweep.py`, `data/datasets/v1/subsets/`, `results/training/curve/README.md`, `results/curve/heldout/README.md`, `docs/writeup.md` section 9 | Since the check-in, the curve has 4 nested points trained with logs (N = 56, 112, 224 with the v1 config and seed, plus the full 448 run). The deterministic-check curve on the held-out set is in `results/curve/heldout/README.md`; the judge-scored curve is pending approval of the judge spend. |
 | R14 | Data-efficiency training logs for rerunning a point | met | `results/training/curve/n{56,112,224}/train_log.json`, `results/training/curve/README.md`, `results/training/v1/train_log.json` | Every point's log has the config and dataset hashes, seed and loss curve; the README gives the rerun command. |
-| R29 | Judge validity evidence | partial | `results/judge_agreement/`, `docs/writeup.md` section 10, `scripts/judge_audit.py` | The agreement study kept gpt-5.5 (it matched a blind label on 17 of 19 disputed replies); the 20-reply hand audit waits for tuned-model replies. |
+| R29 | Judge validity evidence | partial | `results/judge_agreement/`, `docs/writeup.md` section 10, `scripts/judge_audit.py` | The agreement study kept gpt-5.5 (it matched a blind label on 17 of 19 disputed replies). The 20-reply hand-audit tooling is done (`judge_audit.py --blind-system`); the hand audit is pending. |
 
 ## Judge API budget
 
