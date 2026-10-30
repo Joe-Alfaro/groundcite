@@ -79,7 +79,8 @@ FAMILIES_TOML = REPO_ROOT / "data" / "families.toml"
 # snippet list. A twin per source at most, and at least 110 of them.
 V1_COUNT = 448
 V1_ABSTAIN = 126
-MIN_ADDITIONS = 110
+# D-138: lowered from 110 to 105; 21 of the 126 sources can't yield a twin that passes the gates.
+MIN_ADDITIONS = 105
 # v1 distilled two candidates per scenario (960 for 480); v2 keeps the same k.
 K = 2
 ABSTAIN_SHARE_RANGE = (0.20, 0.30)
