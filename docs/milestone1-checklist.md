@@ -14,18 +14,21 @@ Status values:
 - **owner-gated**: needs the owner's own action (a Kaggle GPU run, a Hub push, a recording).
 
 Every model run (smoke on the real model, QLoRA training, base and tuned generation) happens on a
-Kaggle GPU. The notebooks are ready and tested, but no run had been recorded at this check-in, so
-every row that needs a trained model is owner-gated or missing. The reasons are in the
+Kaggle GPU. The first QLoRA run on dataset v1 is done, and its adapter is public on the Hub at
+[`joe-alfaro/groundcite-qwen3-1.7b`](https://huggingface.co/joe-alfaro/groundcite-qwen3-1.7b), commit
+`b16b566d0d36d06744c90342fe836a4e6decc4e8`; that model page is the deployed artifact for this
+check-in. The adapter has not been evaluated yet, so the rows that need tuned-model numbers are
+still missing or partial. The reasons are in the
 [write-up's status section](writeup.md#status-at-milestone-1).
 
 ## Summary
 
 | Status | Rows |
 | --- | --- |
-| met | 18 |
-| partial | 7 |
+| met | 21 |
+| partial | 6 |
 | missing | 3 |
-| owner-gated | 3 |
+| owner-gated | 1 |
 | **Total** | **31** |
 
 ## Project basics
@@ -47,9 +50,9 @@ every row that needs a trained model is owner-gated or missing. The reasons are 
 | R2, R21 | Deterministic check for the spec's own failure modes | met | `src/groundcite/checks.py`, `tests/test_checks*.py` | HARD (structural) failures, such as an unprovided or unsupporting cited ID or a wrong citation count, force Spec-adherence to 0; SOFT lexical checks are reported. |
 | R2, R10 | Base-vs-tuned comparison in one invocation | met | `eval.py`, `src/groundcite/runner.py`, `tests/test_eval_cli.py` | One `--model` adds base zero-shot and base best-prompt rows automatically. |
 | R2 | Harness on `main` before any training code | met | `git log --reverse -- train/` | First `train/` commit `dd36d33` comes after the harness (`b38f644`) and the committed ablation (`2f39d0b`). |
-| R10 | One-command eval | met | `uv run eval.py --model <hf-repo-id> --eval-set <path>` | Tested end to end on mock models and judge; not yet run on a tuned model, since none exists yet. |
-| R11 | Raw judge transcripts as JSONL (score and reasoning per example) | partial | `results/ablation/m1/transcripts.jsonl`, `results/rollout_pilot/pilot1/transcripts.jsonl`, `results/judge_agreement/*/transcripts.jsonl` | Every committed run has them; base-vs-tuned transcripts follow the first trained model. |
-| R13 | Pinned versions: eval-code commit and model commit | partial | `src/groundcite/versions.py`, `uv.lock`, `uv run scripts/check_rubric.py results/` | Every `results.json` pins eval code, judge, rubric, eval set and decoding; the tuned model's Hub commit hash waits on the checkpoint. |
+| R10 | One-command eval | met | `uv run eval.py --model <hf-repo-id> --eval-set <path>` | Tested end to end on mock models and judge; not yet run on the tuned adapter. |
+| R11 | Raw judge transcripts as JSONL (score and reasoning per example) | partial | `results/ablation/m1/transcripts.jsonl`, `results/rollout_pilot/pilot1/transcripts.jsonl`, `results/judge_agreement/*/transcripts.jsonl` | Every committed run has them; base-vs-tuned transcripts follow the tuned-model eval. |
+| R13 | Pinned versions: eval-code commit and model commit | met | `src/groundcite/versions.py`, `uv.lock`, `uv run scripts/check_rubric.py results/`, `results/training/v1/` | Every `results.json` pins eval code, judge, rubric, eval set and decoding. The tuned model is pinned to Hub commit `b16b566d0d36d06744c90342fe836a4e6decc4e8`, trained from code commit `72f24f33` (both in `results/training/v1/README.md`). |
 | R12 | Accepts a third-party held-out set | partial | `docs/eval-set-format.md`, `src/groundcite/evalset.py`, `tests/test_evalset.py` | Due at Milestone 2. Loader takes JSONL, JSON array or CSV now; the scored-output test through `eval.py` is still planned. |
 
 ## Prompt-ceiling ablation (required in full at Milestone 1)
@@ -70,11 +73,11 @@ every row that needs a trained model is owner-gated or missing. The reasons are 
 | --- | --- | --- | --- | --- |
 | R4 | Distillation from a frontier teacher plus a hard quality filter | met | `scripts/distill.py`, `scripts/build_dataset.py`, `data/datasets/v1/filter_report.md` | Teacher `anthropic:claude-opus-5-5`, two candidates per scenario. |
 | R6 | First real filtered dataset, and its shape | met | `data/datasets/v1/` (`train.jsonl`, `manifest.json`, `NOTES.md`, `leakage_report.md`) | 448 kept of 960 candidates, 28.1% abstain, counts by category and ID scheme in the manifest. Its filter judge was Claude Opus, disclosed in the README and write-up. |
-| R5 | Full loop generate → train → eval on a smoke batch | partial | `scripts/smoke_loop.sh`, `tests/test_smoke_loop.py` | Local mode runs end to end as a CPU-only check on a tiny model; the real-model smoke (`--kaggle`, Qwen3-0.6B) has no recorded run yet. |
-| R6 | First real QLoRA training run | owner-gated | `train/train_qlora.py`, `train/config.toml`, `train/kaggle_train.ipynb` | Ready to run on a Kaggle T4; waiting on the owner's run. |
-| R6, R9 | Draft model checkpoint on the Hub with its commit hash | owner-gated | Hub model repo (planned); the notebook prints the commit SHA | Pending the Kaggle training run. |
+| R5 | Full loop generate → train → eval on a smoke batch | partial | `scripts/smoke_loop.sh`, `tests/test_smoke_loop.py` | Local mode runs end to end as a CPU-only check on a tiny model. The real-model training path has now run end to end on Kaggle (`results/training/v1/`); the eval step on a real model is still pending. |
+| R6 | First real QLoRA training run | met | `results/training/v1/` (`train_log.json`, `README.md`), `train/train_qlora.py`, `train/config.toml`, `train/kaggle_train.ipynb` | Qwen3-1.7B on dataset v1 with frozen config v1, Kaggle T4, code commit `72f24f33`: 168 steps (3 epochs) in 839.7 s, final step loss 0.5064, mean train loss 0.9019, no errors. |
+| R6, R9 | Draft model checkpoint on the Hub with its commit hash | met | [`joe-alfaro/groundcite-qwen3-1.7b`](https://huggingface.co/joe-alfaro/groundcite-qwen3-1.7b) at commit `b16b566d0d36d06744c90342fe836a4e6decc4e8`; `results/training/v1/README.md` | Public. The LoRA adapter, its config, the model card and the training log. This model page is the deployed artifact for Milestone 1. |
 | R6 | First base-vs-tuned numbers in the verified format | missing | `results/base_vs_tuned/` (planned), `train/kaggle_eval.ipynb`, `eval.py --judge-from` | Needs the trained adapter. Target: within a day of the Kaggle run. |
 | R7 | One failure mode diagnosed from evals and fixed by a data change (v2) | missing | `scripts/diff_datasets.py` (ready); diagnosis note and `data/datasets/v2/` (planned) | The failure mode must come from tuned-model transcripts, not a guess. Candidate weaknesses are noted in `data/datasets/v1/NOTES.md`. |
-| R8 | At least two data-efficiency points, or a documented reason | partial | `scripts/make_sweep.py`, `docs/checklist.md`, `docs/writeup.md` (status section) | No points yet; the reason (every run is on Kaggle and v1 is not trained yet) and the plan are documented. |
-| R14 | Data-efficiency training logs for rerunning a point | missing | `train/train_qlora.py` writes `train_log.json` (config and dataset hashes, seed, loss curve) | Due with the first curve point; no training run exists yet. |
+| R8 | At least two data-efficiency points, or a documented reason | partial | `scripts/make_sweep.py`, `docs/checklist.md`, `docs/writeup.md` (status section) | No points yet; the reason (every run is on Kaggle, and the full v1 run only just finished) and the plan are documented. |
+| R14 | Data-efficiency training logs for rerunning a point | missing | `train/train_qlora.py` writes `train_log.json` (config and dataset hashes, seed, loss curve) | Due with the first curve point. The full v1 run's log is committed in `results/training/v1/train_log.json`; no curve-point logs yet. |
 | R29 | Judge validity evidence | partial | `results/judge_agreement/`, `docs/writeup.md` section 10, `scripts/judge_audit.py` | The agreement study kept gpt-5.5 (it matched a blind label on 17 of 19 disputed replies); the 20-reply hand audit waits for tuned-model replies. |

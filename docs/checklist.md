@@ -20,9 +20,11 @@ Every row is filled in before each milestone. Dates are Central Time.
 
 Summary: the spec, the eval harness, the prompt-ceiling ablation, the long-conversation pilot,
 the judge agreement study and dataset v1 (448 examples) are done. Every model run (smoke on the
-real model, QLoRA training, base and tuned generation) happens on a Kaggle GPU, and the notebooks
-are ready but no run has been recorded yet, so base-vs-tuned, the v2 data fix, the curve points and the Hub
-checkpoint are behind or waiting on that run. The reasons are in the
+real model, QLoRA training, base and tuned generation) happens on a Kaggle GPU. The first QLoRA run
+on v1 is done and its adapter is public at
+[`joe-alfaro/groundcite-qwen3-1.7b`](https://huggingface.co/joe-alfaro/groundcite-qwen3-1.7b) (commit
+`b16b566d0d36d06744c90342fe836a4e6decc4e8`). Base-vs-tuned, the v2 data fix and the curve points
+are still behind: they need the tuned-model eval first. The reasons are in the
 [write-up's status section](writeup.md#status-at-milestone-1).
 
 | Req | Item | Artifact, command or URL | Status |
@@ -42,19 +44,19 @@ checkpoint are behind or waiting on that run. The reasons are in the
 | R3 | Results table, per-example judge JSONL, best-vs-second-best delta, plateau check: **no plateau** (three cells meet the bar) | `results/ablation/README.md`, `results/ablation/m1/results.md`, `results/ablation/m1/transcripts.jsonl` | done |
 | R3 | Surviving failure mode paragraph with rate and ≥2 scenario IDs | `results/ablation/README.md`, `docs/writeup.md` section 4 | done |
 | R4 | Teacher generation (k = 2), hard quality filter, filter report (v1) | `scripts/distill.py`, `scripts/build_dataset.py`, `data/distill/v1/`, `data/datasets/v1/filter_report.md` | done |
-| R5 | Smoke loop: generate → filter → train (≤20 steps) → eval on ≤32 examples | `scripts/smoke_loop.sh`, `tests/test_smoke_loop.py`; README "Smoke loop". The local mode is a CPU-only check on a tiny model; the real-model smoke (`smoke_loop.sh --kaggle`, Qwen3-0.6B) runs from `train/kaggle_train.ipynb` and has no recorded run yet | partial |
+| R5 | Smoke loop: generate → filter → train (≤20 steps) → eval on ≤32 examples | `scripts/smoke_loop.sh`, `tests/test_smoke_loop.py`; README "Smoke loop". The local mode is a CPU-only check on a tiny model; the real-model smoke (`smoke_loop.sh --kaggle`, Qwen3-0.6B) runs from `train/kaggle_train.ipynb` and has no recorded run yet. The real-model training path has run end to end on Kaggle (`results/training/v1/`); the eval step on a real model is still pending | partial |
 | R6 | Dataset v1 (≥300 filtered examples) with manifest: 448 kept of 960 candidates, 28.1% abstain | `data/datasets/v1/` (`train.jsonl`, `manifest.json`, `filter_report.md`, `NOTES.md`, `leakage_report.md`) | done |
-| R6 | One QLoRA run of Qwen3-1.7B on v1, training log committed | `train/train_qlora.py`, `train/config.toml`, `train/kaggle_train.ipynb` (pinned to a commit that contains dataset v1), `tests/test_train_qlora.py`, `tests/test_train_notebook.py`. Ready to run; waiting on the owner's Kaggle run. Target: Fri Oct 30 | owner-gated |
-| R6 | Base-vs-tuned table on the own eval set, with transcripts and pins | `results/base_vs_tuned/` (planned). Needs the trained adapter, then base and tuned generation on Kaggle (`train/kaggle_eval.ipynb`, held-out set first), then local judging with `eval.py --judge-from`. Target: within a day of the Kaggle run, Sat Oct 31 at the latest | behind |
-| R6, R9 | Draft HF checkpoint and its commit hash (G14) | Hub model repo (private until the owner approves public); the commit SHA is printed by the training notebook. Pending the Kaggle training run | owner-gated |
+| R6 | One QLoRA run of Qwen3-1.7B on v1, training log committed | `results/training/v1/train_log.json` and `results/training/v1/README.md`: Kaggle T4, code commit `72f24f33`, frozen config v1, 168 steps (3 epochs) in 839.7 s, final step loss 0.5064, mean train loss 0.9019. Code: `train/train_qlora.py`, `train/config.toml`, `train/kaggle_train.ipynb`, `tests/test_train_qlora.py`, `tests/test_train_notebook.py` | done |
+| R6 | Base-vs-tuned table on the own eval set, with transcripts and pins | `results/base_vs_tuned/` (planned). The trained adapter exists; next is base and tuned generation on Kaggle (`train/kaggle_eval.ipynb`, held-out set first), then local judging with `eval.py --judge-from`. Target: Sat Oct 31 at the latest | behind |
+| R6, R9 | Draft HF checkpoint and its commit hash (G14) | [`joe-alfaro/groundcite-qwen3-1.7b`](https://huggingface.co/joe-alfaro/groundcite-qwen3-1.7b) at commit `b16b566d0d36d06744c90342fe836a4e6decc4e8`, public; recorded in `results/training/v1/README.md`. The model page is the deployed artifact for Milestone 1 | done |
 | R7 | Diagnosis note: one v1 failure mode, rate, scenario IDs, data change | `docs/` diagnosis note (planned); candidate weaknesses already noted from reading the data in `data/datasets/v1/NOTES.md`. Needs tuned-model eval evidence first: the failure mode must come from v1 transcripts, not from guessing. Target: Sat Oct 31 | behind |
 | R7 | v1 and v2 logs share a config hash, dataset diff summary committed | `scripts/diff_datasets.py`, `tests/test_diff_datasets.py`; `train_qlora.py` logs `config_sha256` and `dataset_sha256`; `data/datasets/v2/` (planned, after the diagnosis note). Target: Sat Oct 31 | behind |
 | R7 | v2 eval shows the failure-mode rate going down | `results/base_vs_tuned/` (planned). Needs v2 training on Kaggle. Target: Sun Nov 1, before Milestone 2 | behind |
-| R8 | ≥2 data-efficiency points on nested subsets | `scripts/make_sweep.py`, `tests/test_sweep.py`; `results/curve/` (planned). Behind because every training run happens on Kaggle and v1 itself has not been trained yet; the subsets need one Kaggle session each (about 0.6 GPU h). Target: Sat Oct 31 | behind |
+| R8 | ≥2 data-efficiency points on nested subsets | `scripts/make_sweep.py`, `tests/test_sweep.py`; `results/curve/` (planned). Behind because every training run happens on Kaggle and the full v1 run only just finished; the subsets need one Kaggle session each (about 0.6 GPU h). Target: Sat Oct 31 | behind |
 | R10 | One-command eval writes `results.md`, `results.json`, `transcripts.jsonl`; base rows added automatically | `uv run eval.py --model <hf-repo-id> --eval-set <path>`, `tests/test_eval_cli.py` | done |
 | R10 | README first lines name the env var and the hardware | `README.md`, `tests/test_eval_hardening.py` | done |
 | R11 | Raw judge transcripts for every run, row count = scenarios × systems | `src/groundcite/report.py`, `tests/test_eval_cli.py`; committed runs: `results/ablation/m1/transcripts.jsonl`, `results/rollout_pilot/pilot1/transcripts.jsonl`, `results/judge_agreement/` | done |
-| R13 | Pins in every `results.json`, dirty-tree refusal, one `rubric_sha256` | `src/groundcite/versions.py`, `uv.lock`, `tests/test_eval_cli.py`, `scripts/check_rubric.py`, `tests/test_check_rubric.py`; `uv run scripts/check_rubric.py results/` reports one `rubric_sha256` across the 5 committed runs | done |
+| R13 | Pins in every `results.json`, dirty-tree refusal, one `rubric_sha256` | `src/groundcite/versions.py`, `uv.lock`, `tests/test_eval_cli.py`, `scripts/check_rubric.py`, `tests/test_check_rubric.py`; `uv run scripts/check_rubric.py results/` reports one `rubric_sha256` across the 5 committed runs; the tuned model's Hub commit `b16b566d` and code commit `72f24f33` in `results/training/v1/README.md` | done |
 | R17 | Write-up draft | `docs/writeup.md`: status, thesis, spec, scenarios, ablation, pilot, data and the judge agreement study are written; base vs tuned, v2 and the curve are marked Pending | partial |
 | R19 | Mock judge, full eval with network blocked | `src/groundcite/backends.py` (`mock:judge`), `tests/test_eval_cli.py` | done |
 | R20 | `--dry-run` on `eval.py`, `run_ablation.py`, `distill.py` | `eval.py`, `scripts/run_ablation.py`, `scripts/distill.py`; `tests/test_eval_cli.py`, `tests/test_ablation.py`, `tests/test_distill.py` | done |
@@ -68,7 +70,7 @@ checkpoint are behind or waiting on that run. The reasons are in the
 | R28 | Greedy local decoding, rerun delta within ±0.03 stated in README | `config/models.toml`, `README.md`, `scripts/rerun_delta.py`, `tests/test_rerun_delta.py`; the measured delta needs a rerun of the tuned eval (after the Kaggle run) | partial |
 | R29 | 20 hand-labeled replies, judge agrees on ≥18 | `scripts/judge_audit.py`, `tests/test_judge_audit.py`; labeling waits for tuned-model replies. The agreement study's blind adjudication (gpt-5.5 matched the label on 17 of 19 disputed replies) is related evidence, not this audit | partial |
 | R30 | Invented-ID rate, abstain precision and recall; 20–30% abstain in training mix | `src/groundcite/report.py`, `tests/test_report.py`; `data/datasets/v1/manifest.json` (abstain share 28.1%) | done |
-| R31 | T4 config (`fp16=True`), `max_seq_length` logged, GPU-hour budget table | `train/config.toml`, `train/train_qlora.py`, `tests/test_train_qlora.py`, `tests/test_train_device.py`, `tests/test_gpu_budget.py`; [GPU-hour budget](#r31-gpu-hour-budget) below (Used is 0 so far: no Kaggle run recorded yet) | done |
+| R31 | T4 config (`fp16=True`), `max_seq_length` logged, GPU-hour budget table | `train/config.toml`, `train/train_qlora.py`, `tests/test_train_qlora.py`, `tests/test_train_device.py`, `tests/test_gpu_budget.py`; [GPU-hour budget](#r31-gpu-hour-budget) below (Used so far: the v1 training run) | done |
 | R32 | Milestone checklist | `docs/checklist.md`; deliverable-by-deliverable view in `docs/milestone1-checklist.md` | done |
 
 ## Milestone 2 (Sun Nov 1, noon CT)
@@ -105,15 +107,16 @@ checkpoint are behind or waiting on that run. The reasons are in the
 Weekly Kaggle GPU quota: 30 h (T4). Every model run happens on Kaggle (D-078), and the plan keeps
 at least 25% of the week free. Planned hours are estimates for one T4, including clone, install
 and model download; record the hours each session actually used. As of this check-in (Thu Oct 29),
-no Kaggle run has been recorded, so Used is 0 on every row.
+only the v1 training run has happened; its Used figure is the training wall time (16 min 41 s), as
+the session's setup time was not recorded.
 
 | Run | Planned (GPU h) | Used (GPU h) |
 | --- | --- | --- |
 | Smoke loop (`smoke_loop.sh --kaggle`, Qwen3-0.6B, 20 steps) | 0.5 | 0 |
-| v1 training (`kaggle_train.ipynb`) | 1.0 | 0 |
+| v1 training (`kaggle_train.ipynb`) | 1.0 | 0.28 |
 | v2 training | 1.0 | 0 |
 | Curve: 4 nested points (N/8 to N) | 2.5 | 0 |
 | Eval generation (`kaggle_eval.ipynb`): base and tuned, own and held-out sets | 4.0 | 0 |
 | Eval generation for the curve checkpoints | 3.0 | 0 |
 | Reruns and failed sessions | 3.0 | 0 |
-| Total | 15.0 | 0 |
+| Total | 15.0 | 0.28 |

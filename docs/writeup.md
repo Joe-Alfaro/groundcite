@@ -48,11 +48,18 @@ plainly instead of treating the frontier numbers as something the small model ha
 - **Training and smoke code.** The QLoRA script, its frozen config, the Kaggle training and eval
   notebooks and the smoke loop are written and tested. The local smoke mode is a CPU-only check on
   a tiny model; the real-model smoke runs on Kaggle.
+- **First QLoRA run and the draft checkpoint.** Qwen3-1.7B was trained on dataset v1 with frozen
+  config v1 on a Kaggle T4 (code commit `72f24f33`): 168 steps over 3 epochs in 839.7 s, final
+  step loss 0.5064, mean train loss 0.9019, no errors. This is the first time the real-model
+  training path ran end to end. The adapter is public at
+  [`joe-alfaro/groundcite-qwen3-1.7b`](https://huggingface.co/joe-alfaro/groundcite-qwen3-1.7b), commit
+  `b16b566d0d36d06744c90342fe836a4e6decc4e8`, and that model page is the deployed artifact for
+  this milestone. The training log is in `results/training/v1/`.
 
 **Behind, and why.**
 
-- **No tuned model yet, so no base-vs-tuned numbers.** Three things used up the time that was
-  planned for training before this milestone:
+- **No base-vs-tuned numbers yet.** The tuned adapter exists but has not been evaluated. Three
+  things used up the time that was planned for training and eval before this milestone:
   1. *The prompt-ceiling result needed spec hardening first.* The plan (section 1) was to harden
      the spec, not train, if a prompted frontier model already met the bar. It did, so the
      long-conversation pilot came first.
@@ -68,19 +75,17 @@ plainly instead of treating the frontier numbers as something the small model ha
 - **The v2 data fix needs eval evidence first.** The v1 → v2 change has to target a failure mode
   measured in tuned-model transcripts. Weaknesses noted while reading v1 (`data/datasets/v1/NOTES.md`)
   are candidates, not a diagnosis.
-- **The data-efficiency curve points** need their own Kaggle training runs, after v1.
-- **The draft Hub checkpoint** is pushed by the training notebook, so it waits on the same run.
+- **The data-efficiency curve points** need their own Kaggle training runs, now that v1 is
+  trained.
 
 **Next steps (targets, Central Time).**
 
-1. Run the training notebook on dataset v1 (smoke mode first) and record the GPU hours. Owner's
-   Kaggle run; target Fri Oct 30. This also produces the draft Hub checkpoint and its commit SHA.
-2. Generate base and tuned replies on `heldout` first, then `eval_own`, in the Kaggle eval
-   notebook, and judge them locally with `gpt-5.5`. Target: within a day of step 1, Sat Oct 31 at
-   the latest. This fills section 7 and the hand audit in section 10.
-3. Diagnose one v1 failure mode from those transcripts, build v2 by changing data only, train it
+1. Generate base and tuned replies on `heldout` first, then `eval_own`, in the Kaggle eval
+   notebook, loading the adapter at Hub commit `b16b566d`, and judge them locally with `gpt-5.5`.
+   Target: Sat Oct 31 at the latest. This fills section 7 and the hand audit in section 10.
+2. Diagnose one v1 failure mode from those transcripts, build v2 by changing data only, train it
    with the same config and re-evaluate. Target: Sat Oct 31 to Sun Nov 1.
-4. Train at least two nested data-efficiency points, then the rest of the curve for Milestone 2
+3. Train at least two nested data-efficiency points, then the rest of the curve for Milestone 2
    (Sun Nov 1, noon).
 
 ## 1. Behavior thesis

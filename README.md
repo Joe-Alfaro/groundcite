@@ -32,8 +32,11 @@ transformers and peft included) on first run, and the model is downloaded from t
 Milestone 1 (Oct 29): the spec, the eval harness, the prompt-ceiling ablation (no plateau: a
 prompted frontier model already meets the bar), a long-conversation hardening pilot, a judge
 agreement study and dataset v1 (448 examples) are done. Training and base and tuned generation
-run on a Kaggle GPU; the notebooks are ready, and the first QLoRA run, the base-vs-tuned table,
-the v1 → v2 data fix and the data-efficiency curve are still to come.
+run on a Kaggle GPU. The first QLoRA run on v1 is done (168 steps, 3 epochs; log in
+[`results/training/v1/`](results/training/v1/)), and the adapter is public at
+[`joe-alfaro/groundcite-qwen3-1.7b`](https://huggingface.co/joe-alfaro/groundcite-qwen3-1.7b), commit
+`b16b566d0d36d06744c90342fe836a4e6decc4e8`. The base-vs-tuned table, the v1 → v2 data fix and the
+data-efficiency curve are still to come.
 
 - Every Milestone 1 deliverable, its status and the file or command behind it:
   [`docs/milestone1-checklist.md`](docs/milestone1-checklist.md).
