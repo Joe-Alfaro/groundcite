@@ -3,14 +3,21 @@
 > **Status: draft.** The status sections below summarize where the project stands at Milestone 1
 > and since. Sections 1, 2, 3, 5 and 6 (method) describe what is built or designed in this
 > repository. Section 4 reports the real prompt-ceiling ablation, section 4a the long-conversation
-> pilot, section 6 dataset v1, section 7 the base-vs-tuned evals, section 8 the v2 diagnosis and
-> section 10 the judge agreement study. Every other number that needs a
+> pilot, section 6 dataset v1, section 7 the base-vs-tuned evals, section 8 the v2 diagnosis,
+> section 9 the curve training runs (their evals are pending) and section 10 the judge agreement
+> study. Every other number that needs a
 > real run is marked **Pending**, along with what will go there. Nothing in the pending sections
 > should be read as a result.
 
 Requirements: [`docs/requirements/small-model-finetune.md`](requirements/small-model-finetune.md).
 Architecture: [`ARCHITECTURE.md`](../ARCHITECTURE.md). Status of every item:
-[`docs/checklist.md`](checklist.md).
+[`docs/checklist.md`](checklist.md); Milestone 2 deliverables: [`docs/final-checklist.md`](final-checklist.md).
+
+Public artifacts: dataset v1 at
+[`joe-alfaro/groundcite-diagnostic-v1`](https://huggingface.co/datasets/joe-alfaro/groundcite-diagnostic-v1),
+commit `ccb75f757844360f10fc951d7c4f3db1a57fcb36`; the tuned adapter at
+[`joe-alfaro/groundcite-qwen3-1.7b`](https://huggingface.co/joe-alfaro/groundcite-qwen3-1.7b),
+commit `b16b566d0d36d06744c90342fe836a4e6decc4e8`.
 
 ## Status update (Friday, October 30)
 
@@ -20,10 +27,14 @@ Architecture: [`ARCHITECTURE.md`](../ARCHITECTURE.md). Status of every item:
   scenario, it wins 20 and loses 8 against base zero_shot (sign test p ≈ 0.036). On `eval_own`
   (in-distribution, with a memorization caveat) it scores 0.57 / 3.73 against 0.22 / 2.63.
   **No system meets the reliability bar on either set.**
-- **The v2 diagnosis is done; v2 is in progress (section 8).** The tuned model's most frequent
-  failure is a false abstain (14 of 60 held-out replies), usually justified by a scope exclusion
-  that is false. The data change is in-scope twins of the v1 abstain scenarios, with no config
-  change.
+- **The v2 diagnosis is done; v2 is designed and its generation awaits approval (section 8).**
+  The tuned model's most frequent failure is a false abstain (14 of 60 held-out replies), usually
+  justified by a scope exclusion that is false. The data change is in-scope twins of the v1
+  abstain scenarios, with no config change.
+- **Curve points trained; evals pending (section 9).** Nested subsets of v1 at N = 56, 112 and
+  224 are trained with the v1 config and seed (final step losses 1.3040 / 1.0274 / 0.6386; the
+  full 448 run ended at 0.5064). Their held-out evals are not scored yet, so the minimum viable N
+  is not stated.
 - **Judge spend:** $7.88 logged plus about $1.6 unlogged (the first 83 held-out judgments
   predate usage logging), about $9.5 of the $20 cap. With the conservative $6 estimate for the
   unlogged calls, about $13.9.
@@ -537,36 +548,103 @@ zero_shot (0.00), and far below base `structured` (0.40).
 
 ## 8. v1 → v2 data fix
 
-**In progress.** The diagnosis is done; the v2 dataset, its training run and its eval are not.
-Full note: [`results/base_vs_tuned/heldout/DIAGNOSIS.md`](../results/base_vs_tuned/heldout/DIAGNOSIS.md).
+**Status: designed; generation awaiting approval.** The diagnosis is done and the data change is
+specified. The v2 data needs new teacher calls, which wait for the owner's approval, so the v2
+dataset, its training run and its eval do not exist yet. No v2 number appears anywhere in this
+write-up. Full note:
+[`results/base_vs_tuned/heldout/DIAGNOSIS.md`](../results/base_vs_tuned/heldout/DIAGNOSIS.md).
 
-- **Failure mode (from the tuned model's held-out transcripts only):** false abstain. The model
-  says none of the references fits and cites nothing when a provided snippet does apply. Rate:
-  14 of 60 tuned replies (23%), 14 of the 41 cite scenarios (34%), 14 of its 31 failures. In 9 of
-  the 14, the reason it gives is a scope exclusion that is false: the snippet's applicability line
-  includes the vehicle, or the model misquotes the range. Examples: `ho-0011` (a 2012 car,
-  rejected for a 2011-2021 bulletin), `ho-0018` (the reply invents a "2010-2015" range for a
-  snippet that covers 2009-2022), `ho-0034`, `ho-0052`. The mirror image, citing an out-of-scope
-  near-miss when gold is abstain, adds 8 more. Together they make up all 22 wrong-mode failures.
-- **Why v1 teaches it:** all 126 v1 abstain examples reject on-topic near-miss snippets for year,
-  engine, body or equipment, and those near-miss snippets are never the cited gold in a v1 cite
-  example. The model learns the abstain template, not the comparison that should trigger it.
-- **Data change (no config change):** add an in-scope twin of each v1 abstain scenario,
-  regenerated with the vehicle moved inside one near-miss snippet's applicability and relabeled
-  as cite with that snippet. This needs about 252 new teacher calls (two candidates per twin).
-  The v1 and v2 training logs will show the same config hash and different dataset hashes. The
-  v2 eval on the held-out set will show whether the false-abstain rate goes down.
+**Where the evidence comes from.** Only the tuned model's 60 replies on the held-out set (adapter
+`joe-alfaro/groundcite-qwen3-1.7b@b16b566d`, zero-shot prompt), in
+[`transcripts.jsonl`](../results/base_vs_tuned/heldout/20261030T171626Z-e1bd6f/transcripts.jsonl).
+The tuned model fails 31 of the 60. Each failure falls into one of four kinds. "Gold" is the
+correct mode for the scenario: *cite* one snippet, or *abstain* because none applies.
+
+| Kind of failure | Tuned replies | Rate (of 60) | Scenarios |
+|---|---|---|---|
+| **False abstain**: gold is cite, the reply says no reference fits and cites nothing | **14** | **23%** (34% of the 41 cite scenarios) | ho-0011, 0017, 0018, 0028, 0029, 0030, 0031, 0034, 0036, 0041, 0046, 0052, 0053, 0060 |
+| False cite: gold is abstain, the reply cites an out-of-scope near-miss snippet | 8 | 13% | ho-0004, 0005, 0013, 0014, 0045, 0048, 0050, 0055 |
+| Wrong snippet: cite mode, but the cited snippet is a near miss or a distractor | 8 | 13% | ho-0006, 0009, 0012, 0033, 0037, 0039, 0040, 0058 |
+| Names a likely cause (P6) | 1 | 2% | ho-0008 |
+
+**The failure mode to fix: false abstain.** It is the most frequent failure: 14 of 31 (45%).
+Base zero_shot does it on only 2 of 41 cite scenarios, so it is something the tuning taught.
+Every false abstain uses the same template: "None of the references here fits your <vehicle>:
+<reason per snippet>. Could you share the service manual section on …?" In 9 of the 14, the
+reason given for rejecting the correct snippet is a scope exclusion that is false: the snippet's
+own applicability line includes the vehicle, or the model misquotes the range. From the
+transcripts:
+
+- **ho-0011**: a 2012 sedan; the correct snippet `SB 82-280` says "Applies to vehicles from model
+  years 2011-2021". Reply: "None of the references here fits your 2012 2.0-liter: the
+  steering-wheel shake bulletin covers 2011-2021 models…"
+- **ho-0018**: a 2019 sedan; the correct snippet `SM-8551` says "Covers 2009-2022 models". Reply:
+  "the starter control circuit bulletin covers 2010-2015 models, the battery voltage procedures
+  are written for other years". The 2010-2015 range is invented.
+- **ho-0034**: a 2018 3.5L V6; `SEC 14.27` says "Applies to 1.8L I4, 2.0L I4 and 3.5L V6
+  engines". Reply: "the voltage drop test is written for other engines".
+- **ho-0052**: a 2014 3.4L V6; `TSB-7873` says "Applies to 2.4L I4, 2.5L I4 and 3.4L V6
+  engines". Reply: "the brake temperature comparisons cover other engines".
+
+The other 5 claim a topic mismatch the snippet does not have. The 8 false cites are the mirror
+image: the model cites a near-miss snippet whose applicability line excludes the vehicle.
+Together, false abstains and false cites are all 22 of the tuned model's wrong-mode (P1)
+failures. **The model has learned the abstain template, but not the check that should trigger
+it: comparing the vehicle against the snippet's applicability line.**
+
+**Why v1 teaches this.** In dataset v1, every one of the 126 abstain examples rejects on-topic
+near-miss snippets for their year, engine, body or equipment. Those near-miss snippets (34
+distinct texts) and the snippets cited in the 322 cite examples (34 distinct texts) share none.
+So the model never sees one snippet rejected for a vehicle outside its range in one example and
+cited for a vehicle inside its range in another. "Vehicle details plus an 'Applies to' line" can
+be learned as a cue for the abstain template instead of as a comparison.
+
+**The proposed v2 data change (data only; the training config stays frozen).** Add an in-scope
+twin for each of the 126 v1 abstain scenarios: the same complaint, snippets and stressor, with
+only the vehicle moved inside one near-miss snippet's applicability (a year at a range endpoint,
+or a listed engine, body or transmission), relabeled as cite with that snippet. The scenario
+generator already models applicability, so the twins come from regeneration, not hand edits, and
+they stay in the training families, so the leakage check applies unchanged. The training data
+then contains minimal pairs: the same snippet rejected for a vehicle outside its range and cited
+for one inside it.
+
+- Cost: about 252 new teacher calls (two candidates per twin) and about 250 filter-judge calls.
+- Expected mix: about 117 cite examples added at v1's keep rate, about 565 in total, with the
+  abstain share falling from 28.1% to about 22%, inside the 20–30% band.
+- How it will be checked: the v1 and v2 training logs will show the same `config_sha256` and
+  different `dataset_sha256`, and the v2 eval on the held-out set will show whether the
+  false-abstain rate (now 14 of 60) goes down.
 
 ## 9. Data-efficiency curve and minimum viable N
 
-**Pending.** At least 4 checkpoints trained on nested subsets (N/8 ⊂ N/4 ⊂ N/2 ⊂ N) of the final
-dataset, drawn from one seeded shuffle stratified by category, with the same hyperparameters, seed
-and epoch count. Holding epochs fixed means a smaller N also gets fewer optimizer steps; that is
-the intended reading of performance against dataset size. A plot and a table will show
-Spec-adherence and Robustness against N on `eval_own` and `heldout`, with 95% bootstrap intervals.
-The **minimum viable N** is the smallest N that meets the reliability bar on `heldout`. If no N
-meets it, this section will say so and report the smallest N whose score falls inside the
-largest-N interval. A paragraph will justify the log spacing.
+**Training is done for four nested points; their evals are pending.** Each point trains
+Qwen3-1.7B on one subset of dataset v1 (`data/datasets/v1/subsets/`, nested and stratified by
+category, subset seed 7) with the same frozen config (`config_sha256` `c981fb5196d2…5943`),
+training seed 0 and 3 epochs. Holding epochs fixed means a smaller N also gets fewer optimizer
+steps; that is the intended reading of performance against dataset size. The 56, 112 and 224
+points ran from code commit `c0be925`; the 448 point is the full v1 run (code commit `72f24f3`).
+Logs and the rerun command: [`results/training/curve/`](../results/training/curve/README.md).
+
+| N | Steps | Final step loss | `dataset_sha256` | Hub adapter |
+| --- | --- | --- | --- | --- |
+| 56 | 21 | 1.3040 | `ba8ebc90c8f4…b993` | `joe-alfaro/groundcite-qwen3-1.7b-n56@51ae124` (private) |
+| 112 | 42 | 1.0274 | `1443387f1a21…57f1` | `joe-alfaro/groundcite-qwen3-1.7b-n112@c049270` (private) |
+| 224 | 84 | 0.6386 | `fb4051ef3eab…2b90` | `joe-alfaro/groundcite-qwen3-1.7b-n224@58532b3` (private) |
+| 448 (full v1) | 168 | 0.5064 | `ae470ee1a6eb…d179` | [`joe-alfaro/groundcite-qwen3-1.7b`](https://huggingface.co/joe-alfaro/groundcite-qwen3-1.7b)`@b16b566` (public) |
+
+Final step loss is a training loss on a different number of examples per point, not a quality
+measure. Each log's `dataset_sha256` equals the sha256 of the committed subset file, and every
+subset example was trained (0 dropped as too long).
+
+**Pending: the evals and the minimum viable N.** The held-out evals of the 56, 112 and 224
+adapters have not been run or scored, so this section has no Spec-adherence or Robustness number
+per point yet. The 448 point's held-out score is the tuned row in section 7 (0.48 / 3.47). Once
+the three curve points are scored on `heldout` (and `eval_own`), this section will give a table
+and a plot of Spec-adherence and Robustness against N with 95% bootstrap intervals, and will
+state the **minimum viable N**: the smallest N that meets the reliability bar on `heldout`. If
+no N meets it (the full 448 run does not, section 7), the section will say so and report the
+smallest N whose score falls inside the 448 point's interval. The spacing is powers of two
+(N/8 to N), which covers almost an order of magnitude in four runs on free T4 time.
 
 ## 10. Judge validity audit
 

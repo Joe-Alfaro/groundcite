@@ -292,7 +292,7 @@ tests/                   # pytest; fixtures/ incl. hand-written third-party-styl
   `scripts/run_curve.py --eval-set <path>` re-evaluates every checkpoint on any set, including a
   third-party one.
   Each point logs its config, dataset hash, loss curve and wall time to
-  `results/curve/<N>/train_log.json` (R14).
+  `results/training/curve/n<N>/train_log.json` (R14).
 - Every checkpoint is evaluated on `eval_own` and `heldout`. The minimum viable N rule is in R8.
 
 ## Leakage controls
@@ -337,7 +337,7 @@ tests/                   # pytest; fixtures/ incl. hand-written third-party-styl
 | R10, R11 | `eval.py`, `cli.py`, `runner.py`, `report.py` |
 | R12 | `schema.py`, `docs/eval-set-format.md`, `tests/fixtures/third_party.jsonl` |
 | R13 | `versions.py`, `scripts/check_rubric.py`, `uv.lock` |
-| R14 | `run_ablation.py --limit`, `results/curve/*/train_log.json` |
+| R14 | `run_ablation.py --limit`, `results/training/curve/n*/train_log.json` |
 | R16 | `scripts/demo.py`, public notebook |
 | R17, R18 | `docs/writeup.md`, video |
 | R19 | `judge/backends.py` (mock) |

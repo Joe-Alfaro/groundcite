@@ -51,8 +51,14 @@ agreement study and dataset v1 (448 examples) are done. Training and base and tu
 run on a Kaggle GPU. The first QLoRA run on v1 is done (168 steps, 3 epochs; log in
 [`results/training/v1/`](results/training/v1/)), and the adapter is public at
 [`joe-alfaro/groundcite-qwen3-1.7b`](https://huggingface.co/joe-alfaro/groundcite-qwen3-1.7b), commit
-`b16b566d0d36d06744c90342fe836a4e6decc4e8`. The base-vs-tuned table, the v1 → v2 data fix and the
-data-efficiency curve are still to come.
+`b16b566d0d36d06744c90342fe836a4e6decc4e8`.
+
+Since then (Oct 30): base vs tuned is measured on the own and held-out sets (tuned beats base,
+and no system meets the reliability bar; [`results/base_vs_tuned/`](results/base_vs_tuned/)),
+the v1 failure mode is diagnosed and the v2 data change is designed, and three nested curve points
+are trained ([`results/training/curve/`](results/training/curve/README.md)). The v2 data, the
+curve-point evals and the minimum viable N are still to come. Milestone 2 deliverables:
+[`docs/final-checklist.md`](docs/final-checklist.md).
 
 - Every Milestone 1 deliverable, its status and the file or command behind it:
   [`docs/milestone1-checklist.md`](docs/milestone1-checklist.md).

@@ -52,7 +52,7 @@ are still behind: they need the tuned-model eval first. The reasons are in the
 | R7 | Diagnosis note: one v1 failure mode, rate, scenario IDs, data change | `results/base_vs_tuned/heldout/DIAGNOSIS.md`, `docs/writeup.md` section 8: false abstain, 14 of 60 tuned held-out replies, with scenario IDs; data change: in-scope twins of the v1 abstain scenarios (about 252 teacher calls). The fix itself is pending | done |
 | R7 | v1 and v2 logs share a config hash, dataset diff summary committed | `scripts/diff_datasets.py`, `tests/test_diff_datasets.py`; `train_qlora.py` logs `config_sha256` and `dataset_sha256`; `data/datasets/v2/` (planned, after the diagnosis note). Target: Sat Oct 31 | behind |
 | R7 | v2 eval shows the failure-mode rate going down | `results/base_vs_tuned/` (planned). Needs v2 training on Kaggle. Target: Sun Nov 1, before Milestone 2 | behind |
-| R8 | ≥2 data-efficiency points on nested subsets | `scripts/make_sweep.py`, `tests/test_sweep.py`; `results/curve/` (planned). Behind because every training run happens on Kaggle and the full v1 run only just finished; the subsets need one Kaggle session each (about 0.6 GPU h). Target: Sat Oct 31 | behind |
+| R8 | ≥2 data-efficiency points on nested subsets | `scripts/make_sweep.py`, `tests/test_sweep.py`; `data/datasets/v1/subsets/`; `results/training/curve/` (n56, n112, n224 trained, logs committed, plus the full 448 run in `results/training/v1/`). The held-out evals of the curve points are pending | partial |
 | R10 | One-command eval writes `results.md`, `results.json`, `transcripts.jsonl`; base rows added automatically | `uv run eval.py --model <hf-repo-id> --eval-set <path>`, `tests/test_eval_cli.py` | done |
 | R10 | README first lines name the env var and the hardware | `README.md`, `tests/test_eval_hardening.py` | done |
 | R11 | Raw judge transcripts for every run, row count = scenarios × systems | `src/groundcite/report.py`, `tests/test_eval_cli.py`; committed runs: `results/ablation/m1/transcripts.jsonl`, `results/rollout_pilot/pilot1/transcripts.jsonl`, `results/judge_agreement/`, and the base and tuned rows in `results/base_vs_tuned/heldout/` (180) and `results/base_vs_tuned/eval_own/` (300) | done |
@@ -77,30 +77,30 @@ are still behind: they need the tuned-model eval first. The reasons are in the
 
 | Req | Item | Artifact, command or URL | Status |
 | --- | --- | --- | --- |
-| R8 | ≥4 nested curve points, evaluated on own and held-out sets | `results/curve/` (planned) | not started |
+| R8 | ≥4 nested curve points, evaluated on own and held-out sets | `results/training/curve/README.md`: 4 nested points trained (N = 56, 112, 224, 448) with one config hash and seed. Evals of n56, n112 and n224 on held-out and `eval_own` are pending (the 448 point is the v1 run in `results/base_vs_tuned/`) | partial |
 | R8 | Re-run every checkpoint on any eval set | `uv run scripts/run_curve.py --eval-set <path>` (planned) | not started |
-| R8 | Plot and table with 95% bootstrap intervals, minimum viable N | `results/curve/`, `docs/writeup.md` (planned) | not started |
-| R8 | Each curve checkpoint as its own HF revision with a recorded SHA (G19) | HF Hub model repo revisions (planned) | owner-gated |
-| R9 | Public tuned model; README gives the exact HF commit hash; eval and demo load that revision | HF Hub model repo (planned), `README.md` | owner-gated |
+| R8 | Plot and table with 95% bootstrap intervals, minimum viable N | `docs/writeup.md` section 9 (training facts only); the table, plot and minimum viable N wait for the curve-point evals | partial |
+| R8 | Each curve checkpoint as its own HF revision with a recorded SHA (G19) | `joe-alfaro/groundcite-qwen3-1.7b-n{56,112,224}` at `51ae124` / `c049270` / `58532b3` (full SHAs in each `train_log.json`); the curve repos are private, so a third party cannot load them yet | owner-gated |
+| R9 | Public tuned model; README gives the exact HF commit hash; eval and demo load that revision | [`joe-alfaro/groundcite-qwen3-1.7b`](https://huggingface.co/joe-alfaro/groundcite-qwen3-1.7b) at commit `b16b566d0d36d06744c90342fe836a4e6decc4e8` (public), given in `README.md`; the base-vs-tuned runs and `train/demo_inference.ipynb` load that revision | done |
 | R12 | Third-party held-out format documented, loader accepts JSONL, JSON array, CSV | `docs/eval-set-format.md`, `src/groundcite/evalset.py`, `tests/test_evalset.py` | done |
 | R12 | Three fixture sets each produce scored output | `tests/fixtures/{our_format.jsonl,prompt_only.csv,prompt_only.json,third_party.jsonl}`, `tests/test_evalset.py`; scored-output test through `eval.py` (planned) | partial |
 | R13 | Pins in every committed `results.json`, one `rubric_sha256` across runs | `uv run scripts/check_rubric.py results/`, `tests/test_check_rubric.py`; rerun on the Milestone 2 results | partial |
 | R14 | Rerun one ablation cell | `uv run scripts/run_ablation.py --model <m> --strategy few_shot --limit 30`, `tests/test_ablation.py` | done |
-| R14 | Rerun one curve point from a published subset | `uv run train/train_qlora.py --dataset data/datasets/<v>/subsets/n<N>.jsonl --seed <s>` (planned) | not started |
+| R14 | Rerun one curve point from a published subset | `uv run train/train_qlora.py --dataset data/datasets/v1/subsets/n<N>.jsonl --out runs/n<N> --seed 0` (CUDA host), documented in `results/training/curve/README.md`; each log's `dataset_sha256` equals the committed subset's sha256. No independent rerun has been done | done |
 | R14 | Training logs committed for every point | `results/training/curve/n{56,112,224}/train_log.json`, `results/training/curve/README.md`, `results/training/v1/train_log.json` (448) | done |
 | R15 | Public dataset with card ("synthetic, not real service information") | [`joe-alfaro/groundcite-diagnostic-v1`](https://huggingface.co/datasets/joe-alfaro/groundcite-diagnostic-v1) at commit `ccb75f757844360f10fc951d7c4f3db1a57fcb36`, `data/datasets/v1/publish.json` | done |
 | R15 | Teacher provider's terms checked before publishing (G38) | dataset card (planned) | owner-gated |
 | R16 | Base-vs-tuned demo with check results; no-snippet path abstains | `uv run scripts/demo.py` (planned) | not started |
 | R16 | Public notebook link, each reply under 2 minutes, tested logged-out (G31, G32) | Colab or Kaggle link in `README.md` (planned) | owner-gated |
-| R17 | Final write-up | `docs/writeup.md` (planned) | not started |
-| R18 | 3–5 minute demo video, linked from README | link in `README.md` (planned) | not started |
+| R17 | Final write-up | `docs/writeup.md`: thesis, ablation, base vs tuned, the v2 diagnosis and the curve training facts are written; the v2 result, the curve evals with minimum viable N and the R29 hand audit are pending | partial |
+| R18 | 3–5 minute demo video, linked from README | link in `README.md` (planned); recorded by the owner | owner-gated |
 | R18 | Live prompt from someone outside the project, run in one uncut take | video (planned) | owner-gated |
 | G12 | Judge bias: the eval judge (gpt-5.5) is a different family from the teacher, so M1 and the pilot need no re-judge; the ablation table flags the cells that share the judge's family; dataset v1's Claude Opus filter judge is disclosed and pinned in its manifest; the three cheaper agreement candidates failed and are marked rejected | flag in `src/groundcite/ablation.py`, `tests/test_ablation.py`; judge pin and `[judge_candidates]` status in `config/models.toml`, `tests/test_gpt55_judge.py`; `data/datasets/v1/manifest.json` (`judge_model`); `results/judge_agreement/`; `docs/ai-usage.md` | done |
-| R30 | Tuned invented-ID rate ≤ base and ≤2% on own and held-out sets | `results/base_vs_tuned/`, `results/curve/` (planned) | not started |
-| — | Results tables: ablation; base vs tuned on own and held-out sets | `results/` (planned) and `docs/writeup.md` (planned) | not started |
+| R30 | Tuned invented-ID rate ≤ base and ≤2% on own and held-out sets | `results/base_vs_tuned/`: tuned 0.02 held-out, 0.00 `eval_own` (≤2% on both, ≤ base on `eval_own`). On held-out it is one reply above base zero_shot (0.00), below base `structured` (0.40). Curve points pending | partial |
+| — | Results tables: ablation; base vs tuned on own and held-out sets | `results/ablation/`, `results/base_vs_tuned/heldout/`, `results/base_vs_tuned/eval_own/`, `docs/writeup.md` sections 4 and 7 | done |
 | — | Architecture document | `ARCHITECTURE.md` | done |
 | — | Canonical spec | `SPEC.md` | done |
-| R32 | Milestone checklist, every row filled | `docs/checklist.md` | partial |
+| R32 | Milestone checklist, every row filled | `docs/checklist.md`; deliverable-by-deliverable view in `docs/final-checklist.md` | partial |
 
 ## R31 GPU-hour budget
 

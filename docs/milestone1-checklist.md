@@ -25,9 +25,10 @@ still missing or partial. The reasons are in the
 
 | Status | Rows |
 | --- | --- |
-| met | 22 |
+| met | 25 |
 | partial | 6 |
-| missing | 3 |
+| missing | 0 |
+| owner-gated | 1 |
 | owner-gated | 1 |
 | **Total** | **32** |
 
@@ -79,8 +80,8 @@ still missing or partial. The reasons are in the
 | R15 | Dataset published | met | [`joe-alfaro/groundcite-diagnostic-v1`](https://huggingface.co/datasets/joe-alfaro/groundcite-diagnostic-v1) at commit `ccb75f757844360f10fc951d7c4f3db1a57fcb36`; `data/datasets/v1/publish.json` | Public. Dataset v1 with its dataset card, published from `main` `92113c3`. |
 | R6 | First base-vs-tuned numbers in the verified format | met | `results/base_vs_tuned/heldout/`, `results/base_vs_tuned/eval_own/` (README, `results.json`, `transcripts.jsonl`, `spend.json` each), `docs/writeup.md` section 7 | Held-out (headline): tuned 0.48 [0.35, 0.60] / 3.47 vs base zero_shot 0.28 / 2.97 and base structured 0.17 / 2.35. `eval_own`: tuned 0.57 / 3.73 vs 0.22 / 2.63. No system meets the bar. |
 | R7 | One failure mode diagnosed from evals and fixed by a data change (v2) | partial | `results/base_vs_tuned/heldout/DIAGNOSIS.md`, `docs/writeup.md` section 8; `scripts/diff_datasets.py` (ready); `data/datasets/v2/` (planned) | Diagnosis done from tuned-model transcripts: false abstain, 14 of 60 held-out replies. Data change chosen (in-scope twins of the v1 abstain scenarios); the fix is pending. |
-| R8 | At least two data-efficiency points, or a documented reason | partial | `scripts/make_sweep.py`, `docs/checklist.md`, `docs/writeup.md` (status section) | No points yet; the reason (every run is on Kaggle, and the full v1 run only just finished) and the plan are documented. |
-| R14 | Data-efficiency training logs for rerunning a point | missing | `train/train_qlora.py` writes `train_log.json` (config and dataset hashes, seed, loss curve) | Due with the first curve point. The full v1 run's log is committed in `results/training/v1/train_log.json`; no curve-point logs yet. |
+| R8 | At least two data-efficiency points, or a documented reason | partial | `scripts/make_sweep.py`, `data/datasets/v1/subsets/`, `results/training/curve/README.md`, `docs/writeup.md` section 9 | Since the check-in, three nested points (N = 56, 112, 224) are trained with the v1 config and seed, next to the full 448 run. Their held-out evals are pending, so there are no quality numbers per point yet. |
+| R14 | Data-efficiency training logs for rerunning a point | met | `results/training/curve/n{56,112,224}/train_log.json`, `results/training/curve/README.md`, `results/training/v1/train_log.json` | Every point's log has the config and dataset hashes, seed and loss curve; the README gives the rerun command. |
 | R29 | Judge validity evidence | partial | `results/judge_agreement/`, `docs/writeup.md` section 10, `scripts/judge_audit.py` | The agreement study kept gpt-5.5 (it matched a blind label on 17 of 19 disputed replies); the 20-reply hand audit waits for tuned-model replies. |
 
 ## Judge API budget

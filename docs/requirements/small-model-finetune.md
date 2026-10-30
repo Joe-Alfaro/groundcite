@@ -478,7 +478,7 @@ Checked at Milestone 2, separately from the build audit.
 | Milestone checklists | `docs/checklist.md` (R32) |
 | Results tables: prompt-ceiling ablation; base vs tuned on own and held-out sets | `results/` plus the write-up (R3, R6, R10) |
 | Raw judge transcripts (JSONL) | `results/<run_id>/transcripts.jsonl` (R11) |
-| Data-efficiency curve with minimum viable N | `results/curve/` plus the write-up (R8) |
+| Data-efficiency curve with minimum viable N | `results/training/curve/` plus the write-up (R8) |
 | Write-up | `docs/writeup.md` (R17) |
 | `ARCHITECTURE.md` | repo root |
 | 3–5 minute demo video | linked from README (R18) |
