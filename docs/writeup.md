@@ -483,7 +483,7 @@ inflated, especially on `distractor`.
 | Set | vs | Spec-adherence | Robustness | Paired wins / losses (sign test) |
 |---|---|---|---|---|
 | held-out | base zero_shot | +0.20 | +0.50 | 20 / 8 (p ≈ 0.036) |
-| held-out | base structured | +0.31 | +1.12 | 23 / 4 (p ≈ 0.0003) |
+| held-out | base structured | +0.32 | +1.12 | 23 / 4 (p ≈ 0.0003) |
 | `eval_own` | base zero_shot | +0.35 | +1.10 | 41 / 6 (p < 0.0001) |
 | `eval_own` | base structured | +0.40 | +1.40 | 49 / 9 (p < 0.0001) |
 
@@ -566,7 +566,7 @@ it: comparing the vehicle against the snippet's applicability line.**
 
 **Why v1 teaches this.** In dataset v1, every one of the 126 abstain examples rejects on-topic
 near-miss snippets for their year, engine, body or equipment. Those near-miss snippets (34
-distinct texts) and the snippets cited in the 322 cite examples (34 distinct texts) share none.
+distinct texts) and the snippets cited in the 322 cite examples (33 distinct texts) share none.
 So the model never sees one snippet rejected for a vehicle outside its range in one example and
 cited for a vehicle inside its range in another. "Vehicle details plus an 'Applies to' line" can
 be learned as a cue for the abstain template instead of as a comparison.

@@ -56,9 +56,9 @@ The reliability bar (fixed before the ablation) is Spec-adherence ≥ 0.90 and R
 
 | Metric | tuned − base zero_shot | tuned − base structured |
 |---|---|---|
-| Spec-adherence | **+0.20** | **+0.31** |
+| Spec-adherence | **+0.20** | **+0.32** |
 | Robustness | +0.50 | +1.12 |
-| Stressor spec | +0.23 | +0.27 |
+| Stressor spec | +0.24 | +0.27 |
 | HARD-check fail | −0.03 | −0.30 |
 | Invented-ID rate | +0.02 | −0.38 |
 | Abstain precision / recall | +0.44 / +0.58 | −0.06 / +0.47 |

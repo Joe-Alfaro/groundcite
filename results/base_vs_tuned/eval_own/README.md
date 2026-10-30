@@ -61,7 +61,7 @@ eval_own.** The tuned model reaches 0.57 / 3.73, and base reaches 0.22 / 2.63 (z
 |---|---|---|
 | Spec-adherence | **+0.35** | **+0.40** |
 | Robustness | +1.10 | +1.40 |
-| Stressor spec | +0.34 | +0.37 |
+| Stressor spec | +0.34 | +0.36 |
 | HARD-check fail | −0.22 | −0.40 |
 | Invented-ID rate | −0.06 | −0.38 |
 | Abstain precision / recall | n/a / +0.57 | +0.23 / +0.47 |

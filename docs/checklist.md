@@ -44,7 +44,7 @@ are still behind: they need the tuned-model eval first. The reasons are in the
 | R3 | Results table, per-example judge JSONL, best-vs-second-best delta, plateau check: **no plateau** (three cells meet the bar) | `results/ablation/README.md`, `results/ablation/m1/results.md`, `results/ablation/m1/transcripts.jsonl` | done |
 | R3 | Surviving failure mode paragraph with rate and ≥2 scenario IDs | `results/ablation/README.md`, `docs/writeup.md` section 4 | done |
 | R4 | Teacher generation (k = 2), hard quality filter, filter report (v1) | `scripts/distill.py`, `scripts/build_dataset.py`, `data/distill/v1/`, `data/datasets/v1/filter_report.md` | done |
-| R5 | Smoke loop: generate → filter → train (≤20 steps) → eval on ≤32 examples | `scripts/smoke_loop.sh`, `tests/test_smoke_loop.py`; README "Smoke loop". The local mode is a CPU-only check on a tiny model; the real-model smoke (`smoke_loop.sh --kaggle`, Qwen3-0.6B) runs from `train/kaggle_train.ipynb` and has no recorded run yet. The real-model training path has run end to end on Kaggle (`results/training/v1/`); the eval step on a real model is still pending | partial |
+| R5 | Smoke loop: generate → filter → train (≤20 steps) → eval on ≤32 examples | `scripts/smoke_loop.sh`, `tests/test_smoke_loop.py`; README "Smoke loop". The local mode is a CPU-only check on a tiny model; the real-model smoke (`smoke_loop.sh --kaggle`, Qwen3-0.6B) runs from `train/kaggle_train.ipynb` and has no recorded run yet. The real-model training path has run end to end on Kaggle (`results/training/v1/`), and the real-model eval step has run on Kaggle too: base and tuned on the held-out set (`results/base_vs_tuned/heldout/`) and on `eval_own` (`results/base_vs_tuned/eval_own/`), and the three curve points on the held-out set (`results/curve/heldout/`) | partial |
 | R6 | Dataset v1 (≥300 filtered examples) with manifest: 448 kept of 960 candidates, 28.1% abstain | `data/datasets/v1/` (`train.jsonl`, `manifest.json`, `filter_report.md`, `NOTES.md`, `leakage_report.md`) | done |
 | R6 | One QLoRA run of Qwen3-1.7B on v1, training log committed | `results/training/v1/train_log.json` and `results/training/v1/README.md`: Kaggle T4, code commit `72f24f33`, frozen config v1, 168 steps (3 epochs) in 839.7 s, final step loss 0.5064, mean train loss 0.9019. Code: `train/train_qlora.py`, `train/config.toml`, `train/kaggle_train.ipynb`, `tests/test_train_qlora.py`, `tests/test_train_notebook.py` | done |
 | R6 | Base-vs-tuned table on the own eval set, with transcripts and pins | `results/base_vs_tuned/heldout/` (headline: tuned 0.48 [0.35, 0.60] / 3.47 vs base zero_shot 0.28 / 2.97, structured 0.17 / 2.35) and `results/base_vs_tuned/eval_own/` (tuned 0.57 / 3.73 vs 0.22 / 2.63, memorization caveat); `docs/writeup.md` section 7. No system meets the bar | done |
@@ -62,7 +62,7 @@ are still behind: they need the tuned-model eval first. The reasons are in the
 <!-- PENDING-B:not-run -->
 | R7 | v2 eval shows the failure-mode rate going down | Not run: there is no v2 adapter to evaluate (`docs/writeup.md` section 8) | not started |
 <!-- /PENDING-B -->
-| R8 | ≥2 data-efficiency points on nested subsets | `scripts/make_sweep.py`, `tests/test_sweep.py`; `data/datasets/v1/subsets/`; `results/training/curve/` (4 points with logs: n56, n112, n224, plus the full 448 run in `results/training/v1/`); deterministic-check curve on the held-out set in `results/curve/heldout/README.md`. The judge-scored curve is pending approval of the judge spend | partial |
+| R8 | ≥2 data-efficiency points on nested subsets | `scripts/make_sweep.py`, `tests/test_sweep.py`; `data/datasets/v1/subsets/`; `results/training/curve/` (4 points with logs: n56, n112, n224, plus the full 448 run in `results/training/v1/`); deterministic-check curve on the held-out set in `results/curve/heldout/README.md`. The judge-scored curve is pending the owner's approval | partial |
 | R10 | One-command eval writes `results.md`, `results.json`, `transcripts.jsonl`; base rows added automatically | `uv run eval.py --model <hf-repo-id> --eval-set <path>`, `tests/test_eval_cli.py` | done |
 | R10 | README first lines name the env var and the hardware | `README.md`, `tests/test_eval_hardening.py` | done |
 | R11 | Raw judge transcripts for every run, row count = scenarios × systems | `src/groundcite/report.py`, `tests/test_eval_cli.py`; committed runs: `results/ablation/m1/transcripts.jsonl`, `results/rollout_pilot/pilot1/transcripts.jsonl`, `results/judge_agreement/`, and the base and tuned rows in `results/base_vs_tuned/heldout/` (180) and `results/base_vs_tuned/eval_own/` (300) | done |
@@ -80,7 +80,7 @@ are still behind: they need the tuned-model eval first. The reasons are in the
 | R28 | Greedy local decoding, rerun delta within ±0.03 stated in README | `config/models.toml`, `README.md`, `scripts/rerun_delta.py`, `tests/test_rerun_delta.py`; the measured delta needs a rerun of the tuned eval (after the Kaggle run) | partial |
 | R29 | 20 hand-labeled replies, judge agrees on ≥18 | `results/judge_audit/` (blind sheet, key, labels, `report.json`; 19/20 agree, the one disagreement a borderline repeated citation), `scripts/judge_audit.py` (`--blind-system` hides the system behind an audit ID), `tests/test_judge_audit.py`, `tests/test_judge_audit_heldout.py`, `docs/writeup.md` section 10 | done |
 | R30 | Invented-ID rate, abstain precision and recall; 20–30% abstain in training mix | `src/groundcite/report.py`, `tests/test_report.py`; `data/datasets/v1/manifest.json` (abstain share 28.1%) | done |
-| R31 | T4 config (`fp16=True`), `max_seq_length` logged, GPU-hour budget table | `train/config.toml`, `train/train_qlora.py`, `tests/test_train_qlora.py`, `tests/test_train_device.py`, `tests/test_gpu_budget.py`; [GPU-hour budget](#r31-gpu-hour-budget) below (Used so far: the v1 training run) | done |
+| R31 | T4 config (`fp16=True`), `max_seq_length` logged, GPU-hour budget table | `train/config.toml`, `train/train_qlora.py`, `tests/test_train_qlora.py`, `tests/test_train_device.py`, `tests/test_gpu_budget.py`; [GPU-hour budget](#r31-gpu-hour-budget) below (recorded use: v1 training only) | done |
 | R32 | Milestone checklist | `docs/checklist.md`; deliverable-by-deliverable view in `docs/milestone1-checklist.md` | done |
 
 ## Milestone 2 (Sun Nov 1, noon CT)
@@ -126,20 +126,24 @@ are still behind: they need the tuned-model eval first. The reasons are in the
 
 Weekly Kaggle GPU quota: 30 h (T4). Every model run happens on Kaggle (D-078), and the plan keeps
 at least 25% of the week free. Planned hours are estimates for one T4, including clone, install
-and model download; record the hours each session actually used. As of this check-in (Thu Oct 29),
-only the v1 training run has happened; its Used figure is the training wall time (16 min 41 s), as
-the session's setup time was not recorded.
+and model download; record the hours each session actually used. The Used column counts training
+only: the one recorded figure is the v1 training wall time, 839.7 s (16 min 41 s, 0.28 GPU h) from
+the trainer output in `results/training/v1/README.md`. The committed `train_log.json` files
+(v1 and the three curve points, 21 + 42 + 84 = 147 steps) record steps and losses but no timing,
+and the eval generation runs (base and tuned on held-out and `eval_own`, the curve points on
+held-out) did not record their GPU time. In the table, "—" means no GPU time was recorded (the
+curve and eval runs did happen); 0 means the run has not happened.
 
 | Run | Planned (GPU h) | Used (GPU h) |
 | --- | --- | --- |
 | Smoke loop (`smoke_loop.sh --kaggle`, Qwen3-0.6B, 20 steps) | 0.5 | 0 |
 | v1 training (`kaggle_train.ipynb`) | 1.0 | 0.28 |
 | v2 training | 1.0 | 0 |
-| Curve: 4 nested points (N/8 to N) | 2.5 | 0 |
-| Eval generation (`kaggle_eval.ipynb`): base and tuned, own and held-out sets | 4.0 | 0 |
-| Eval generation for the curve checkpoints | 3.0 | 0 |
-| Reruns and failed sessions | 3.0 | 0 |
-| Total | 15.0 | 0.28 |
+| Curve: 4 nested points (N/8 to N) | 2.5 | — |
+| Eval generation (`kaggle_eval.ipynb`): base and tuned, own and held-out sets | 4.0 | — |
+| Eval generation for the curve checkpoints (held-out run so far) | 3.0 | — |
+| Reruns and failed sessions | 3.0 | — |
+| Total | 15.0 | 0.28 recorded (training only, v1) |
 
 ## Judge API budget
 
