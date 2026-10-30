@@ -71,3 +71,6 @@ max_new_tokens = 256
 "anthropic:claude-opus-5-5" = { input_per_mtok = 4.0, output_per_mtok = 20.0 }
 "anthropic:claude-sonnet-5-5" = { input_per_mtok = 2.0, output_per_mtok = 10.0 }
 "anthropic:claude-haiku-5-5" = { input_per_mtok = 0.10, output_per_mtok = 0.50 }
+# The judge (D-123): the owner-supplied rate, not yet checked against a pricing page.
+# Verify on the dashboard before trusting a spend.json total.
+"openai:gpt-5.5-2026-04-23" = { input_per_mtok = 5.0, output_per_mtok = 30.0 }

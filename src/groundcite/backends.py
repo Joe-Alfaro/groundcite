@@ -16,6 +16,7 @@ import importlib
 import json
 import logging
 import re
+import threading
 from collections.abc import Callable, Mapping, Sequence
 from typing import Any, Protocol
 
@@ -136,6 +137,8 @@ class _ApiBackend:
         self.effective_params: dict[str, Any] | None = None
         # Token usage, one entry per successful call, for spend reporting (D-095).
         self.usage: list[dict[str, int | None]] = []
+        # The usage of this thread's last call, for the row that made it (spend.MeteredJudge).
+        self._last = threading.local()
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}(name={self.name!r})"
@@ -162,9 +165,17 @@ class _ApiBackend:
                 rejected.add(param)
                 del sent[param]
         self.effective_params = dict(sent)
-        text = self._text(response)
-        self.usage.append(self._usage(response))
-        return text
+        # Recorded before the text is read: a billed call with no usable content still counts.
+        usage = self._usage(response)
+        self.usage.append(usage)
+        self._last.usage = usage
+        return self._text(response)
+
+    def take_last_usage(self) -> dict[str, int | None] | None:
+        """This thread's last call's usage, once (None after it is taken)."""
+        usage: dict[str, int | None] | None = getattr(self._last, "usage", None)
+        self._last.usage = None
+        return usage
 
     def restore_effective_params(
         self, requested: Mapping[str, Any], recorded: Mapping[str, Any]

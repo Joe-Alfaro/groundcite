@@ -14,7 +14,9 @@ judge's pins and ``rejudged_from`` naming the source run and judge.
 Rows are appended as they are judged, so an interrupted re-judge continues with --resume into
 the same NEW_DIR, judging only the missing rows; --resume refuses a NEW_DIR started from another
 source run or judge. Without --resume a non-empty NEW_DIR is refused. --dry-run prints
-``judge calls: N`` and writes nothing, with no key needed.
+``judge calls: N`` and an estimated cost from ``[prices]`` and writes nothing, with no key
+needed. Each row records its judge calls' usage, NEW_DIR/spend.json the actual spend across
+resumed invocations, and --max-spend USD stops before a call that could push it past USD (D-123).
 """
 
 from __future__ import annotations
@@ -31,7 +33,7 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any
 
-from groundcite import versions
+from groundcite import spend, versions
 from groundcite.ablation import model_family, plateau_verdict, strategy_deltas
 from groundcite.backends import BackendError
 from groundcite.checks import run_checks
@@ -89,6 +91,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--dry-run", action="store_true", help="print the call count; no calls")
     parser.add_argument(
         "--resume", action="store_true", help="continue an interrupted re-judge into --out"
+    )
+    parser.add_argument(
+        "--max-spend",
+        type=float,
+        metavar="USD",
+        help="stop before a judge call that could push NEW_DIR's recorded spend past USD",
     )
     return parser
 
@@ -275,13 +283,16 @@ def rejudge_row(
     run_id: str,
     judge: Retrying,
     judge_params: Mapping[str, Any],
+    meter: spend.MeteredJudge | None = None,
 ) -> dict[str, Any]:
-    """One source row checked and judged again; every other field is carried over."""
+    """One source row checked and judged again; every other field is carried over. ``meter``
+    (default: an uncapped one) records the row's judge calls."""
     reply = src["reply"]
     checks = run_checks(reply, scenario)
     error = src.get("generation_error")
+    calls = (meter or spend.MeteredJudge(judge)).for_row()
     if error is None:
-        result = judge_reply(scenario, reply, checks, judge, params=judge_params)
+        result = judge_reply(scenario, reply, checks, calls, params=judge_params)
     else:
         result = _generation_failure(judge.name, error)
     row = transcript_row(
@@ -302,6 +313,7 @@ def rejudge_row(
         if field not in row:
             row[field] = value
     row["judge"]["decoding"] = judge.effective_params(judge_params)
+    row["judge"]["usage"] = calls.usage
     return row
 
 
@@ -313,6 +325,7 @@ def judge_all(
     transcripts: Path,
     done: dict[RowKey, dict[str, Any]],
     concurrency: int,
+    meter: spend.MeteredJudge | None = None,
 ) -> None:
     """Judge every ``todo`` row in a bounded pool, appending each to ``transcripts`` as it
     finishes. The first exception stops the run; finished rows stay on disk for --resume."""
@@ -331,7 +344,12 @@ def judge_all(
                 return
             try:
                 row = rejudge_row(
-                    src, scenario, run_id=run_id, judge=judge, judge_params=judge_params
+                    src,
+                    scenario,
+                    run_id=run_id,
+                    judge=judge,
+                    judge_params=judge_params,
+                    meter=meter,
                 )
             except BaseException:
                 stop.set()
@@ -454,10 +472,17 @@ def run(args: argparse.Namespace) -> int:
         print(f"judge: {judge_spec}")
         print(f"rows to re-judge: {len(todo)} ({len(done)} already done)")
         print(f"judge calls: {calls}")
+        prompts = [
+            spend.judge_prompt(s, r["reply"]) for r, s in todo if r.get("generation_error") is None
+        ]
+        spend.print_estimate(judge_spec, spend.estimate_cost(judge_spec, prompts))
         print("dry run: no requests made, nothing written")
         return 0
 
+    spend.check_limit(judge_spec, args.max_spend)
     judge = build_backend(judge_spec)  # the key check, before anything is written
+    spent = spend.recorded_cost(new_dir) if new_dir.is_dir() else 0.0
+    meter = spend.MeteredJudge(judge, limit=args.max_spend, spent=spent)
     created = not new_dir.exists()
     new_dir.mkdir(parents=True, exist_ok=True)
     write_json(new_dir / MANIFEST, wanted)
@@ -472,11 +497,15 @@ def run(args: argparse.Namespace) -> int:
             transcripts=transcripts,
             done=done,
             concurrency=args.concurrency,
+            meter=meter,
         )
     except BaseException:
-        if created and not read_transcripts(transcripts):
+        if meter.usage or (new_dir / spend.SPEND).is_file():
+            spend.record_spend(new_dir, judge.name, meter.usage)
+        elif created and not read_transcripts(transcripts):
             shutil.rmtree(new_dir, ignore_errors=True)
         raise
+    recorded = spend.record_spend(new_dir, judge.name, meter.usage)
     rows = [done[row_key(r)] for r in src_rows]
     # Rows were appended as they finished; the final file keeps the source order.
     transcripts.write_text(
@@ -485,7 +514,7 @@ def run(args: argparse.Namespace) -> int:
     results, writer = build_results(source, grid_order(source, rows, eval_set), run_id, judge)
     write_json(new_dir / RESULTS, results)
     (new_dir / "results.md").write_text(results_md(results, writer), encoding="utf-8")
-    print(f"wrote {new_dir} ({calls} judge calls)")
+    print(f"wrote {new_dir} ({spend.spend_note(recorded)})")
     return 0
 
 
@@ -496,6 +525,9 @@ def main(argv: list[str] | None = None) -> int:
     except (UsageError, MissingKeyError, ValueError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
+    except spend.SpendCapReached as exc:
+        print(f"error: re-judge stopped: {exc}; rerun with --resume to continue", file=sys.stderr)
+        return 1
     except BackendError as exc:
         if exc.stops_run:
             print(stop_message(exc), file=sys.stderr)

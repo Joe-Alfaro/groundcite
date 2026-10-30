@@ -44,6 +44,7 @@ from groundcite.evalset import Scenario
 from groundcite.judge import JudgeResult, judge_reply, rubric_sha256
 from groundcite.prompts import STRATEGIES, prompt_sha256, render_messages
 from groundcite.report import transcript_row
+from groundcite.spend import MeteredJudge
 
 log = logging.getLogger(__name__)
 
@@ -324,6 +325,7 @@ def _one(
     backend: Retrying,
     revision: str | None,
     judge: Retrying,
+    meter: MeteredJudge,
     gen_params: Mapping[str, Any],
     judge_params: Mapping[str, Any],
     prompt_hash: str,
@@ -334,8 +336,9 @@ def _one(
         generated = generate_one(system, scenario, backend, gen_params)
     reply, error, decoding = generated
     checks = run_checks(reply, scenario)
+    calls = meter.for_row()
     if error is None:
-        result = judge_reply(scenario, reply, checks, judge, params=judge_params)
+        result = judge_reply(scenario, reply, checks, calls, params=judge_params)
     else:
         result = _generation_failure(judge.name, error)
     row = transcript_row(
@@ -352,6 +355,7 @@ def _one(
     row["generation_error"] = error
     row["decoding"] = decoding
     row["judge"]["decoding"] = judge.effective_params(judge_params)
+    row["judge"]["usage"] = calls.usage
     return row
 
 
@@ -368,14 +372,17 @@ def run_grid(
     progress: TextIO | None = None,
     generated: Mapping[tuple[str, str, str], tuple[str, str | None, dict[str, Any] | None]]
     | None = None,
+    meter: MeteredJudge | None = None,
 ) -> list[dict[str, Any]]:
     """Run every (system, scenario) not already in ``transcripts`` and return all grid rows in
     system-then-scenario order. New rows are appended as they finish. ``generated`` maps
     ``(model, strategy, scenario_id)`` to stored ``generate_one`` results (``eval.py
-    --judge-from``): those cells are judged without calling the model.
+    --judge-from``): those cells are judged without calling the model. ``meter`` (default: an
+    uncapped one) records each judge call's usage in its row and enforces ``--max-spend``.
 
     The first exception stops the run: tasks not yet started are skipped, in-flight ones finish
     and are saved, and the exception is re-raised."""
+    meter = meter or MeteredJudge(judge)
     existing = read_transcripts(transcripts)
     done = {row_key(r): r for r in existing}
     hashes = {s.strategy: prompt_sha256(s.strategy) for s in systems}
@@ -420,6 +427,7 @@ def run_grid(
                     backend=backends[system.model],
                     revision=revisions.get(system.model),
                     judge=judge,
+                    meter=meter,
                     gen_params=gen_params[system.model],
                     judge_params=judge_params,
                     prompt_hash=hashes[system.strategy],

@@ -8,7 +8,13 @@ The same run can be split in two (D-078): ``--generate-only`` generates every re
 judge and writes ``generations.jsonl`` plus ``generation_pins.json`` (on a Kaggle GPU), and
 ``--judge-from <generations.jsonl>`` judges those replies elsewhere with no generation or Hub
 calls. For the same replies and judge, its ``results.json`` equals the one-command run's apart
-from ``run_id``.
+from ``run_id``. ``--judge-from GENERATIONS --resume RUN_DIR`` continues an interrupted judging
+run in RUN_DIR, judging only the rows it lacks.
+
+Every judging run records each judge call's token usage in its transcript row and the run's
+total, with the actual dollars from ``[prices]``, in ``spend.json``. ``--dry-run`` makes no calls
+and prints the judge call count and an estimated cost; ``--max-spend USD`` stops the run before a
+call that could push the recorded spend past USD (D-123).
 """
 
 from __future__ import annotations
@@ -21,7 +27,7 @@ import tomllib
 from pathlib import Path
 from typing import Any
 
-from groundcite import hub, versions
+from groundcite import hub, spend, versions
 from groundcite.backends import BackendError
 from groundcite.config import load_models_config
 from groundcite.evalset import EvalSetError, Scenario, load_eval_set
@@ -33,12 +39,14 @@ from groundcite.runner import (
     BOOTSTRAP_SEED,
     DEFAULT_CONCURRENCY,
     MANIFEST,
+    MANIFEST_LABELS,
     RecordedBackend,
     Retrying,
     System,
     UsageError,
     build_backend,
     category_table,
+    check_resumable,
     discard_if_empty,
     display_path,
     generate_grid,
@@ -49,7 +57,9 @@ from groundcite.runner import (
     pins,
     pins_section,
     print_plan,
+    read_transcripts,
     results_table,
+    row_key,
     run_grid,
     run_manifest,
     sha256_file,
@@ -104,6 +114,18 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         metavar="GENERATIONS",
         help=f"judge the replies in a --generate-only run's {GENERATIONS} (no generation)",
+    )
+    parser.add_argument(
+        "--resume",
+        type=Path,
+        metavar="RUN_DIR",
+        help="with --judge-from: continue an interrupted judging run in RUN_DIR (not --out)",
+    )
+    parser.add_argument(
+        "--max-spend",
+        type=float,
+        metavar="USD",
+        help="stop before a judge call that could push the run's recorded spend past USD",
     )
     return parser
 
@@ -213,6 +235,8 @@ def _plan_systems(
     systems = (base_rows or []) + [System(m, args.strategy) for m in models]
     if args.dry_run:
         print_plan(systems, scenarios, judge_spec or "none (--generate-only)", args.eval_set)
+        if judge_spec is not None:
+            _print_one_shot_estimate(judge_spec, systems, scenarios)
         return None
 
     dirty = check_clean_tree(args.allow_dirty)
@@ -242,13 +266,16 @@ def _finish(
     backends: dict[str, Retrying],
     revisions: dict[str, str | None],
     judge: Retrying,
+    meter: spend.MeteredJudge,
     dirty: bool,
     concurrency: int,
     generated: dict[tuple[str, str, str], tuple[str, str | None, dict[str, Any] | None]]
     | None = None,
-) -> None:
-    """Judge the grid and write transcripts.jsonl, results.json and results.md into run_dir."""
-    write_json(run_dir / MANIFEST, run_manifest(eval_set, scenarios, judge.name))
+    manifest: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Judge the grid and write transcripts.jsonl, results.json, results.md and spend.json into
+    run_dir; return the spend. Stopped early, it keeps the finished rows and their spend."""
+    write_json(run_dir / MANIFEST, manifest or run_manifest(eval_set, scenarios, judge.name))
     transcripts = run_dir / "transcripts.jsonl"
     try:
         rows = run_grid(
@@ -261,10 +288,15 @@ def _finish(
             transcripts=transcripts,
             concurrency=concurrency,
             generated=generated,
+            meter=meter,
         )
     except BaseException:
-        discard_if_empty(run_dir)
+        if meter.usage or (run_dir / spend.SPEND).is_file():
+            spend.record_spend(run_dir, judge.name, meter.usage)
+        else:
+            discard_if_empty(run_dir)
         raise
+    recorded = spend.record_spend(run_dir, judge.name, meter.usage)
     cells = aggregate_scores(rows, seed=BOOTSTRAP_SEED)
     p = pins(
         eval_set=eval_set,
@@ -282,17 +314,32 @@ def _finish(
     }
     write_json(run_dir / "results.json", results)
     (run_dir / "results.md").write_text(_results_md(run_id, cells, p), encoding="utf-8")
+    return recorded
+
+
+def _print_one_shot_estimate(
+    judge_spec: str, systems: list[System], scenarios: list[Scenario]
+) -> None:
+    """The dry run's cost line. The replies don't exist yet, so each judge prompt is sized with an
+    empty reply: the rubric and scenario dominate it."""
+    prompts = [spend.judge_prompt(sc, "") for sc in scenarios]
+    spend.print_estimate(judge_spec, spend.estimate_cost(judge_spec, prompts * len(systems)))
 
 
 def run(args: argparse.Namespace) -> int:
     if args.judge_from is not None:
         return run_judge_from(args)
+    if args.resume is not None:
+        raise UsageError("--resume RUN_DIR continues a --judge-from run; pass --judge-from too")
     if not args.model or args.eval_set is None:
         raise UsageError("--model and --eval-set are required (unless --judge-from)")
+    if args.generate_only and args.max_spend is not None:
+        raise UsageError("--max-spend caps judge spend; --generate-only makes no judge calls")
     scenarios = load_scenarios(args.eval_set, args.limit)
     judge_spec = None
     if not args.generate_only:
         judge_spec = normalize_spec(args.judge or load_models_config()["judge"]["model"])
+        spend.check_limit(judge_spec, args.max_spend)
     planned = _plan_systems(args, scenarios, judge_spec)
     if planned is None:
         return 0
@@ -302,10 +349,11 @@ def run(args: argparse.Namespace) -> int:
         return _generate_only(args, scenarios, systems, revisions, backends, dirty)
 
     judge = build_backend(judge_spec)
+    meter = spend.MeteredJudge(judge, limit=args.max_spend)
     run_id = new_run_id()
     run_dir = args.out / run_id
     run_dir.mkdir(parents=True)
-    _finish(
+    recorded = _finish(
         run_id=run_id,
         run_dir=run_dir,
         eval_set=args.eval_set,
@@ -314,10 +362,11 @@ def run(args: argparse.Namespace) -> int:
         backends=backends,
         revisions=revisions,
         judge=judge,
+        meter=meter,
         dirty=dirty,
         concurrency=args.concurrency,
     )
-    print(f"wrote {run_dir}")
+    print(f"wrote {run_dir} ({spend.spend_note(recorded)})")
     return 0
 
 
@@ -450,8 +499,35 @@ def run_judge_from(args: argparse.Namespace) -> int:
     if missing:
         raise UsageError(f"{generations} has no reply for {len(missing)} cells, e.g. {missing[0]}")
 
+    judge_spec = normalize_spec(args.judge or load_models_config()["judge"]["model"])
+    spend.check_limit(judge_spec, args.max_spend)
+    manifest = run_manifest(eval_set, scenarios, judge_spec)
+    manifest["generations_sha256"] = sha256_file(generations)
+    done: set[tuple[str, str, str, str | None]] = set()
+    if args.resume is not None:
+        _check_resume(args.resume, manifest, generated, generations, pins_path)
+        done = {row_key(r) for r in read_transcripts(args.resume / "transcripts.jsonl")}
+    if args.dry_run:
+        hashes = {s.strategy: prompt_sha256(s.strategy) for s in systems}
+        todo = [
+            (sc, generated[(s.model, s.strategy, sc.id)])
+            for s in systems
+            for sc in scenarios
+            if (s.model, s.strategy, sc.id, hashes[s.strategy]) not in done
+        ]
+        # A reply whose generation failed is scored as a failure with no judge call.
+        prompts = [spend.judge_prompt(sc, reply) for sc, (reply, error, _) in todo if error is None]
+        total = len(systems) * len(scenarios)
+        print(f"generations: {display_path(generations)} ({total} replies)")
+        print(f"judge: {judge_spec}")
+        print(f"rows to judge: {len(todo)} ({total - len(todo)} already done)")
+        print(f"judge calls: {len(prompts)}")
+        spend.print_estimate(judge_spec, spend.estimate_cost(judge_spec, prompts))
+        print("dry run: no requests made, nothing written")
+        return 0
+
     dirty = check_clean_tree(args.allow_dirty)
-    judge = build_backend(normalize_spec(args.judge or load_models_config()["judge"]["model"]))
+    judge = build_backend(judge_spec)
     models = list(dict.fromkeys(s.model for s in systems))
     revisions = {m: (models_info.get(m) or {}).get("model_revision") for m in models}
     backends = {
@@ -462,12 +538,18 @@ def run_judge_from(args: argparse.Namespace) -> int:
         )
         for m in models
     }
-    run_id = new_run_id()
-    run_dir = args.out / run_id
-    run_dir.mkdir(parents=True)
+    if args.resume is not None:
+        run_dir = args.resume
+        run_id = run_dir.name
+        meter = spend.MeteredJudge(judge, limit=args.max_spend, spent=spend.recorded_cost(run_dir))
+    else:
+        meter = spend.MeteredJudge(judge, limit=args.max_spend)
+        run_id = new_run_id()
+        run_dir = args.out / run_id
+        run_dir.mkdir(parents=True)
     # Keep what generated the replies next to the scores (R13).
     shutil.copy2(pins_path, run_dir / GENERATION_PINS)
-    _finish(
+    recorded = _finish(
         run_id=run_id,
         run_dir=run_dir,
         eval_set=eval_set,
@@ -476,12 +558,53 @@ def run_judge_from(args: argparse.Namespace) -> int:
         backends=backends,
         revisions=revisions,
         judge=judge,
+        meter=meter,
         dirty=dirty,
         concurrency=args.concurrency,
         generated=generated,
+        manifest=manifest,
     )
-    print(f"wrote {run_dir} (judged {display_path(generations)})")
+    print(f"wrote {run_dir} (judged {display_path(generations)}; {spend.spend_note(recorded)})")
     return 0
+
+
+def _check_resume(
+    run_dir: Path,
+    manifest: dict[str, Any],
+    generated: dict[tuple[str, str, str], tuple[str, str | None, dict[str, Any] | None]],
+    generations: Path,
+    pins_path: Path,
+) -> None:
+    """Refuse to resume ``run_dir`` unless it was started from the same generations, eval set,
+    judge and rubric. A run started before run.json recorded the generations' sha256 is checked
+    reply by reply, and by its copy of generation_pins.json."""
+    if not run_dir.is_dir():
+        raise UsageError(f"--resume: no such run directory: {run_dir}")
+    labels = dict(MANIFEST_LABELS)
+    recorded = _read_json(run_dir / MANIFEST) if (run_dir / MANIFEST).is_file() else {}
+    legacy = not isinstance(recorded, dict) or "generations_sha256" not in recorded
+    if not legacy:
+        labels["generations_sha256"] = "generations (sha256)"
+    try:
+        check_resumable(run_dir, manifest, labels)
+    except json.JSONDecodeError as exc:
+        raise UsageError(f"{run_dir} has a malformed row: {exc.msg}") from None
+    if not legacy:
+        return
+    copied = run_dir / GENERATION_PINS
+    if copied.is_file() and _read_json(copied) != _read_json(pins_path):
+        raise UsageError(
+            f"{run_dir} was judged from other generations ({GENERATION_PINS} differs); resume "
+            "only continues the same run"
+        )
+    for row in read_transcripts(run_dir / "transcripts.jsonl"):
+        key = (row["model"], row["strategy"], row["scenario_id"])
+        reply = generated.get(key)
+        if reply is None or (row.get("reply"), row.get("generation_error")) != reply[:2]:
+            raise UsageError(
+                f"{run_dir} was judged from other generations: its {key} reply is not the one "
+                f"in {generations}; resume only continues the same run"
+            )
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -491,6 +614,9 @@ def main(argv: list[str] | None = None) -> int:
     except (UsageError, MissingKeyError, ValueError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
+    except spend.SpendCapReached as exc:
+        print(f"error: run stopped: {exc}", file=sys.stderr)
+        return 1
     except BackendError as exc:
         if exc.stops_run:
             print(stop_message(exc), file=sys.stderr)
