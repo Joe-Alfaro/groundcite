@@ -250,11 +250,8 @@ class _Generator:
             row: dict[str, Any] | None = builder(item, rng, pool)
             if row is None:
                 continue
-            final = row["messages"][-1]["content"]
-            if text_hash(final) in self.seen_hashes or self.seen.matches(final, JACCARD_THRESHOLD):
+            if not self._remember(row["messages"][-1]["content"]):
                 continue
-            self.seen.add(final)
-            self.seen_hashes.add(text_hash(final))
             self._count_year_pairs(row, item.ablation)
             ordered = {
                 "id": "",
@@ -267,6 +264,14 @@ class _Generator:
             }
             return ordered
         raise GenerationError(f"could not build a distinct {item.category} for {item.family.name}")
+
+    def _remember(self, final: str) -> bool:
+        """Record ``final``, unless it is a near-duplicate of a final already seen (R23)."""
+        if text_hash(final) in self.seen_hashes or self.seen.matches(final, JACCARD_THRESHOLD):
+            return False
+        self.seen.add(final)
+        self.seen_hashes.add(text_hash(final))
+        return True
 
     def _build_clean(
         self, item: _PlanItem, rng: random.Random, pool: list[Family]
@@ -363,7 +368,12 @@ class _Generator:
             draft.tags.add("no_snippet")
         if rng.random() < 0.15:
             draft.tags.add("pressure")
+        return self._multi_symptom_row(rng, item, draft, fam, second)
 
+    def _multi_symptom_row(
+        self, rng: random.Random, item: _PlanItem, draft: _Draft, fam: Family, second: Family
+    ) -> dict[str, Any]:
+        """One user turn stating both complaints, with a pressure tail when tagged."""
         complaints = [self._complaint(rng, fam), self._complaint(rng, second)]
         rng.shuffle(complaints)
         joined = (
